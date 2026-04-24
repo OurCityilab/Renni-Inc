@@ -24,15 +24,17 @@ import type { Department, Task, TaskPriority, TaskStatus } from '~/types/models'
 // are statically prevented from using 'blocked' as a target.
 type NonBlockedStatus = Exclude<TaskStatus, 'blocked'>
 
-// Input shape for the Timeline Planner's task builder. All fields except
-// `title` / `ownerEmail` are optional; the composable normalizes empties
-// to null before writing.
+// Input shape for the Timeline Planner's task builder.
+// Required: title, ownerEmail, deliverableId. Every task must belong to a
+// deliverable so Tasks → Timeline → Deliverables → Playbook roll up
+// consistently. Other fields are optional; the composable normalizes
+// empties to null before writing.
 export interface NewTaskInput {
   title: string
   ownerEmail: string
+  deliverableId: string
   ownerUid?: string | null
   department?: Department | null
-  deliverableId?: string | null
   playbookChapter?: number | null
   startDate?: string | null
   dueDate?: string | null
@@ -194,12 +196,16 @@ export function useTasks() {
     if (!title) throw new Error('title is required')
     const ownerEmail = input.ownerEmail.trim().toLowerCase()
     if (!ownerEmail) throw new Error('ownerEmail is required')
+    // Every task must belong to a deliverable. This keeps the operating
+    // flow intact: Deliverable → Tasks → Timeline → Departments → Playbook.
+    const deliverableId = (input.deliverableId || '').trim()
+    if (!deliverableId) throw new Error('deliverableId is required')
     const payload = {
       title,
       ownerEmail,
       ownerUid: input.ownerUid ?? null,
       department: input.department ?? null,
-      deliverableId: input.deliverableId ?? null,
+      deliverableId,
       playbookChapter: input.playbookChapter ?? null,
       startDate: input.startDate || null,
       dueDate: input.dueDate || null,

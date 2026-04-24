@@ -62,6 +62,15 @@ const canAssignForDeliverable = computed(() => {
 })
 const assigningOpen = ref(false)
 
+// Task progress rollup for this deliverable. Approval status stays a
+// separate axis (status chip), so this only signals execution progress.
+const taskProgress = computed(() => {
+  const total = relatedTasks.value.length
+  if (!total) return { total: 0, done: 0, percent: 0 }
+  const done = relatedTasks.value.filter((t) => t.status === 'done').length
+  return { total, done, percent: Math.round((done / total) * 100) }
+})
+
 // Reverse-chronological; most recent at top.
 const history = computed<DeliverableEvent[]>(() => {
   const items = deliverable.value?.statusHistory ?? []
@@ -336,14 +345,32 @@ async function saveNotes() {
 
           <!-- Related tasks -->
           <section class="card">
-            <header class="flex items-center justify-between">
+            <header class="flex flex-wrap items-center justify-between gap-2">
               <h2 class="text-sm font-semibold">Related tasks</h2>
               <NuxtLink to="/tasks" class="text-xs text-phoenix-700 hover:underline">
                 View all tasks →
               </NuxtLink>
             </header>
+            <!-- Task-execution progress. Separate axis from the approval
+                 status chip in the action panel — this shows child work
+                 completion, not whether the deliverable itself is approved. -->
+            <div v-if="taskProgress.total" class="mt-2 space-y-1">
+              <div class="flex items-baseline justify-between text-xs text-neutral-600">
+                <span>Task progress</span>
+                <span>{{ taskProgress.done }} of {{ taskProgress.total }} complete · {{ taskProgress.percent }}%</span>
+              </div>
+              <div class="h-1.5 w-full overflow-hidden rounded bg-neutral-100">
+                <div
+                  class="h-full rounded bg-phoenix-500"
+                  :style="{ width: taskProgress.percent + '%' }"
+                />
+              </div>
+            </div>
             <p v-if="!relatedTasks.length" class="mt-2 text-sm text-neutral-500">
-              No tasks linked to this deliverable.
+              No tasks linked to this deliverable yet. Use
+              <span v-if="canAssignForDeliverable"><strong>Assign work</strong> above</span>
+              <span v-else>Workbench or Timeline</span>
+              to plan the work.
             </p>
             <ul v-else class="mt-2 space-y-2">
               <li

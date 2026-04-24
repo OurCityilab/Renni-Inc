@@ -264,6 +264,11 @@ async function submitNewTask() {
     formError.value = 'Who owns this? (enter an email)'
     return
   }
+  if (!form.value.deliverableId) {
+    formError.value =
+      'Pick a deliverable this task supports. Every task must belong to a Playbook chapter.'
+    return
+  }
   if (
     form.value.startDate &&
     form.value.dueDate &&
@@ -284,17 +289,17 @@ async function submitNewTask() {
   }
   submitting.value = true
   try {
-    // Resolve linked deliverable's chapter when one is selected so the
-    // Playbook view can group this task under its chapter automatically.
-    const d = form.value.deliverableId
-      ? deliverableOptions.value.find((x) => x.id === form.value.deliverableId)
-      : null
+    // Resolve linked deliverable's chapter so the Playbook view can group
+    // this task under its chapter automatically.
+    const d = deliverableOptions.value.find(
+      (x) => x.id === form.value.deliverableId
+    )
     const payload: NewTaskInput = {
       title: form.value.title.trim(),
       ownerEmail,
       ownerUid,
       department: form.value.department || null,
-      deliverableId: form.value.deliverableId || null,
+      deliverableId: form.value.deliverableId,
       playbookChapter: d?.chapter ?? null,
       startDate: form.value.startDate || null,
       dueDate: form.value.dueDate || null,
@@ -378,12 +383,13 @@ const dependencyCandidates = computed<Task[]>(() =>
           </select>
         </label>
         <label class="text-xs font-medium text-neutral-800">
-          Linked deliverable (Playbook chapter)
+          Linked deliverable (Playbook chapter) <span class="text-rose-600">*</span>
           <select
             v-model="form.deliverableId"
+            required
             class="mt-1 w-full rounded border border-neutral-300 p-2 text-sm"
           >
-            <option value="">— None —</option>
+            <option value="">— Pick a Playbook chapter —</option>
             <option
               v-for="d in deliverableOptions"
               :key="d.id"
