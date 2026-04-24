@@ -29,11 +29,11 @@ async function signOutCompletely() {
 
 <template>
   <div class="w-full max-w-md card">
-    <h1 class="text-xl font-semibold text-center">You're not on the roster yet</h1>
+    <h1 class="text-xl font-semibold text-center">We couldn't match this account yet</h1>
     <p class="mt-2 text-center text-sm text-neutral-600">
       The account
       <span class="font-medium">{{ auth.user?.email || 'you signed in with' }}</span>
-      isn't on the Renaissance roster for Renni Command Center.
+      couldn't be matched to a provisioned Renaissance roster entry for Renni Command Center yet.
     </p>
 
     <div class="mt-5 space-y-3 text-left text-sm text-neutral-700">

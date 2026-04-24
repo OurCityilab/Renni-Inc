@@ -6,10 +6,11 @@ import type { Deliverable, Task } from '~/types/models'
 
 const deliverables = useDeliverables()
 const tasks = useTasks()
-const { data: all, loading } = deliverables.watchList()
+const { data: all, loading: deliverablesLoading } = deliverables.watchList()
 // Tasks are the source of truth for execution. Rolling up per chapter here
 // so each chapter card can show whether there's actually work planned.
-const { data: allTasks } = tasks.watchAll()
+const { data: allTasks, loading: tasksLoading } = tasks.watchAll()
+const loading = computed(() => deliverablesLoading.value || tasksLoading.value)
 
 // ---- per-chapter rollup ----
 
