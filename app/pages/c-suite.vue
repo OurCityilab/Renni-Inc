@@ -71,13 +71,13 @@ const pendingForMe = computed(() => {
     <template v-else>
       <div class="grid gap-3 sm:grid-cols-4">
         <KpiCard
-          label="Chapters approved"
+          label="Approved deliverables"
           :value="`${totalApproved} / ${all.length || 0}`"
           tone="good"
         />
         <KpiCard label="In review" :value="inReview.length" />
         <KpiCard
-          label="Chapters not started"
+          label="Not started deliverables"
           :value="chaptersNotStarted.length"
           :tone="chaptersNotStarted.length > 0 ? 'warn' : 'default'"
         />

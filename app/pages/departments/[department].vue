@@ -121,6 +121,29 @@ const statusColor: Record<string, string> = {
   blocked: 'border-rose-300 bg-rose-50 text-rose-800',
   done: 'border-emerald-300 bg-emerald-50 text-emerald-800'
 }
+
+const statusLabel: Record<Task['status'], string> = {
+  not_started: 'Not started',
+  in_progress: 'In progress',
+  blocked: 'Blocked',
+  done: 'Done'
+}
+
+const deliverableLabelById = computed(() => {
+  const m = new Map<string, string>()
+  for (const d of allDeliverables.value) {
+    m.set(d.id, `Ch ${d.chapter} · ${d.title}`)
+  }
+  return m
+})
+
+function deliverableLinkLabel(t: Task) {
+  if (t.deliverableId && deliverableLabelById.value.has(t.deliverableId)) {
+    return deliverableLabelById.value.get(t.deliverableId)!
+  }
+  if (t.playbookChapter != null) return `Ch ${t.playbookChapter} · open deliverable`
+  return 'Open deliverable'
+}
 </script>
 
 <template>
@@ -247,12 +270,12 @@ const statusColor: Record<string, string> = {
                   v-if="t.deliverableId"
                   :to="`/deliverables/${t.deliverableId}`"
                   class="text-xs text-phoenix-700 hover:underline"
-                >↳ {{ t.deliverableId }}</NuxtLink>
+                >↳ {{ deliverableLinkLabel(t) }}</NuxtLink>
               </div>
               <span
                 class="shrink-0 rounded-full border px-2 py-0.5 text-xs"
                 :class="statusColor[t.status]"
-              >{{ t.status }}</span>
+              >{{ statusLabel[t.status] }}</span>
             </div>
             <p
               v-if="t.status === 'blocked' && t.blockedBy"

@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { useAuthStore } from '~/stores/auth'
+import { useDeliverables } from '~/composables/useDeliverables'
 import { useTasks } from '~/composables/useTasks'
 import type { Task, TaskStatus } from '~/types/models'
 
 const auth = useAuthStore()
 const tasks = useTasks()
+const deliverables = useDeliverables()
 
 type Tab = 'mine' | 'all'
 const tab = ref<Tab>('mine')
@@ -18,6 +20,7 @@ const canSeeAll = computed(() => auth.isChief || auth.isAdmin)
 // via onScopeDispose when the page unmounts.
 const myUid = computed(() => auth.user?.uid || '')
 const { data: myTasks, loading: myLoading } = tasks.watchByOwner(myUid.value)
+const { data: allDeliverables } = deliverables.watchList()
 const { data: allTasks, loading: allLoading } = canSeeAll.value
   ? tasks.watchAll()
   : { data: ref<Task[]>([]), loading: ref(false) }
@@ -52,6 +55,29 @@ const notStartedCount = computed(
 const doneCount = computed(
   () => currentSet.value.filter((t) => t.status === 'done').length
 )
+
+const statusLabel: Record<TaskStatus, string> = {
+  not_started: 'Not started',
+  in_progress: 'In progress',
+  blocked: 'Blocked',
+  done: 'Done'
+}
+
+const deliverableLabelById = computed(() => {
+  const m = new Map<string, string>()
+  for (const d of allDeliverables.value) {
+    m.set(d.id, `Ch ${d.chapter} · ${d.title}`)
+  }
+  return m
+})
+
+function deliverableLinkLabel(t: Task) {
+  if (t.deliverableId && deliverableLabelById.value.has(t.deliverableId)) {
+    return deliverableLabelById.value.get(t.deliverableId)!
+  }
+  if (t.playbookChapter != null) return `Ch ${t.playbookChapter} · open deliverable`
+  return 'Open deliverable'
+}
 
 // --- per-row state for inline block dialog ---
 const blockingId = ref<string | null>(null)
@@ -147,10 +173,10 @@ async function reopen(t: Task) {
         class="rounded border border-neutral-300 p-2 text-sm"
       >
         <option value="">All statuses</option>
-        <option value="not_started">not_started</option>
-        <option value="in_progress">in_progress</option>
-        <option value="blocked">blocked</option>
-        <option value="done">done</option>
+        <option value="not_started">Not started</option>
+        <option value="in_progress">In progress</option>
+        <option value="blocked">Blocked</option>
+        <option value="done">Done</option>
       </select>
     </div>
 
@@ -176,7 +202,7 @@ async function reopen(t: Task) {
               :to="`/deliverables/${t.deliverableId}`"
               class="text-xs text-phoenix-700 hover:underline"
             >
-              ↳ {{ t.deliverableId }}
+              ↳ {{ deliverableLinkLabel(t) }}
             </NuxtLink>
           </div>
           <span
@@ -187,7 +213,7 @@ async function reopen(t: Task) {
               'border-rose-300 bg-rose-50 text-rose-800': t.status === 'blocked',
               'border-emerald-300 bg-emerald-50 text-emerald-800': t.status === 'done'
             }"
-          >{{ t.status }}</span>
+          >{{ statusLabel[t.status] }}</span>
         </div>
 
         <p
