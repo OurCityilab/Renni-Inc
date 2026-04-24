@@ -10,6 +10,7 @@ const props = defineProps<{
   deliverable: Deliverable
   studio: TemplateStudio
   relatedTasks: Task[]
+  relatedTasksLoading: boolean
   canAssign: boolean
 }>()
 
@@ -64,6 +65,12 @@ const completedRequirementCount = computed(
   () =>
     props.studio.requirements.filter(
       (r) => coverageFor(r).state === 'done'
+    ).length
+)
+const coveredRequirementCount = computed(
+  () =>
+    props.studio.requirements.filter(
+      (r) => coverageFor(r).state !== 'none'
     ).length
 )
 </script>
@@ -170,8 +177,14 @@ const completedRequirementCount = computed(
     <section v-if="studio.requirements.length" class="card space-y-2">
       <header class="flex flex-wrap items-baseline justify-between gap-2">
         <h3 class="text-sm font-semibold">Requirements for approval</h3>
-        <span class="text-xs text-neutral-500">
-          {{ completedRequirementCount }} of {{ studio.requirements.length }} covered
+        <span v-if="relatedTasksLoading" class="text-xs text-neutral-500">
+          Checking task coverage…
+        </span>
+        <span v-else class="text-xs text-neutral-500">
+          {{ coveredRequirementCount }} of {{ studio.requirements.length }} covered
+          <span v-if="completedRequirementCount !== coveredRequirementCount">
+            · {{ completedRequirementCount }} complete
+          </span>
         </span>
       </header>
       <ul class="space-y-2">
@@ -198,8 +211,10 @@ const completedRequirementCount = computed(
             <div class="flex shrink-0 items-center gap-2">
               <span
                 class="rounded-full border px-2 py-0.5 text-xs"
-                :class="coverageTone[coverageFor(req).state]"
-              >{{ coverageLabel[coverageFor(req).state] }}</span>
+                :class="relatedTasksLoading
+                  ? 'border-neutral-300 text-neutral-500'
+                  : coverageTone[coverageFor(req).state]"
+              >{{ relatedTasksLoading ? 'Checking…' : coverageLabel[coverageFor(req).state] }}</span>
               <button
                 v-if="canAssign"
                 class="text-xs text-phoenix-700 hover:underline"
@@ -212,7 +227,7 @@ const completedRequirementCount = computed(
 
           <!-- Linked tasks summary -->
           <ul
-            v-if="coverageFor(req).linked.length"
+            v-if="!relatedTasksLoading && coverageFor(req).linked.length"
             class="mt-1 space-y-0.5 text-xs text-neutral-600"
           >
             <li v-for="t in coverageFor(req).linked" :key="t.id">

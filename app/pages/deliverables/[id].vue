@@ -17,7 +17,7 @@ const id = computed(() => String(route.params.id))
 // Pass the computed ref (not id.value) so the helpers rebind when the
 // route param changes without remounting this component.
 const { data: deliverable, loading } = deliverables.watchOne(id)
-const { data: relatedTasks } = tasks.watchByDeliverable(id)
+const { data: relatedTasks, loading: relatedTasksLoading } = tasks.watchByDeliverable(id)
 
 const notesDraft = ref('')
 const savingNotes = ref(false)
@@ -220,6 +220,7 @@ async function saveNotes() {
             :deliverable="deliverable"
             :studio="studio"
             :related-tasks="relatedTasks"
+            :related-tasks-loading="relatedTasksLoading"
             :can-assign="canAssignForDeliverable"
           />
 
@@ -386,7 +387,10 @@ async function saveNotes() {
                 />
               </div>
             </div>
-            <p v-if="!relatedTasks.length" class="mt-2 text-sm text-neutral-500">
+            <p v-if="relatedTasksLoading" class="mt-2 text-sm text-neutral-500">
+              Loading linked tasks…
+            </p>
+            <p v-else-if="!relatedTasks.length" class="mt-2 text-sm text-neutral-500">
               No tasks linked to this deliverable yet. Use
               <span v-if="canAssignForDeliverable"><strong>Assign work</strong> above</span>
               <span v-else>Workbench or Timeline</span>
