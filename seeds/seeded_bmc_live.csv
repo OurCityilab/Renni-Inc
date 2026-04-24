@@ -1,0 +1,10 @@
+id,title,prompt,ownerDepartment,status
+customer_segments,Customer Segments,"Who does Renni Inc. and House Phoenix serve at the TechTown pop-up — and who could we serve next semester?",marketing,draft
+value_propositions,Value Propositions,"What unique value do our products (beanies, sweatshirts, t-shirts, baked goods) and our pop-up experience deliver to customers?",marketing,draft
+channels,Channels,"How do customers discover and buy from us? TechTown floor traffic, Instagram, word-of-mouth, peer networks.",marketing,draft
+customer_relationships,Customer Relationships,"How do we build trust during the pop-up and keep people engaged for Phoenix Nest and future cohorts?",marketing,draft
+revenue_streams,Revenue Streams,"Where does money come from — merch sales, baked goods, donations? Cross-check with /pricing and /revenue.",finance,draft
+key_resources,Key Resources,"What people, skills, inventory, space, and assets does the pop-up actually need on the day?",operations,draft
+key_activities,Key Activities,"What must we do well — production, marketing, setup, selling, handoff? Which are repeatable for next cohort?",operations,draft
+key_partners,Key Partners,"Who supports the work — TechTown, Humble Oven, vendors, Renaissance staff, Renni sponsors?",strategy-growth,draft
+cost_structure,Cost Structure,"What do we spend money on — merch unit costs, baked-goods inputs, signage, labor? Reference /pricing for per-product costs.",finance,draft

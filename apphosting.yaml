@@ -1,0 +1,57 @@
+# Firebase App Hosting config for Renni Command Center.
+# Run the Nuxt server on GCP so /api/auth/provision + Admin SDK use ADC
+# from the App Hosting service account (no service-account key needed,
+# which is important because the org policy iam.disableServiceAccountKeyCreation
+# is enforced on this project).
+
+runConfig:
+  minInstances: 0
+  maxInstances: 2
+  cpu: 1
+  memoryMiB: 512
+  concurrency: 80
+
+# NUXT_PUBLIC_* values are safe to embed in the client bundle (not secrets).
+# They must be present at BUILD time so Nuxt inlines them into /_nuxt assets.
+# Fill each `value` with the corresponding string from your local .env before
+# deploying. FIREBASE_CLIENT_EMAIL / FIREBASE_PRIVATE_KEY are NOT set here —
+# the server falls back to Application Default Credentials at runtime, which
+# App Hosting provides automatically via its service account.
+env:
+  - variable: NUXT_PUBLIC_FIREBASE_API_KEY
+    value: REPLACE_WITH_API_KEY_FROM_LOCAL_ENV
+    availability:
+      - BUILD
+      - RUNTIME
+  - variable: NUXT_PUBLIC_FIREBASE_AUTH_DOMAIN
+    value: renni-command-center.firebaseapp.com
+    availability:
+      - BUILD
+      - RUNTIME
+  - variable: NUXT_PUBLIC_FIREBASE_PROJECT_ID
+    value: renni-command-center
+    availability:
+      - BUILD
+      - RUNTIME
+  - variable: NUXT_PUBLIC_FIREBASE_STORAGE_BUCKET
+    value: renni-command-center.firebasestorage.app
+    availability:
+      - BUILD
+      - RUNTIME
+  - variable: NUXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID
+    value: "335815229018"
+    availability:
+      - BUILD
+      - RUNTIME
+  - variable: NUXT_PUBLIC_FIREBASE_APP_ID
+    value: REPLACE_WITH_APP_ID_FROM_LOCAL_ENV
+    availability:
+      - BUILD
+      - RUNTIME
+  # projectId fallback the server admin util reads when NUXT_PUBLIC_* isn't
+  # available (e.g. on direct tsx invocations). Safe to set to the same
+  # non-secret project id.
+  - variable: FIREBASE_PROJECT_ID
+    value: renni-command-center
+    availability:
+      - RUNTIME

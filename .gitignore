@@ -1,0 +1,11 @@
+node_modules
+.nuxt
+.output
+.env
+.env.*
+*.local
+*firebase-adminsdk*.json
+*serviceAccount*.json
+*.pem
+*.key
+.DS_Store

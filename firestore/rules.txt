@@ -1,0 +1,215 @@
+rules_version = '2';
+
+// Renni Command Center Firestore rules.
+// Approval truth lives here — not in linked docs.
+//
+// Role model (users/{uid}.role):
+//   admin   - instructor / program lead; may override anything
+//   coceo   - Co-CEO; may approve any deliverable, override due dates, edit roster-linked data
+//   coo|cfo|cmo|cdo|csgo - department chiefs
+//   member  - student, department-scoped
+//
+// Deliverable statuses: draft | in_review | needs_revision | approved
+// Owners move draft <-> in_review. Approvers route in_review -> approved | needs_revision.
+// "blocked" is a task-level flag, not a review outcome.
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function userDoc() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function hasRole(r) {
+      return isSignedIn() && userDoc().role == r;
+    }
+
+    function isAdmin() { return hasRole('admin'); }
+    function isCoCEO() { return hasRole('coceo'); }
+    function isAdminOrCoCEO() { return isAdmin() || isCoCEO(); }
+    function isChief() { return isSignedIn() && userDoc().isChief == true; }
+
+    // -------- roster --------
+    // Seed-populated registry of allowed accounts, keyed by email.
+    // Read-only to any authed user; writes are admin-only (seed scripts use the admin SDK).
+    match /roster/{email} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    // -------- users --------
+    // Self-read allowed; writes are admin-only — the /api/auth/provision server route
+    // uses the admin SDK to upsert users/{uid} from the roster on first sign-in.
+    match /users/{userId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    // -------- deliverables --------
+    // Deliverable status is strictly: draft | in_review | needs_revision | approved.
+    // `blocked` is task-only and must never land here. There is no blanket
+    // admin/coceo update branch — instructor overrides go through the same
+    // narrowed branches below so status can only move along legal edges and
+    // arbitrary fields can't be rewritten.
+    //
+    // `statusHistory` is an append-only activity feed written by the client.
+    // It is allowed in every branch that mutates the deliverable so the UI
+    // can log the event alongside the state change, but the rules do not
+    // attempt to make it tamper-proof — that belongs to a server-side
+    // lifecycle endpoint (future hardening).
+    match /deliverables/{id} {
+      allow read: if isSignedIn();
+      allow create, delete: if isAdminOrCoCEO();
+
+      allow update: if
+        // Owner: save notes/linkedDocUrl or submit (draft|needs_revision → in_review).
+        (
+          resource.data.ownerUid == request.auth.uid
+          && resource.data.status in ['draft', 'needs_revision']
+          && request.resource.data.status in ['draft', 'needs_revision', 'in_review']
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(
+               ['status', 'notes', 'linkedDocUrl', 'submittedForReviewAt',
+                'statusHistory', 'updatedAt']
+             )
+        )
+        // Approver (or admin/coceo override): return in_review → needs_revision.
+        // Must supply a non-empty returnedReason so the owner knows what to fix.
+        || (
+          (resource.data.approverUid == request.auth.uid || isAdminOrCoCEO())
+          && resource.data.status == 'in_review'
+          && request.resource.data.status == 'needs_revision'
+          && request.resource.data.returnedReason is string
+          && request.resource.data.returnedReason.size() > 0
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(
+               ['status', 'returnedReason', 'statusHistory', 'updatedAt']
+             )
+        )
+        // Approver (or admin/coceo override): approve in_review → approved.
+        // Required audit fields must be populated by the client.
+        || (
+          (resource.data.approverUid == request.auth.uid || isAdminOrCoCEO())
+          && resource.data.status == 'in_review'
+          && request.resource.data.status == 'approved'
+          && request.resource.data.approvedAt is string
+          && request.resource.data.approvedByUid is string
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(
+               ['status', 'approvalNotes', 'approvedAt', 'approvedByUid',
+                'approvedByRole', 'statusHistory', 'updatedAt']
+             )
+        )
+        // Admin/coceo: edit due-date fields only; must not change status.
+        || (
+          isAdminOrCoCEO()
+          && request.resource.data.status == resource.data.status
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(
+               ['dueDate', 'lastDueDateEditedBy', 'lastDueDateEditedAt',
+                'dueDateOverrideReason', 'statusHistory', 'updatedAt']
+             )
+        );
+    }
+
+    // -------- tasks --------
+    // Tightened for the Timeline Planner: task creation and planning-field
+    // updates are limited to admin / Co-CEO / any chief. Task owners keep
+    // the ability to update their own record (status, blocked reason, notes)
+    // so /tasks still works for members.
+    match /tasks/{id} {
+      allow read: if isSignedIn();
+      allow create: if isAdmin() || isCoCEO() || isChief();
+      allow update: if isAdmin() || isCoCEO() || isChief()
+        || resource.data.ownerUid == request.auth.uid;
+      allow delete: if isAdminOrCoCEO();
+    }
+
+    // -------- goals --------
+    match /goals/{id} {
+      allow read: if isSignedIn();
+      allow create: if isAdminOrCoCEO();
+      allow update: if isAdminOrCoCEO()
+        || (isChief() && resource.data.ownerUid == request.auth.uid);
+      allow delete: if isAdmin();
+    }
+
+    // -------- bmc --------
+    // All authed users can read. Writes restricted to chiefs, Co-CEOs, and admin.
+    // Section-level soft locking is enforced in app code on top of this.
+    match /bmc/{id} {
+      allow read: if isSignedIn();
+      allow write: if isChief() || isCoCEO() || isAdmin();
+    }
+
+    // -------- bmcBlocks --------
+    // One doc per Business Model Canvas block (customer_segments, etc.).
+    // Read: any signed-in user. Edit: admin, Co-CEO, or CSGO. The block's
+    // ownerDepartment chief isn't granted write here to keep V1 simple —
+    // expand later if granular ownership is worth the rule cost.
+    match /bmcBlocks/{id} {
+      allow read: if isSignedIn();
+      allow create, update, delete:
+        if isAdmin() || isCoCEO() || hasRole('csgo');
+    }
+
+    // -------- continuity --------
+    match /continuity/{id} {
+      allow read: if isSignedIn();
+      allow write: if isChief() || isCoCEO() || isAdmin();
+    }
+
+    // -------- decisions --------
+    match /decisions/{id} {
+      allow read: if isSignedIn();
+      allow create, update: if isChief() || isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // -------- pricing scenarios --------
+    // Anyone signed-in can read. Mutations are limited to admin/Co-CEO/CFO
+    // since pricing decisions are financial and the CFO owns the model.
+    // Narrower than the previous "any signed-in user can create/update"
+    // so members/chiefs outside finance can't change numbers.
+    match /pricingScenarios/{id} {
+      allow read: if isSignedIn();
+      allow create, update, delete: if isAdmin() || isCoCEO() || hasRole('cfo');
+    }
+
+    // -------- donations --------
+    match /donations/{id} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn();
+      allow update: if isAdminOrCoCEO()
+        || resource.data.recordedByUid == request.auth.uid;
+      allow delete: if isAdminOrCoCEO();
+    }
+
+    // -------- transactions --------
+    match /transactions/{id} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn();
+      allow update, delete: if isAdminOrCoCEO();
+    }
+
+    // -------- popUpTransactions --------
+    // Unified pop-up ledger: sale | donation | adjustment.
+    // Students may record sales/donations during the pop-up, but only
+    // admin / Co-CEO / CFO can edit or delete historical records so the
+    // ledger stays append-mostly and auditable.
+    match /popUpTransactions/{id} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn();
+      allow update, delete: if isAdmin() || isCoCEO() || hasRole('cfo');
+    }
+
+    // -------- feedback --------
+    match /feedback/{id} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn();
+      allow update: if isAdminOrCoCEO()
+        || resource.data.capturedByUid == request.auth.uid;
+      allow delete: if isAdmin();
+    }
+  }
+}

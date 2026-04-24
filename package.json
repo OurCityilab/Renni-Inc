@@ -1,0 +1,46 @@
+{
+  "name": "renni-command-center",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Renni Command Center — lightweight production environment for the Renni Inc. Brand and Operations Bible and TechTown pop-up.",
+  "scripts": {
+    "dev": "nuxt dev",
+    "build": "nuxt build",
+    "preview": "nuxt preview",
+    "generate": "nuxt generate",
+    "postinstall": "nuxt prepare",
+    "typecheck": "nuxt typecheck",
+    "seed": "tsx scripts/seed-all.ts",
+    "seed:users": "tsx scripts/seed-users.ts",
+    "seed:deliverables": "tsx scripts/seed-deliverables.ts",
+    "seed:goals": "tsx scripts/seed-goals.ts",
+    "seed:tasks": "tsx scripts/seed-tasks.ts",
+    "seed:pricing": "tsx scripts/seed-pricing.ts",
+    "seed:bmc": "tsx scripts/seed-bmc.ts",
+    "seed:qa": "tsx scripts/seed-qa-lane.ts",
+    "seed:qa-identities": "tsx scripts/seed-qa-identities.ts",
+    "cleanup:qa-identities": "tsx scripts/cleanup-qa-identities.ts",
+    "cleanup:bible-goal": "tsx scripts/cleanup-bible-goal.ts",
+    "sync:users": "tsx scripts/sync-users-from-roster.ts"
+  },
+  "dependencies": {
+    "@pinia/nuxt": "^0.5.5",
+    "firebase": "^10.14.1",
+    "nuxt": "^3.14.0",
+    "pinia": "^2.2.6",
+    "vue": "^3.5.12",
+    "vue-router": "^4.4.5"
+  },
+  "devDependencies": {
+    "@nuxtjs/tailwindcss": "^6.12.2",
+    "@types/node": "^22.9.0",
+    "@types/papaparse": "^5.3.15",
+    "dotenv": "^16.4.5",
+    "firebase-admin": "^13.0.1",
+    "papaparse": "^5.4.1",
+    "tailwindcss": "^3.4.14",
+    "tsx": "^4.19.2",
+    "typescript": "^5.6.3"
+  }
+}

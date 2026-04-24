@@ -1,0 +1,6 @@
+department,metricName,target,current,ownerEmail,status
+finance,Revenue Goal,2500,0,chief@example.com,not_started
+finance,Donation Goal,500,0,chief@example.com,not_started
+operations,Inventory Count Completion,100,0,ops@example.com,not_started
+marketing,Brand Book Completion,100,0,marketing@example.com,not_started
+strategy-growth,Feedback Entries Captured,25,0,strategy@example.com,not_started

@@ -1,0 +1,9 @@
+{
+  "coceo":  { "department": "executive",       "isChief": true },
+  "coo":    { "department": "operations",      "isChief": true },
+  "cfo":    { "department": "finance",         "isChief": true },
+  "cmo":    { "department": "marketing",       "isChief": true },
+  "csgo":   { "department": "strategy-growth", "isChief": true },
+  "member": { "isChief": false },
+  "admin":  { "department": "admin",           "isChief": true }
+}

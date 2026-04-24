@@ -1,0 +1,9 @@
+department,metricName,target,current,ownerEmail,status,notes
+finance,Revenue Goal,2500,0,cjackson6@ltu.edu,not_started,Instructor-editable target
+finance,Donation Goal,500,0,cjackson6@ltu.edu,not_started,Track separately from merchandise revenue
+operations,Inventory Count Completion,100,0,sharaecottingham1@gmail.com,not_started,Percent of inventory logged and verified
+operations,SOP Completion,100,0,sharaecottingham1@gmail.com,not_started,Percent of core event-day and handoff SOPs completed
+marketing,Brand Book Completion,100,0,arimalloy10@gmail.com,not_started,House Phoenix brand book completion
+marketing,Phoenix Nest Pitch Readiness,100,0,arimalloy10@gmail.com,not_started,Pitch visuals and story readiness
+strategy-growth,Feedback Entries Captured,25,0,alorythomas569@gmail.com,not_started,Customer feedback + observation entries
+executive,Playbook Chapter Approval Rate,13,0,bcrenshaw@ltu.edu,not_started,Approved chapters out of 13

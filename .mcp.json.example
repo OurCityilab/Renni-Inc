@@ -1,0 +1,19 @@
+{
+  "mcpServers": {
+    "firebase-admin": {
+      "type": "stdio",
+      "command": "node",
+      "args": ["./scripts/mcp/firebase-admin-server.js"],
+      "env": {
+        "GOOGLE_APPLICATION_CREDENTIALS": "${GOOGLE_APPLICATION_CREDENTIALS}"
+      }
+    },
+    "google-drive": {
+      "type": "sse",
+      "url": "${GOOGLE_DRIVE_MCP_URL}",
+      "headers": {
+        "Authorization": "Bearer ${GOOGLE_DRIVE_MCP_TOKEN}"
+      }
+    }
+  }
+}
