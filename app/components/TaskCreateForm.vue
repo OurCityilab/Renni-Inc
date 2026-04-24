@@ -12,6 +12,9 @@ const props = withDefaults(
     presetDepartment?: Department | null
     presetDeliverableId?: string | null
     presetPlaybookChapter?: number | null
+    presetRequirementId?: string | null
+    presetTitle?: string
+    presetDefinitionOfDone?: string
     lockDepartment?: boolean
     lockDeliverable?: boolean
     title?: string
@@ -20,6 +23,9 @@ const props = withDefaults(
     presetDepartment: null,
     presetDeliverableId: null,
     presetPlaybookChapter: null,
+    presetRequirementId: null,
+    presetTitle: '',
+    presetDefinitionOfDone: '',
     lockDepartment: false,
     lockDeliverable: false,
     title: 'Assign a task'
@@ -80,14 +86,14 @@ interface FormState {
 
 function initialForm(): FormState {
   return {
-    title: '',
+    title: props.presetTitle ?? '',
     ownerEmail: '',
     department: (props.presetDepartment ?? auth.profile?.department ?? '') as Department | '',
     deliverableId: props.presetDeliverableId ?? '',
     startDate: '',
     dueDate: '',
     dependsOn: [],
-    definitionOfDone: '',
+    definitionOfDone: props.presetDefinitionOfDone ?? '',
     priority: '',
     notes: ''
   }
@@ -162,7 +168,8 @@ async function submit() {
       definitionOfDone: form.value.definitionOfDone.trim() || null,
       priority: form.value.priority || null,
       notes: form.value.notes.trim() || null,
-      assignedByEmail: auth.profile?.email || auth.user?.email || null
+      assignedByEmail: auth.profile?.email || auth.user?.email || null,
+      requirementId: props.presetRequirementId || null
     }
     const id = await tasks.create(payload)
     formSuccess.value = 'Task created.'

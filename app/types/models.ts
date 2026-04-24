@@ -162,6 +162,9 @@ export interface Task {
   priority?: TaskPriority | null
   assignedByEmail?: string | null
   playbookChapter?: number | null
+  // Optional link to a Template Studio requirement on the parent
+  // deliverable. Legacy tasks have no requirementId and render fine.
+  requirementId?: string | null
   createdAt: IsoTimestamp
   updatedAt: IsoTimestamp
 }

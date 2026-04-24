@@ -22,6 +22,10 @@
 // Exit non-zero if any task required attention that couldn't be resolved.
 
 import { db } from './lib/admin'
+// Template Studio registry is curriculum content, not Firestore data, so
+// we import it here to check that requirementId values on tasks actually
+// refer to a known requirement on their deliverable's studio.
+import { templateStudios } from '../app/data/templateStudios'
 
 interface TaskRow {
   deliverableId?: string | null
@@ -31,6 +35,7 @@ interface TaskRow {
   playbookChapter?: number | null
   dueDate?: string | null
   title?: string
+  requirementId?: string | null
 }
 interface DeliverableRow {
   chapter?: number
@@ -119,6 +124,28 @@ async function main() {
       warnings.push(`  - ${label}: no dueDate. Informational — not auto-filled.`)
     }
 
+    // Requirement validation. If the task claims a requirementId, check
+    // that its deliverable has a Template Studio and that the
+    // requirement id actually exists on that studio.
+    if (data.requirementId) {
+      if (!data.deliverableId) {
+        warnings.push(
+          `  - ${label}: requirementId "${data.requirementId}" set but no deliverableId.`
+        )
+      } else {
+        const studio = templateStudios[data.deliverableId]
+        if (!studio) {
+          warnings.push(
+            `  - ${label}: requirementId "${data.requirementId}" but deliverable has no Template Studio yet.`
+          )
+        } else if (!studio.requirements.some((r) => r.id === data.requirementId)) {
+          warnings.push(
+            `  - ${label}: requirementId "${data.requirementId}" does not match any requirement on the studio.`
+          )
+        }
+      }
+    }
+
     if (touched) {
       const keys = Object.keys(patch).join(', ')
       if (apply) {
@@ -131,6 +158,28 @@ async function main() {
       aligned += 1
     } else {
       already += 1
+    }
+  }
+
+  // Report uncovered studio requirements. A requirement is "covered"
+  // when at least one task has its requirementId. Required-for-approval
+  // requirements without coverage are the actionable signal.
+  const coveredByDeliverable = new Map<string, Set<string>>()
+  tasksSnap.forEach((doc) => {
+    const t = doc.data() as TaskRow
+    if (!t.deliverableId || !t.requirementId) return
+    const s = coveredByDeliverable.get(t.deliverableId) ?? new Set<string>()
+    s.add(t.requirementId)
+    coveredByDeliverable.set(t.deliverableId, s)
+  })
+  for (const [deliverableId, studio] of Object.entries(templateStudios)) {
+    const covered = coveredByDeliverable.get(deliverableId) ?? new Set<string>()
+    for (const req of studio.requirements) {
+      if (covered.has(req.id)) continue
+      const tag = req.requiredForApproval ? 'required' : 'optional'
+      warnings.push(
+        `  - ${deliverableId} requirement "${req.id}" (${tag}): no task covers it yet.`
+      )
     }
   }
 

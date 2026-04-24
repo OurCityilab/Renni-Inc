@@ -5,6 +5,7 @@ import { useAuthStore } from '~/stores/auth'
 import { useDeliverables } from '~/composables/useDeliverables'
 import { useTasks } from '~/composables/useTasks'
 import { useTemplatePreview } from '~/composables/useTemplatePreview'
+import { getTemplateStudio } from '~/data/templateStudios'
 import type { DeliverableEvent } from '~/types/models'
 
 const route = useRoute()
@@ -61,6 +62,14 @@ const canAssignForDeliverable = computed(() => {
   )
 })
 const assigningOpen = ref(false)
+
+// Template Studio lookup. If a curated studio exists for this deliverable,
+// the detail page renders the guided workspace in addition to (not instead
+// of) the plain markdown preview that's below. Deliverables without a
+// studio fall back to just the preview — this is purely additive.
+const studio = computed(() =>
+  deliverable.value ? getTemplateStudio(deliverable.value.id) : null
+)
 
 // Task progress rollup for this deliverable. Approval status stays a
 // separate axis (status chip), so this only signals execution progress.
@@ -202,6 +211,17 @@ async function saveNotes() {
               No approval notes were left for the next cohort.
             </p>
           </section>
+
+          <!-- Template Studio: the interactive guided workspace. Only
+               renders when curated curriculum exists for this deliverable;
+               otherwise the plain template preview below still serves. -->
+          <TemplateStudio
+            v-if="studio"
+            :deliverable="deliverable"
+            :studio="studio"
+            :related-tasks="relatedTasks"
+            :can-assign="canAssignForDeliverable"
+          />
 
           <!-- What this deliverable needs -->
           <section class="card">

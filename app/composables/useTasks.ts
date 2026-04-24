@@ -44,6 +44,8 @@ export interface NewTaskInput {
   notes?: string | null
   assignedByEmail?: string | null
   status?: TaskStatus
+  // Optional Template Studio requirement this task covers.
+  requirementId?: string | null
 }
 
 function byDueThenTitle(a: Task, b: Task) {
@@ -214,6 +216,7 @@ export function useTasks() {
       priority: input.priority ?? null,
       notes: input.notes?.trim() || null,
       assignedByEmail: input.assignedByEmail?.trim().toLowerCase() || null,
+      requirementId: input.requirementId ?? null,
       status: input.status ?? ('not_started' as TaskStatus),
       progress: 0,
       blockedBy: null,
@@ -243,7 +246,8 @@ export function useTasks() {
       'definitionOfDone',
       'priority',
       'notes',
-      'assignedByEmail'
+      'assignedByEmail',
+      'requirementId'
     ]
     for (const k of copyables) {
       if (k in patch) write[k] = (patch as Record<string, unknown>)[k] ?? null
