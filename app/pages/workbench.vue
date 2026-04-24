@@ -72,6 +72,19 @@ const dueSoon = computed(() =>
 const unassigned = computed(() =>
   scopedTasks.value.filter((t) => !t.ownerUid)
 )
+// Overdue: past local midnight, still open. Different surface from
+// due-soon — these need re-planning, not just follow-through.
+function isPastDue(iso?: string | null): boolean {
+  if (!iso) return false
+  const [y, m, d] = iso.split('-').map(Number)
+  if (!y || !m || !d) return false
+  const today = new Date()
+  const midnight = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime()
+  return new Date(y, m - 1, d).getTime() < midnight
+}
+const overdueTasks = computed(() =>
+  scopedTasks.value.filter((t) => t.status !== 'done' && isPastDue(t.dueDate))
+)
 const assignedByMe = computed(() =>
   [...allTasks.value]
     .filter((t) => t.assignedByEmail && auth.profile?.email && t.assignedByEmail === auth.profile.email)
@@ -97,6 +110,26 @@ const scopedDeliverables = computed<Deliverable[]>(() => {
 })
 const deliverablesNeedingReview = computed(() =>
   scopedDeliverables.value.filter((d) => d.status === 'in_review')
+)
+const deliverablesNeedingRevision = computed(() =>
+  scopedDeliverables.value.filter((d) => d.status === 'needs_revision')
+)
+// Task-coverage risk: a non-approved deliverable with zero linked tasks.
+// This is the signal that a chief hasn't yet broken their chapter into
+// work. Approved deliverables are excluded — if it's already approved,
+// missing tasks is no longer a planning problem.
+const taskCountByDeliverable = computed(() => {
+  const m = new Map<string, number>()
+  for (const t of allTasks.value) {
+    if (!t.deliverableId) continue
+    m.set(t.deliverableId, (m.get(t.deliverableId) ?? 0) + 1)
+  }
+  return m
+})
+const deliverablesWithoutTasks = computed(() =>
+  scopedDeliverables.value.filter(
+    (d) => d.status !== 'approved' && !taskCountByDeliverable.value.get(d.id)
+  )
 )
 
 // --- team directory (chief / member scope) ---
@@ -156,8 +189,13 @@ const statusColor: Record<string, string> = {
     </header>
 
     <!-- KPIs -->
-    <div class="grid gap-3 sm:grid-cols-2 md:grid-cols-4">
+    <div class="grid gap-3 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-5">
       <KpiCard label="Blocked" :value="blockedTasks.length" :tone="blockedTasks.length > 0 ? 'warn' : 'default'" />
+      <KpiCard
+        label="Overdue"
+        :value="overdueTasks.length"
+        :tone="overdueTasks.length > 0 ? 'warn' : 'default'"
+      />
       <KpiCard label="Due this week" :value="dueSoon.length" />
       <KpiCard label="In review" :value="deliverablesNeedingReview.length" />
       <KpiCard
@@ -245,6 +283,29 @@ const statusColor: Record<string, string> = {
       </ul>
     </section>
 
+    <!-- Overdue -->
+    <section v-if="overdueTasks.length" class="space-y-2">
+      <h2 class="text-sm font-semibold text-rose-700">Overdue — needs rescheduling</h2>
+      <ul class="space-y-1">
+        <li
+          v-for="t in overdueTasks"
+          :key="t.id"
+          class="rounded-md border border-rose-300 bg-rose-50 p-2 text-sm"
+        >
+          <p class="font-medium text-neutral-900">{{ t.title }}</p>
+          <p class="text-xs text-neutral-600">
+            {{ t.ownerEmail }}<span v-if="t.department"> · {{ t.department }}</span>
+            <span v-if="t.dueDate"> · due {{ t.dueDate }}</span>
+          </p>
+          <NuxtLink
+            v-if="t.deliverableId"
+            :to="`/deliverables/${t.deliverableId}`"
+            class="text-xs text-phoenix-700 hover:underline"
+          >↳ open deliverable</NuxtLink>
+        </li>
+      </ul>
+    </section>
+
     <!-- Due this week -->
     <section class="space-y-2">
       <h2 class="text-sm font-semibold text-neutral-700">Due this week</h2>
@@ -272,6 +333,42 @@ const statusColor: Record<string, string> = {
       <div class="space-y-2">
         <DeliverableRow
           v-for="d in deliverablesNeedingReview"
+          :key="d.id"
+          :deliverable="d"
+          show-owner
+          show-department
+        />
+      </div>
+    </section>
+
+    <!-- Deliverables returned for revision: owners need to act, planners
+         need to see where the bottleneck is. -->
+    <section v-if="deliverablesNeedingRevision.length" class="space-y-2">
+      <h2 class="text-sm font-semibold text-rose-700">Deliverables needing revision</h2>
+      <div class="space-y-2">
+        <DeliverableRow
+          v-for="d in deliverablesNeedingRevision"
+          :key="d.id"
+          :deliverable="d"
+          show-owner
+          show-department
+        />
+      </div>
+    </section>
+
+    <!-- Deliverables with no task coverage yet. Planner-only surface —
+         chiefs need to break these into work before the pop-up. -->
+    <section v-if="scope !== 'member' && deliverablesWithoutTasks.length" class="space-y-2">
+      <h2 class="text-sm font-semibold text-amber-800">
+        Deliverables without task coverage
+      </h2>
+      <p class="text-xs text-neutral-600">
+        These haven't been broken into tasks yet. Use
+        <strong>Assign work</strong> on each deliverable's detail page.
+      </p>
+      <div class="space-y-2">
+        <DeliverableRow
+          v-for="d in deliverablesWithoutTasks"
           :key="d.id"
           :deliverable="d"
           show-owner

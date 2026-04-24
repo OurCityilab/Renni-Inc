@@ -1,10 +1,15 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { useDeliverables } from '~/composables/useDeliverables'
-import type { Deliverable } from '~/types/models'
+import { useTasks } from '~/composables/useTasks'
+import type { Deliverable, Task } from '~/types/models'
 
 const deliverables = useDeliverables()
+const tasks = useTasks()
 const { data: all, loading } = deliverables.watchList()
+// Tasks are the source of truth for execution. Rolling up per chapter here
+// so each chapter card can show whether there's actually work planned.
+const { data: allTasks } = tasks.watchAll()
 
 // ---- per-chapter rollup ----
 
@@ -29,6 +34,9 @@ interface ChapterRollup {
   percentApproved: number
   nextDue: string | null
   status: ChapterStatus
+  taskTotal: number
+  taskDone: number
+  taskBlocked: number
 }
 
 function today() {
@@ -60,6 +68,31 @@ function classify(ds: Deliverable[]): ChapterStatus {
   return 'not_started'
 }
 
+// Per-chapter task buckets. Tasks carry either deliverableId (preferred)
+// or playbookChapter (the backfill script fills this from the linked
+// deliverable). We union both so legacy rows without a chapter still
+// count via their deliverable.
+const tasksByChapter = computed<Map<number, Task[]>>(() => {
+  const m = new Map<number, Task[]>()
+  const chapterByDeliverable = new Map<string, number>()
+  for (const d of all.value) {
+    if (d.id && d.chapter) chapterByDeliverable.set(d.id, d.chapter)
+  }
+  for (const t of allTasks.value) {
+    let chapter: number | null = null
+    if (t.deliverableId && chapterByDeliverable.has(t.deliverableId)) {
+      chapter = chapterByDeliverable.get(t.deliverableId)!
+    } else if (t.playbookChapter != null) {
+      chapter = t.playbookChapter
+    }
+    if (chapter == null) continue
+    const arr = m.get(chapter) ?? []
+    arr.push(t)
+    m.set(chapter, arr)
+  }
+  return m
+})
+
 const chapters = computed<ChapterRollup[]>(() => {
   const byChapter = new Map<number, Deliverable[]>()
   for (const d of all.value) {
@@ -77,6 +110,9 @@ const chapters = computed<ChapterRollup[]>(() => {
       .filter((d) => d.status !== 'approved' && d.dueDate)
       .map((d) => d.dueDate!)
       .sort()
+    const chapterTasks = tasksByChapter.value.get(chapter) ?? []
+    const taskDone = chapterTasks.filter((t) => t.status === 'done').length
+    const taskBlocked = chapterTasks.filter((t) => t.status === 'blocked').length
     // Title and primary owner fall back to the first deliverable in the
     // chapter (V1 has one deliverable per chapter; this also handles the
     // future case of multiple by picking the lowest-id representative).
@@ -94,7 +130,10 @@ const chapters = computed<ChapterRollup[]>(() => {
       overdue: ds.filter((d) => isOverdue(d, todayMs)).length,
       percentApproved: ds.length ? Math.round((approved / ds.length) * 100) : 0,
       nextDue: futureDues[0] ?? null,
-      status: classify(ds)
+      status: classify(ds),
+      taskTotal: chapterTasks.length,
+      taskDone,
+      taskBlocked
     })
   }
   return out.sort((a, b) => a.chapter - b.chapter)
@@ -218,6 +257,22 @@ const statusLabel: Record<ChapterStatus, string> = {
           <span>Needs revision {{ c.needsRevision }}</span>
           <span class="text-emerald-700">Approved {{ c.approved }}</span>
           <span v-if="c.overdue > 0" class="text-rose-700">Overdue {{ c.overdue }}</span>
+        </div>
+
+        <!-- Task coverage: Tasks are the source of truth for execution, so
+             surface the count per chapter here alongside deliverable status. -->
+        <div class="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
+          <span
+            v-if="c.taskTotal === 0"
+            class="text-amber-800"
+          >No tasks planned yet</span>
+          <template v-else>
+            <span class="text-neutral-600">Tasks {{ c.taskDone }} / {{ c.taskTotal }} done</span>
+            <span
+              v-if="c.taskBlocked > 0"
+              class="text-rose-700"
+            >Blocked {{ c.taskBlocked }}</span>
+          </template>
         </div>
 
         <div>

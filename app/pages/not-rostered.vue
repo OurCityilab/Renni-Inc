@@ -28,23 +28,41 @@ async function signOutCompletely() {
 </script>
 
 <template>
-  <div class="w-full max-w-md card text-center">
-    <h1 class="text-xl font-semibold">You're not on the roster yet</h1>
-    <p class="mt-2 text-sm text-neutral-600">
+  <div class="w-full max-w-md card">
+    <h1 class="text-xl font-semibold text-center">You're not on the roster yet</h1>
+    <p class="mt-2 text-center text-sm text-neutral-600">
       The account
       <span class="font-medium">{{ auth.user?.email || 'you signed in with' }}</span>
-      isn't in the seeded Renaissance roster.
+      isn't on the Renaissance roster for Renni Command Center.
     </p>
-    <p class="mt-4 text-sm text-neutral-600">
-      Ask your instructor to add you, or switch to the Google account that's on the roster.
-    </p>
+
+    <div class="mt-5 space-y-3 text-left text-sm text-neutral-700">
+      <p class="font-medium">Three things this can mean:</p>
+      <ol class="list-decimal space-y-2 pl-5">
+        <li>
+          <span class="font-medium">Wrong Google account.</span>
+          You may have both a school and a personal Google login. Use the
+          one your instructor put on the roster.
+        </li>
+        <li>
+          <span class="font-medium">Rostered but not provisioned yet.</span>
+          If your email was just added, one more sign-in cycle usually
+          finishes provisioning. Sign out and sign back in once.
+        </li>
+        <li>
+          <span class="font-medium">Not on the roster.</span>
+          If neither of the above fits, message your instructor and share
+          the exact email shown above so they can add it.
+        </li>
+      </ol>
+    </div>
 
     <button
       class="btn-primary mt-6 w-full"
       :disabled="switching"
       @click="switchAccount"
     >
-      {{ switching ? 'Opening Google…' : 'Use a different account' }}
+      {{ switching ? 'Opening Google…' : 'Use a different Google account' }}
     </button>
     <button
       class="btn-secondary mt-3 w-full"
@@ -53,6 +71,8 @@ async function signOutCompletely() {
     >
       Sign out
     </button>
-    <p v-if="auth.error" class="mt-3 text-sm text-rose-600">{{ auth.error }}</p>
+    <p v-if="auth.error" class="mt-3 text-center text-sm text-rose-600">
+      {{ auth.error }}
+    </p>
   </div>
 </template>
