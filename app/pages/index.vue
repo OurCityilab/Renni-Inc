@@ -2,14 +2,27 @@
 import { computed, ref, onMounted } from 'vue'
 import { useAuthStore } from '~/stores/auth'
 import { useDeliverables } from '~/composables/useDeliverables'
-import type { Deliverable } from '~/types/models'
+import { useTasks } from '~/composables/useTasks'
+import type { Deliverable, Department } from '~/types/models'
 
 const auth = useAuthStore()
 const deliverables = useDeliverables()
+const tasks = useTasks()
 
 const owned = ref<Deliverable[]>([])
 const needsMyApproval = ref<Deliverable[]>([])
 const loading = ref(true)
+
+// Member-focused: surface the tasks the signed-in student owns so Home
+// answers "what should I do next?" without bouncing through the nav.
+const myUid = computed(() => auth.user?.uid || '')
+const { data: myTasks, loading: tasksLoading } = tasks.watchByOwner(myUid.value)
+const myOpenTasks = computed(() =>
+  [...myTasks.value]
+    .filter((t) => t.status !== 'done')
+    .sort((a, b) => (a.dueDate || '9999') < (b.dueDate || '9999') ? -1 : 1)
+)
+const myDept = computed<Department | null>(() => auth.profile?.department ?? null)
 
 onMounted(async () => {
   if (!auth.user) return
@@ -58,13 +71,79 @@ const myApproved = computed(() => owned.value.filter((d) => d.status === 'approv
       />
     </div>
 
+    <!-- Your tasks first: answers "what should I do next?" without requiring
+         students to discover /tasks or /workbench via the nav. -->
+    <div class="space-y-2">
+      <header class="flex items-baseline justify-between">
+        <h2 class="text-sm font-semibold text-neutral-700">Your tasks</h2>
+        <NuxtLink to="/tasks" class="text-xs text-phoenix-700 hover:underline">
+          Open Tasks →
+        </NuxtLink>
+      </header>
+      <p v-if="tasksLoading" class="text-sm text-neutral-500">Loading…</p>
+      <p v-else-if="!myOpenTasks.length" class="text-sm text-neutral-500">
+        No open tasks assigned to you right now.
+        <NuxtLink to="/workbench" class="text-phoenix-700 hover:underline">
+          See the Workbench
+        </NuxtLink>
+        for department work, or ask your chief to assign a task.
+      </p>
+      <ul v-else class="space-y-1">
+        <li
+          v-for="t in myOpenTasks.slice(0, 5)"
+          :key="t.id"
+          class="rounded-md border border-neutral-200 p-2 text-sm"
+        >
+          <div class="flex flex-wrap items-start justify-between gap-2">
+            <div class="min-w-0">
+              <p class="font-medium text-neutral-900 truncate">{{ t.title }}</p>
+              <p class="text-xs text-neutral-500">
+                <span v-if="t.dueDate">Due {{ t.dueDate }}</span>
+                <span v-else>No due date</span>
+                <span v-if="t.department"> · {{ t.department }}</span>
+              </p>
+              <NuxtLink
+                v-if="t.deliverableId"
+                :to="`/deliverables/${t.deliverableId}`"
+                class="text-xs text-phoenix-700 hover:underline"
+              >↳ open deliverable</NuxtLink>
+            </div>
+            <span
+              class="shrink-0 rounded-full border px-2 py-0.5 text-xs"
+              :class="{
+                'border-neutral-300 text-neutral-600': t.status === 'not_started',
+                'border-amber-300 bg-amber-50 text-amber-800': t.status === 'in_progress',
+                'border-rose-300 bg-rose-50 text-rose-800': t.status === 'blocked'
+              }"
+            >{{ t.status }}</span>
+          </div>
+        </li>
+        <li v-if="myOpenTasks.length > 5" class="text-xs text-neutral-500">
+          …and {{ myOpenTasks.length - 5 }} more on
+          <NuxtLink to="/tasks" class="text-phoenix-700 hover:underline">Tasks</NuxtLink>.
+        </li>
+      </ul>
+    </div>
+
     <div class="grid gap-4 md:grid-cols-2">
       <div class="space-y-2">
         <h2 class="text-sm font-semibold text-neutral-700">Your deliverables</h2>
         <p v-if="loading" class="text-sm text-neutral-500">Loading…</p>
-        <p v-else-if="!owned.length" class="text-sm text-neutral-500">
-          Nothing owned yet. Check with your chief if this looks off.
-        </p>
+        <div v-else-if="!owned.length" class="text-sm text-neutral-500">
+          <p>You don't own any deliverables — most students contribute through tasks, not deliverable ownership.</p>
+          <p class="mt-1">
+            <NuxtLink
+              v-if="myDept"
+              :to="`/departments/${myDept}`"
+              class="text-phoenix-700 hover:underline"
+            >See what your department owns →</NuxtLink>
+            <NuxtLink
+              v-else
+              to="/departments"
+              class="text-phoenix-700 hover:underline"
+            >Browse departments →</NuxtLink>
+          </p>
+        </div>
         <div v-else class="space-y-2">
           <DeliverableRow
             v-for="d in owned"
