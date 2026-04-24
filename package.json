@@ -22,6 +22,7 @@
     "seed:qa-identities": "tsx scripts/seed-qa-identities.ts",
     "cleanup:qa-identities": "tsx scripts/cleanup-qa-identities.ts",
     "cleanup:bible-goal": "tsx scripts/cleanup-bible-goal.ts",
+    "backfill:tasks": "tsx scripts/backfill-task-alignment.ts",
     "sync:users": "tsx scripts/sync-users-from-roster.ts"
   },
   "dependencies": {

@@ -19,7 +19,7 @@ runConfig:
 # App Hosting provides automatically via its service account.
 env:
   - variable: NUXT_PUBLIC_FIREBASE_API_KEY
-    value: AIzaSyA-MkxGN-4eZVJ8eezk6hPrW96cOi--XoU
+    value: REPLACE_WITH_API_KEY_FROM_LOCAL_ENV
     availability:
       - BUILD
       - RUNTIME
@@ -44,7 +44,7 @@ env:
       - BUILD
       - RUNTIME
   - variable: NUXT_PUBLIC_FIREBASE_APP_ID
-    value: 1:335815229018:web:04c7aeb61281dc3b232263
+    value: REPLACE_WITH_APP_ID_FROM_LOCAL_ENV
     availability:
       - BUILD
       - RUNTIME

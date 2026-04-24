@@ -10,6 +10,8 @@ const nav = computed(() => {
     { to: '/deliverables', label: 'Deliverables' },
     { to: '/playbook', label: 'Playbook' },
     { to: '/tasks', label: 'Tasks' },
+    { to: '/departments', label: 'Departments' },
+    { to: '/workbench', label: 'Workbench' },
     { to: '/canvas', label: 'Canvas' },
     { to: '/timeline', label: 'Timeline' },
     { to: '/goals', label: 'Goals' },

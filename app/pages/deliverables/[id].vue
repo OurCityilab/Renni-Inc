@@ -48,6 +48,20 @@ const canEditNotes = computed(
     ['draft', 'needs_revision'].includes(deliverable.value.status)
 )
 
+// Who can assign tasks to this deliverable from the detail page:
+// admin, Co-CEO, COO (cross-department), or a chief of the deliverable's
+// own department. Mirrors the chief scoping on /departments/[department].
+const canAssignForDeliverable = computed(() => {
+  if (!deliverable.value) return false
+  if (auth.isAdmin || auth.isCoCEO) return true
+  if (!auth.isChief) return false
+  return (
+    auth.profile?.role === 'coo' ||
+    auth.profile?.department === deliverable.value.department
+  )
+})
+const assigningOpen = ref(false)
+
 // Reverse-chronological; most recent at top.
 const history = computed<DeliverableEvent[]>(() => {
   const items = deliverable.value?.statusHistory ?? []
@@ -297,6 +311,27 @@ async function saveNotes() {
                 </p>
               </li>
             </ul>
+          </section>
+
+          <!-- Assign work for this deliverable (admin / Co-CEO / COO / dept chief) -->
+          <section v-if="canAssignForDeliverable" class="space-y-2">
+            <header class="flex items-center justify-between">
+              <h2 class="text-sm font-semibold">Assign work for this deliverable</h2>
+              <button
+                class="text-xs text-phoenix-700 hover:underline"
+                @click="assigningOpen = !assigningOpen"
+              >{{ assigningOpen ? 'Close' : '+ Assign a task' }}</button>
+            </header>
+            <TaskCreateForm
+              v-if="assigningOpen"
+              :preset-department="deliverable.department"
+              :preset-deliverable-id="deliverable.id"
+              :preset-playbook-chapter="deliverable.chapter"
+              lock-deliverable
+              title="Assign a task tied to this deliverable"
+              @created="assigningOpen = false"
+              @cancel="assigningOpen = false"
+            />
           </section>
 
           <!-- Related tasks -->

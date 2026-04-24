@@ -143,6 +143,30 @@ const myApproved = computed(() => owned.value.filter((d) => d.status === 'approv
         </p>
       </NuxtLink>
       <NuxtLink
+        to="/departments"
+        class="card group block hover:border-phoenix-300"
+      >
+        <p class="text-xs uppercase tracking-wide text-neutral-500">Teams</p>
+        <p class="mt-1 text-sm font-medium text-neutral-900">
+          Departments →
+        </p>
+        <p class="mt-1 text-xs text-neutral-600">
+          See who's on each team, what they own, and what's due next.
+        </p>
+      </NuxtLink>
+      <NuxtLink
+        to="/workbench"
+        class="card group block hover:border-phoenix-300"
+      >
+        <p class="text-xs uppercase tracking-wide text-neutral-500">My board</p>
+        <p class="mt-1 text-sm font-medium text-neutral-900">
+          Workbench →
+        </p>
+        <p class="mt-1 text-xs text-neutral-600">
+          Role-aware board: blockers, due dates, and work you can assign.
+        </p>
+      </NuxtLink>
+      <NuxtLink
         to="/canvas"
         class="card group block hover:border-phoenix-300"
       >
