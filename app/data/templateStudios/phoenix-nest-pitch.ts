@@ -39,6 +39,12 @@ export const phoenixNestPitch: TemplateStudio = {
       completionCriteria: [
         'Numbers cited here match /revenue and /pricing actuals exactly.',
         'At least three customer quotes or paraphrased reactions included.'
+      ],
+      evidencePrompt:
+        'Every pitch number deserves a structured evidence entry — claim, evidence, source (/revenue, /pricing, customer quote), confidence, risk.',
+      sourceGuidance: [
+        'If a number is from /revenue or /pricing, name it explicitly so the buyer can verify.',
+        'Customer quotes belong as their own evidence entries with the customer source identified.'
       ]
     },
     {

@@ -305,6 +305,31 @@ export interface DeliverableEvidenceLink {
   addedAt?: IsoTimestamp | null
 }
 
+// Structured Evidence Standard V1 — students log defendable claims
+// alongside the prose drafts. A structured evidence entry forces the
+// team to name the claim, the supporting evidence, the source, the
+// assumption, the calculation (if any), confidence, the risk, and the
+// next validation step. Optional everywhere on the section so legacy
+// output docs without entries keep working without migration.
+export type EvidenceConfidence = 'low' | 'medium' | 'high'
+
+export interface StructuredEvidenceEntry {
+  id: string
+  claim: string
+  evidence: string
+  source: string
+  assumption?: string
+  calculation?: string
+  confidence?: EvidenceConfidence
+  risk?: string
+  nextValidation?: string
+  requirementId?: string | null
+  addedByUid?: string | null
+  addedByEmail?: string | null
+  addedAt?: IsoTimestamp | null
+  updatedAt?: IsoTimestamp | null
+}
+
 export interface DeliverableOutputSection {
   sectionId: string
   sectionTitleSnapshot: string
@@ -312,6 +337,9 @@ export interface DeliverableOutputSection {
   draftText: string
   finalText: string
   evidenceLinks: DeliverableEvidenceLink[]
+  // Optional structured evidence entries that defend the section's
+  // claims with source / assumption / confidence / risk metadata.
+  structuredEvidence?: StructuredEvidenceEntry[]
   status?: DeliverableOutputSectionStatus
   updatedAt?: IsoTimestamp | null
   updatedByUid?: string | null

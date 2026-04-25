@@ -59,6 +59,12 @@ export const currentProductLine: TemplateStudio = {
       completionCriteria: [
         'Every product has a price or an explicit pending note.',
         '/pricing is referenced as the source of truth.'
+      ],
+      evidencePrompt:
+        'Log a structured evidence entry per product price tying it to a vendor quote, comp data, or labeled assumption.',
+      sourceGuidance: [
+        'If you use a number, name the source or explain the assumption.',
+        'Mark confidence low / medium / high so reviewers know what to push on.'
       ]
     },
     {
@@ -90,6 +96,12 @@ export const currentProductLine: TemplateStudio = {
       completionCriteria: [
         'Inventory status is named for every product.',
         'At least one risk product has an explicit readiness plan if applicable.'
+      ],
+      evidencePrompt:
+        'For any "ready / behind / blocked" claim, log evidence — count, vendor confirmation, or labeled assumption.',
+      sourceGuidance: [
+        'If a count is from a recent physical check, name the date and the counter.',
+        'If readiness is an estimate, mark confidence and the next validation step.'
       ]
     },
     {

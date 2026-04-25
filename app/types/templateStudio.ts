@@ -25,6 +25,12 @@ export interface TemplateStudioSection {
   studentPrompts: string[]
   requiredInputs?: string[]
   completionCriteria?: string[]
+  // Structured Evidence Standard V1 — optional per-section guidance shown
+  // next to the structured-evidence editor in the Output Workspace.
+  // Authors can leave them blank; the editor falls back to generic copy.
+  evidencePrompt?: string
+  analysisPrompt?: string
+  sourceGuidance?: string[]
 }
 
 export interface TemplateStudioRequirement {

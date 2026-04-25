@@ -41,6 +41,12 @@ export const decisionLogAppendices: TemplateStudio = {
       completionCriteria: [
         'Every decision has a rationale.',
         'At least one "we would change this" note is included if applicable.'
+      ],
+      evidencePrompt:
+        'For decisions backed by data (pricing, inventory, customer demand), log a structured evidence entry — claim, evidence, source, confidence, risk.',
+      sourceGuidance: [
+        'Cite the document, conversation, or measurement that informed the call.',
+        'If a decision was made on cohort consensus alone, label it that way honestly.'
       ]
     },
     {

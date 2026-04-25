@@ -26,6 +26,15 @@ export const businessModelCanvas: TemplateStudio = {
       completionCriteria: [
         'At least two segments are named specifically.',
         'Each segment has a one-line need or use-case.'
+      ],
+      evidencePrompt:
+        'Support customer claims with feedback, observation, survey results, or clearly labeled assumptions.',
+      analysisPrompt:
+        'If you use a number for segment size or willingness to pay, name the source or explain the assumption.',
+      sourceGuidance: [
+        'Quotes from real customer conversations beat paraphrases.',
+        'If this is an estimate, mark confidence low / medium / high.',
+        'Name the next validation step so the next cohort can test it.'
       ]
     },
     {
@@ -87,6 +96,12 @@ export const businessModelCanvas: TemplateStudio = {
       completionCriteria: [
         'Product sales and donations are listed as separate streams.',
         'Capture method is named for each stream.'
+      ],
+      evidencePrompt:
+        'For any revenue figure, log a structured evidence entry tying it back to /pricing or a real sales scenario.',
+      sourceGuidance: [
+        'If the number is an estimate, mark confidence and name the assumption.',
+        'Donations and product revenue belong in separate evidence entries.'
       ]
     },
     {

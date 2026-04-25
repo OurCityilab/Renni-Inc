@@ -34,6 +34,12 @@ export const supportingBrandSheets: TemplateStudio = {
       completionCriteria: [
         'Lumen sheet reads as a real candle brand, not a placeholder.',
         'A buyer would be able to make a stocking decision from the sheet.'
+      ],
+      evidencePrompt:
+        'Back the Lumen audience and price-point claims with feedback, comparable brands, or labeled assumptions.',
+      sourceGuidance: [
+        'If a price point is "what we hope to charge", mark it as an assumption with confidence.',
+        'Name the next validation step (vendor confirmation, buyer feedback, comp analysis).'
       ]
     },
     {
@@ -58,6 +64,12 @@ export const supportingBrandSheets: TemplateStudio = {
       completionCriteria: [
         'Notice sheet describes a real jewelry brand with a clear design language.',
         'A buyer can picture what would arrive in the case.'
+      ],
+      evidencePrompt:
+        'Defend the Notice audience and price points with real customer reactions or labeled comp data.',
+      sourceGuidance: [
+        'Photo-of-comp-piece + price = a stronger source than "we think it should cost X".',
+        'Name the assumption behind material costs if vendor quotes are pending.'
       ]
     },
     {
@@ -82,6 +94,12 @@ export const supportingBrandSheets: TemplateStudio = {
       completionCriteria: [
         'Sheet covers brand and food-handling realities together.',
         'A new student baker could prep for a pop-up from the sheet.'
+      ],
+      evidencePrompt:
+        'Treat production cadence and allergen rules as claims that need a source — kitchen capacity, real recipe yields, school food-safety guidance.',
+      sourceGuidance: [
+        'If shelf-life is "we think 48 hours", mark confidence and name the validation step.',
+        'Allergen labeling rules should cite the school/kitchen policy or a credible source.'
       ]
     },
     {

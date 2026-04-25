@@ -26,6 +26,12 @@ export const popUpCampaign: TemplateStudio = {
       completionCriteria: [
         'At least two named groups.',
         'Each group has a one-line description grounded in reality.'
+      ],
+      evidencePrompt:
+        'For each customer group, log structured evidence — claim (who they are), source (conversation, observation, survey, labeled assumption), confidence, risk.',
+      sourceGuidance: [
+        'Quotes from real customer conversations beat paraphrases or invented personas.',
+        'If this is an estimate, mark confidence low / medium / high and name what would tighten it.'
       ]
     },
     {
@@ -57,6 +63,12 @@ export const popUpCampaign: TemplateStudio = {
       completionCriteria: [
         'Every insight has a labeled source.',
         'Assumptions are clearly marked, not disguised as facts.'
+      ],
+      evidencePrompt:
+        'This is the section where structured evidence pays off most. Each insight gets one entry: claim, evidence, source, confidence, risk, next validation step.',
+      sourceGuidance: [
+        'Sources include feedback, observation, survey, sales conversation, or labeled assumption.',
+        'No insight should ship without a labeled source.'
       ]
     },
     {

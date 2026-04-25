@@ -4,6 +4,7 @@ import { useAuthStore } from '~/stores/auth'
 import {
   useDeliverableOutputs,
   type NewEvidenceLinkInput,
+  type NewStructuredEvidenceInput,
   type SectionSavePayload
 } from '~/composables/useDeliverableOutputs'
 import type {
@@ -12,7 +13,9 @@ import type {
   DeliverableOutput,
   DeliverableOutputSection,
   DeliverableOutputSectionStatus,
-  EvidenceLinkType
+  EvidenceConfidence,
+  EvidenceLinkType,
+  StructuredEvidenceEntry
 } from '~/types/models'
 import type {
   TemplateStudio,
@@ -301,6 +304,8 @@ const readiness = computed(() => {
   let withDraft = 0
   let withFinal = 0
   let withEvidence = 0
+  let withStructuredEvidence = 0
+  let totalStructuredEvidence = 0
   let missingFinal = 0
   for (const s of sections) {
     const p = persistedSection(s)
@@ -309,6 +314,9 @@ const readiness = computed(() => {
     if ((p?.finalText ?? '').trim()) withFinal += 1
     else missingFinal += 1
     if ((p?.evidenceLinks?.length ?? 0) > 0) withEvidence += 1
+    const seCount = p?.structuredEvidence?.length ?? 0
+    if (seCount > 0) withStructuredEvidence += 1
+    totalStructuredEvidence += seCount
   }
   return {
     total: sections.length,
@@ -316,9 +324,161 @@ const readiness = computed(() => {
     withDraft,
     withFinal,
     withEvidence,
+    withStructuredEvidence,
+    totalStructuredEvidence,
     missingFinal
   }
 })
+
+// --- structured evidence editor state ---
+// Each section gets its own form buffer + editing-entry id so the Add /
+// Edit forms don't bleed across sections.
+function emptyEvidenceForm(): NewStructuredEvidenceInput {
+  return {
+    claim: '',
+    evidence: '',
+    source: '',
+    assumption: '',
+    calculation: '',
+    confidence: undefined,
+    risk: '',
+    nextValidation: '',
+    requirementId: null
+  }
+}
+const evidenceForms = ref<Record<string, NewStructuredEvidenceInput>>({})
+const evidenceEditing = ref<Record<string, string | null>>({})
+const evidenceErrors = ref<Record<string, string>>({})
+const evidenceBusyId = ref<string | null>(null)
+const evidenceFormOpen = ref<Record<string, boolean>>({})
+const CONFIDENCE_OPTIONS: EvidenceConfidence[] = ['low', 'medium', 'high']
+
+function ensureEvidenceForm(sectionId: string) {
+  if (!evidenceForms.value[sectionId]) {
+    evidenceForms.value[sectionId] = emptyEvidenceForm()
+  }
+  if (evidenceEditing.value[sectionId] === undefined) {
+    evidenceEditing.value[sectionId] = null
+  }
+}
+
+function startNewEvidence(sectionId: string) {
+  evidenceForms.value[sectionId] = emptyEvidenceForm()
+  evidenceEditing.value[sectionId] = null
+  evidenceErrors.value[sectionId] = ''
+  evidenceFormOpen.value[sectionId] = true
+}
+
+function startEditEvidence(sectionId: string, entry: StructuredEvidenceEntry) {
+  evidenceForms.value[sectionId] = {
+    claim: entry.claim,
+    evidence: entry.evidence,
+    source: entry.source,
+    assumption: entry.assumption ?? '',
+    calculation: entry.calculation ?? '',
+    confidence: entry.confidence,
+    risk: entry.risk ?? '',
+    nextValidation: entry.nextValidation ?? '',
+    requirementId: entry.requirementId ?? null
+  }
+  evidenceEditing.value[sectionId] = entry.id
+  evidenceErrors.value[sectionId] = ''
+  evidenceFormOpen.value[sectionId] = true
+}
+
+function cancelEvidenceForm(sectionId: string) {
+  evidenceForms.value[sectionId] = emptyEvidenceForm()
+  evidenceEditing.value[sectionId] = null
+  evidenceErrors.value[sectionId] = ''
+  evidenceFormOpen.value[sectionId] = false
+}
+
+function evidenceFormValid(form: NewStructuredEvidenceInput): string | null {
+  if (!form.claim.trim()) return 'Claim is required.'
+  if (!form.evidence.trim()) return 'Evidence is required.'
+  if (!form.source.trim()) return 'Source is required.'
+  return null
+}
+
+async function submitEvidence(s: TemplateStudioSection) {
+  if (!editingEnabled.value) return
+  if (!auth.user || !auth.profile) return
+  ensureEvidenceForm(s.id)
+  const form = evidenceForms.value[s.id]
+  const err = evidenceFormValid(form)
+  if (err) {
+    evidenceErrors.value[s.id] = err
+    return
+  }
+  evidenceErrors.value[s.id] = ''
+  evidenceBusyId.value = s.id
+  try {
+    const persisted = persistedSection(s)
+    const current = persisted?.structuredEvidence ?? []
+    const editingId = evidenceEditing.value[s.id]
+    const actor = {
+      uid: auth.user.uid,
+      email: auth.profile.email || auth.user.email || ''
+    }
+    if (editingId) {
+      await outputs.updateStructuredEvidence(
+        props.deliverable.id,
+        s.id,
+        current,
+        editingId,
+        form,
+        actor
+      )
+    } else {
+      await outputs.addStructuredEvidence(
+        props.deliverable.id,
+        s.id,
+        current,
+        form,
+        actor
+      )
+    }
+    cancelEvidenceForm(s.id)
+  } catch (e) {
+    evidenceErrors.value[s.id] = e instanceof Error ? e.message : String(e)
+  } finally {
+    evidenceBusyId.value = null
+  }
+}
+
+async function removeEvidenceEntry(s: TemplateStudioSection, entryId: string) {
+  if (!editingEnabled.value) return
+  if (!auth.user || !auth.profile) return
+  evidenceBusyId.value = s.id
+  try {
+    const persisted = persistedSection(s)
+    const current = persisted?.structuredEvidence ?? []
+    await outputs.removeStructuredEvidence(
+      props.deliverable.id,
+      s.id,
+      current,
+      entryId,
+      {
+        uid: auth.user.uid,
+        email: auth.profile.email || auth.user.email || ''
+      }
+    )
+    if (evidenceEditing.value[s.id] === entryId) {
+      cancelEvidenceForm(s.id)
+    }
+  } catch (e) {
+    evidenceErrors.value[s.id] = e instanceof Error ? e.message : String(e)
+  } finally {
+    evidenceBusyId.value = null
+  }
+}
+
+function confidenceTone(c?: EvidenceConfidence): string {
+  if (c === 'high') return 'border-emerald-300 bg-emerald-50 text-emerald-800'
+  if (c === 'medium') return 'border-amber-300 bg-amber-50 text-amber-800'
+  if (c === 'low') return 'border-rose-300 bg-rose-50 text-rose-800'
+  return 'border-neutral-300 bg-neutral-50 text-neutral-700'
+}
 
 function fmtWhen(iso?: string | null): string {
   if (!iso) return ''
@@ -333,14 +493,16 @@ function fmtWhen(iso?: string | null): string {
       })
 }
 
-// Make sure each section has a draft + link form initialized so the
-// template can bind v-model into them safely on first render.
+// Make sure each section has a draft + link form + evidence form
+// initialized so the template can bind v-model into them safely on
+// first render.
 watch(
   () => props.studio.sections,
   (sections) => {
     for (const s of sections) {
       ensureDraft(s)
       ensureLinkForm(s)
+      ensureEvidenceForm(s.id)
     }
   },
   { immediate: true }
@@ -404,12 +566,17 @@ watch(
       <p v-else class="mt-1 text-xs text-emerald-700">
         Every section has final Playbook text. Nice.
       </p>
-      <dl class="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-neutral-600 sm:grid-cols-4">
+      <dl class="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-neutral-600 sm:grid-cols-5">
         <div><dt class="inline">Source notes</dt><dd class="inline"> · {{ readiness.withSourceNotes }}/{{ readiness.total }}</dd></div>
         <div><dt class="inline">Draft text</dt><dd class="inline"> · {{ readiness.withDraft }}/{{ readiness.total }}</dd></div>
         <div><dt class="inline">Final text</dt><dd class="inline"> · {{ readiness.withFinal }}/{{ readiness.total }}</dd></div>
-        <div><dt class="inline">Evidence</dt><dd class="inline"> · {{ readiness.withEvidence }}/{{ readiness.total }}</dd></div>
+        <div><dt class="inline">Links</dt><dd class="inline"> · {{ readiness.withEvidence }}/{{ readiness.total }}</dd></div>
+        <div><dt class="inline">Evidence entries</dt><dd class="inline"> · {{ readiness.totalStructuredEvidence }}</dd></div>
       </dl>
+      <p class="mt-1 text-xs text-neutral-500">
+        Defendable claims use the structured evidence editor below — claim, source,
+        assumption, confidence, risk. Soft signal only; never blocks submit.
+      </p>
     </section>
 
     <p v-if="loading" class="text-sm text-neutral-500">Loading workspace…</p>
@@ -623,6 +790,236 @@ watch(
             </div>
           </div>
         </section>
+
+        <!-- Structured evidence editor (Evidence Standard V1).
+             Defendable claims live here: claim / evidence / source /
+             assumption / calculation / confidence / risk / next
+             validation step. Soft signal — never gates submit. -->
+        <section class="space-y-2 rounded-md border border-phoenix-100 bg-phoenix-50/40 p-2">
+          <header class="flex flex-wrap items-baseline justify-between gap-2">
+            <div>
+              <h4 class="text-xs font-medium text-neutral-800">Defend your claim</h4>
+              <p class="text-xs text-neutral-600">
+                {{
+                  s.evidencePrompt ||
+                  'Log structured evidence for any major claim in this section — claim, source, assumption, confidence, risk, next validation step.'
+                }}
+              </p>
+              <p
+                v-if="s.analysisPrompt"
+                class="text-xs text-neutral-500"
+              >{{ s.analysisPrompt }}</p>
+            </div>
+            <span class="text-xs text-neutral-500">
+              Evidence entries: {{ persistedSection(s)?.structuredEvidence?.length ?? 0 }}
+            </span>
+          </header>
+
+          <p
+            v-if="(persistedSection(s)?.structuredEvidence?.length ?? 0) === 0"
+            class="text-xs text-neutral-500"
+          >
+            No structured evidence entries yet. Add at least one for any major claim.
+          </p>
+
+          <ul
+            v-if="persistedSection(s) && (persistedSection(s)!.structuredEvidence?.length ?? 0) > 0"
+            class="space-y-2"
+          >
+            <li
+              v-for="entry in persistedSection(s)!.structuredEvidence"
+              :key="entry.id"
+              class="rounded-md border border-neutral-200 bg-white p-2 text-sm"
+            >
+              <div class="flex flex-wrap items-baseline justify-between gap-2">
+                <p class="font-medium text-neutral-900">{{ entry.claim }}</p>
+                <span
+                  v-if="entry.confidence"
+                  class="rounded-full border px-2 py-0.5 text-xs uppercase tracking-wide"
+                  :class="confidenceTone(entry.confidence)"
+                >{{ entry.confidence }} confidence</span>
+              </div>
+              <dl class="mt-1 space-y-0.5 text-xs text-neutral-700">
+                <div><dt class="inline font-medium text-neutral-600">Evidence:</dt> {{ entry.evidence }}</div>
+                <div><dt class="inline font-medium text-neutral-600">Source:</dt> {{ entry.source }}</div>
+                <div v-if="entry.assumption">
+                  <dt class="inline font-medium text-neutral-600">Assumption:</dt> {{ entry.assumption }}
+                </div>
+                <div v-if="entry.calculation">
+                  <dt class="inline font-medium text-neutral-600">Calculation:</dt> {{ entry.calculation }}
+                </div>
+                <div v-if="entry.risk">
+                  <dt class="inline font-medium text-neutral-600">Risk:</dt> {{ entry.risk }}
+                </div>
+                <div v-if="entry.nextValidation">
+                  <dt class="inline font-medium text-neutral-600">Next validation:</dt> {{ entry.nextValidation }}
+                </div>
+                <div v-if="entry.requirementId">
+                  <dt class="inline font-medium text-neutral-600">Linked requirement:</dt>
+                  {{
+                    studio.requirements.find((r) => r.id === entry.requirementId)?.label
+                      || entry.requirementId
+                  }}
+                </div>
+              </dl>
+              <div v-if="editingEnabled" class="mt-2 flex flex-wrap items-center gap-3 text-xs">
+                <button
+                  class="text-phoenix-700 hover:underline"
+                  @click="startEditEvidence(s.id, entry)"
+                >Edit</button>
+                <button
+                  class="text-rose-700 hover:underline"
+                  :disabled="evidenceBusyId === s.id"
+                  @click="removeEvidenceEntry(s, entry.id)"
+                >Remove</button>
+                <span
+                  v-if="entry.updatedAt"
+                  class="text-neutral-400"
+                >Last edited {{ fmtWhen(entry.updatedAt) }}</span>
+              </div>
+            </li>
+          </ul>
+
+          <div v-if="editingEnabled" class="space-y-2">
+            <button
+              v-if="!evidenceFormOpen[s.id]"
+              class="text-xs text-phoenix-700 hover:underline"
+              @click="startNewEvidence(s.id)"
+            >+ Add evidence entry</button>
+
+            <div
+              v-if="evidenceFormOpen[s.id]"
+              class="space-y-2 rounded-md border border-neutral-200 bg-white p-2"
+            >
+              <p class="text-xs font-semibold text-neutral-800">
+                {{ evidenceEditing[s.id] ? 'Edit evidence entry' : 'New evidence entry' }}
+              </p>
+              <ul
+                v-if="s.sourceGuidance && s.sourceGuidance.length"
+                class="list-disc space-y-0.5 pl-4 text-xs text-neutral-500"
+              >
+                <li v-for="(g, gi) in s.sourceGuidance" :key="gi">{{ g }}</li>
+              </ul>
+              <label class="block text-xs font-medium text-neutral-800">
+                Claim
+                <input
+                  v-model="evidenceForms[s.id].claim"
+                  type="text"
+                  placeholder="What are we saying?"
+                  class="mt-1 w-full rounded border border-neutral-300 p-2 text-sm"
+                />
+              </label>
+              <label class="block text-xs font-medium text-neutral-800">
+                Evidence
+                <textarea
+                  v-model="evidenceForms[s.id].evidence"
+                  rows="2"
+                  placeholder="What supports this — feedback, observation, sales data, vendor quote?"
+                  class="mt-1 w-full rounded border border-neutral-300 p-2 text-sm"
+                />
+              </label>
+              <label class="block text-xs font-medium text-neutral-800">
+                Source
+                <input
+                  v-model="evidenceForms[s.id].source"
+                  type="text"
+                  placeholder="Where did the evidence come from? (Person, doc, link description)"
+                  class="mt-1 w-full rounded border border-neutral-300 p-2 text-sm"
+                />
+              </label>
+              <div class="grid gap-2 sm:grid-cols-2">
+                <label class="block text-xs font-medium text-neutral-800">
+                  Assumption (optional)
+                  <textarea
+                    v-model="evidenceForms[s.id].assumption"
+                    rows="2"
+                    placeholder="What are we estimating or taking on faith?"
+                    class="mt-1 w-full rounded border border-neutral-300 p-2 text-sm"
+                  />
+                </label>
+                <label class="block text-xs font-medium text-neutral-800">
+                  Calculation (optional)
+                  <textarea
+                    v-model="evidenceForms[s.id].calculation"
+                    rows="2"
+                    placeholder="How did we get the number?"
+                    class="mt-1 w-full rounded border border-neutral-300 p-2 text-sm"
+                  />
+                </label>
+              </div>
+              <div class="grid gap-2 sm:grid-cols-3">
+                <label class="block text-xs font-medium text-neutral-800">
+                  Confidence (optional)
+                  <select
+                    v-model="evidenceForms[s.id].confidence"
+                    class="mt-1 w-full rounded border border-neutral-300 p-2 text-sm"
+                  >
+                    <option :value="undefined">— Not set —</option>
+                    <option v-for="c in CONFIDENCE_OPTIONS" :key="c" :value="c">{{ c }}</option>
+                  </select>
+                </label>
+                <label class="block text-xs font-medium text-neutral-800 sm:col-span-2">
+                  Risk (optional)
+                  <input
+                    v-model="evidenceForms[s.id].risk"
+                    type="text"
+                    placeholder="What could make this wrong?"
+                    class="mt-1 w-full rounded border border-neutral-300 p-2 text-sm"
+                  />
+                </label>
+              </div>
+              <label class="block text-xs font-medium text-neutral-800">
+                Next validation step (optional)
+                <input
+                  v-model="evidenceForms[s.id].nextValidation"
+                  type="text"
+                  placeholder="What do we need to test or check next?"
+                  class="mt-1 w-full rounded border border-neutral-300 p-2 text-sm"
+                />
+              </label>
+              <label
+                v-if="studio.requirements.length"
+                class="block text-xs font-medium text-neutral-800"
+              >
+                Linked requirement (optional)
+                <select
+                  v-model="evidenceForms[s.id].requirementId"
+                  class="mt-1 w-full rounded border border-neutral-300 p-2 text-sm"
+                >
+                  <option :value="null">— None —</option>
+                  <option
+                    v-for="r in studio.requirements"
+                    :key="r.id"
+                    :value="r.id"
+                  >{{ r.label }}</option>
+                </select>
+              </label>
+              <p v-if="evidenceErrors[s.id]" class="text-xs text-rose-600">
+                {{ evidenceErrors[s.id] }}
+              </p>
+              <div class="flex flex-wrap items-center justify-end gap-2">
+                <button
+                  class="text-xs text-neutral-600 hover:underline"
+                  :disabled="evidenceBusyId === s.id"
+                  @click="cancelEvidenceForm(s.id)"
+                >Cancel</button>
+                <button
+                  class="btn-primary text-xs"
+                  :disabled="evidenceBusyId === s.id"
+                  @click="submitEvidence(s)"
+                >
+                  {{
+                    evidenceBusyId === s.id
+                      ? 'Saving…'
+                      : evidenceEditing[s.id]
+                        ? 'Save changes'
+                        : 'Add entry'
+                  }}
+                </button>
+              </div>
+            </div>
+          </div>
+        </section>
       </li>
     </ol>
 
@@ -673,6 +1070,43 @@ watch(
               </span>
             </li>
           </ul>
+          <!-- Structured evidence roll-up under the section's final text. -->
+          <div
+            v-if="(persistedSection(s)?.structuredEvidence?.length ?? 0) > 0"
+            class="mt-2 space-y-1.5"
+          >
+            <p class="text-xs font-medium uppercase tracking-wide text-neutral-500">
+              Evidence
+            </p>
+            <ul class="space-y-1.5 text-xs">
+              <li
+                v-for="entry in persistedSection(s)!.structuredEvidence"
+                :key="`preview-evidence-${entry.id}`"
+                class="rounded border border-neutral-200 bg-neutral-50 p-2"
+              >
+                <div class="flex flex-wrap items-baseline justify-between gap-2">
+                  <p class="font-medium text-neutral-900">{{ entry.claim }}</p>
+                  <span
+                    v-if="entry.confidence"
+                    class="rounded-full border px-1.5 py-0.5 text-[10px] uppercase tracking-wide"
+                    :class="confidenceTone(entry.confidence)"
+                  >{{ entry.confidence }}</span>
+                </div>
+                <p class="text-neutral-700">
+                  <span class="font-medium text-neutral-600">Evidence:</span> {{ entry.evidence }}
+                </p>
+                <p class="text-neutral-700">
+                  <span class="font-medium text-neutral-600">Source:</span> {{ entry.source }}
+                </p>
+                <p v-if="entry.risk" class="text-neutral-700">
+                  <span class="font-medium text-neutral-600">Risk:</span> {{ entry.risk }}
+                </p>
+                <p v-if="entry.nextValidation" class="text-neutral-700">
+                  <span class="font-medium text-neutral-600">Next validation:</span> {{ entry.nextValidation }}
+                </p>
+              </li>
+            </ul>
+          </div>
         </li>
       </ol>
     </section>

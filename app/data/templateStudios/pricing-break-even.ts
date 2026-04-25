@@ -89,6 +89,12 @@ export const pricingBreakEven: TemplateStudio = {
       completionCriteria: [
         'Three scenarios are listed with traceable assumptions.',
         'Plan-of-record scenario is named.'
+      ],
+      evidencePrompt:
+        'Each scenario should have a structured evidence entry: claim (the revenue number), source (foot-traffic estimate, conversion rate), assumption, calculation, confidence, and risk.',
+      sourceGuidance: [
+        'Foot-traffic and conversion-rate assumptions should come from CSGO/CMO with CFO signoff — log who provided the number.',
+        'If the number is an estimate, mark confidence and name what would tighten it.'
       ]
     },
     {
@@ -110,6 +116,12 @@ export const pricingBreakEven: TemplateStudio = {
       completionCriteria: [
         'Donation scenarios are written with clear assumptions.',
         'Recording rule keeps donations and product sales separate.'
+      ],
+      evidencePrompt:
+        'Log donor-count and average-gift assumptions as structured evidence — even if both are pure estimates, label them so the post-event recap can compare to actuals.',
+      sourceGuidance: [
+        'Cite past pop-up donation totals if available; otherwise label the entry as an estimate.',
+        'Donations and product revenue belong in separate evidence entries.'
       ]
     },
     {
@@ -291,11 +303,11 @@ export const pricingBreakEven: TemplateStudio = {
     },
     {
       title: 'Estimate foot traffic and conversion rate',
-      department: 'finance',
-      ownerRole: 'member',
+      department: 'strategy-growth',
+      ownerRole: 'csgo',
       requirementId: 'pricing-conversion-assumption',
       definitionOfDone:
-        'Foot-traffic assumption written, conversion rate cited, total matches planned quantities.',
+        'CSGO/CMO source the foot-traffic and conversion-rate assumptions, document evidence, and route to CFO for signoff before the model is locked.',
       dueOffsetDays: 6
     },
     {

@@ -41,6 +41,12 @@ export const strategyNextSemester: TemplateStudio = {
       completionCriteria: [
         'Three to five customer/sales insights are written and tied to evidence.',
         'Implications for next semester are spelled out.'
+      ],
+      evidencePrompt:
+        'Each insight should be a structured evidence entry — claim, evidence, source (/revenue, customer feedback, observation), confidence, risk, next validation.',
+      sourceGuidance: [
+        'Pull numbers from /revenue and the post-event recap; do not invent figures.',
+        'If an insight is one cohort\'s opinion, label it as such with confidence.'
       ]
     },
     {

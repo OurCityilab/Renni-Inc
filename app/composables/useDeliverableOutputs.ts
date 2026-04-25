@@ -19,7 +19,9 @@ import type {
   DeliverableOutput,
   DeliverableOutputSection,
   DeliverableOutputSectionStatus,
-  EvidenceLinkType
+  EvidenceConfidence,
+  EvidenceLinkType,
+  StructuredEvidenceEntry
 } from '~/types/models'
 import type { TemplateStudio } from '~/types/templateStudio'
 
@@ -48,6 +50,26 @@ export interface NewEvidenceLinkInput {
   type: EvidenceLinkType
   requirementId?: string | null
 }
+
+// Structured Evidence Standard V1 — caller supplies the claim/evidence
+// fields; composable assigns id and audit fields. Optional fields stay
+// optional so a student can save a partially-filled entry and finish it
+// later without a hard schema gate.
+export interface NewStructuredEvidenceInput {
+  claim: string
+  evidence: string
+  source: string
+  assumption?: string
+  calculation?: string
+  confidence?: EvidenceConfidence
+  risk?: string
+  nextValidation?: string
+  requirementId?: string | null
+}
+
+// Patch shape for updating a structured evidence entry. Only the fields
+// the caller passes are written; everything else is preserved.
+export type StructuredEvidencePatch = Partial<NewStructuredEvidenceInput>
 
 function genId(): string {
   // crypto.randomUUID is available on App Hosting's Node runtime and in
@@ -231,11 +253,124 @@ export function useDeliverableOutputs() {
     })
   }
 
+  // --- structured evidence (Evidence Standard V1) ---
+  // The same array-replacement pattern evidenceLinks uses: caller passes
+  // the current array, we append/patch/filter and write the whole list
+  // back. Avoids arrayUnion's stale-merge risk.
+  async function addStructuredEvidence(
+    deliverableId: string,
+    sectionId: string,
+    currentEvidence: StructuredEvidenceEntry[],
+    input: NewStructuredEvidenceInput,
+    actor: DeliverableOutputActor
+  ): Promise<StructuredEvidenceEntry> {
+    const now = new Date().toISOString()
+    const entry: StructuredEvidenceEntry = {
+      id: genId(),
+      claim: input.claim.trim(),
+      evidence: input.evidence.trim(),
+      source: input.source.trim(),
+      assumption: input.assumption?.trim() || undefined,
+      calculation: input.calculation?.trim() || undefined,
+      confidence: input.confidence,
+      risk: input.risk?.trim() || undefined,
+      nextValidation: input.nextValidation?.trim() || undefined,
+      requirementId: input.requirementId ?? null,
+      addedByUid: actor.uid,
+      addedByEmail: actor.email,
+      addedAt: now,
+      updatedAt: now
+    }
+    const next = [...currentEvidence, entry]
+    const r = ref_(deliverableId)
+    await updateDoc(r, {
+      [`sections.${sectionId}.structuredEvidence`]: next,
+      [`sections.${sectionId}.updatedAt`]: now,
+      [`sections.${sectionId}.updatedByUid`]: actor.uid,
+      [`sections.${sectionId}.updatedByEmail`]: actor.email,
+      updatedAt: now,
+      updatedByUid: actor.uid,
+      updatedByEmail: actor.email
+    })
+    return entry
+  }
+
+  async function updateStructuredEvidence(
+    deliverableId: string,
+    sectionId: string,
+    currentEvidence: StructuredEvidenceEntry[],
+    entryId: string,
+    patch: StructuredEvidencePatch,
+    actor: DeliverableOutputActor
+  ): Promise<void> {
+    const now = new Date().toISOString()
+    const next = currentEvidence.map((e) => {
+      if (e.id !== entryId) return e
+      return {
+        ...e,
+        ...(patch.claim !== undefined && { claim: patch.claim.trim() }),
+        ...(patch.evidence !== undefined && { evidence: patch.evidence.trim() }),
+        ...(patch.source !== undefined && { source: patch.source.trim() }),
+        ...(patch.assumption !== undefined && {
+          assumption: patch.assumption.trim() || undefined
+        }),
+        ...(patch.calculation !== undefined && {
+          calculation: patch.calculation.trim() || undefined
+        }),
+        ...(patch.confidence !== undefined && { confidence: patch.confidence }),
+        ...(patch.risk !== undefined && {
+          risk: patch.risk.trim() || undefined
+        }),
+        ...(patch.nextValidation !== undefined && {
+          nextValidation: patch.nextValidation.trim() || undefined
+        }),
+        ...(patch.requirementId !== undefined && {
+          requirementId: patch.requirementId
+        }),
+        updatedAt: now
+      }
+    })
+    const r = ref_(deliverableId)
+    await updateDoc(r, {
+      [`sections.${sectionId}.structuredEvidence`]: next,
+      [`sections.${sectionId}.updatedAt`]: now,
+      [`sections.${sectionId}.updatedByUid`]: actor.uid,
+      [`sections.${sectionId}.updatedByEmail`]: actor.email,
+      updatedAt: now,
+      updatedByUid: actor.uid,
+      updatedByEmail: actor.email
+    })
+  }
+
+  async function removeStructuredEvidence(
+    deliverableId: string,
+    sectionId: string,
+    currentEvidence: StructuredEvidenceEntry[],
+    entryId: string,
+    actor: DeliverableOutputActor
+  ): Promise<void> {
+    const next = currentEvidence.filter((e) => e.id !== entryId)
+    const r = ref_(deliverableId)
+    const now = new Date().toISOString()
+    await updateDoc(r, {
+      [`sections.${sectionId}.structuredEvidence`]: next,
+      [`sections.${sectionId}.updatedAt`]: now,
+      [`sections.${sectionId}.updatedByUid`]: actor.uid,
+      [`sections.${sectionId}.updatedByEmail`]: actor.email,
+      updatedAt: now,
+      updatedByUid: actor.uid,
+      updatedByEmail: actor.email
+    })
+  }
+
   return {
     watchOutput,
     createOutputIfMissing,
     saveSection,
     addEvidenceLink,
-    removeEvidenceLink
+    removeEvidenceLink,
+    addStructuredEvidence,
+    updateStructuredEvidence,
+    removeStructuredEvidence
   }
 }
