@@ -37,6 +37,48 @@ const auth = useAuthStore()
 const outputs = useDeliverableOutputs()
 const { data: output, loading } = outputs.watchOutput(() => props.deliverable.id)
 
+// --- Chapter 7 → Chapter 8 demand assumption reference (read-only) ---
+// When the workspace is rendering Chapter 8 (Finance and Revenue Model),
+// pull the Chapter 7 (Current Product Line and Pricing) output so we
+// can show the Market Builder demand entries the team already produced.
+// This is a one-way *reference* — Chapter 8 never writes back to
+// Chapter 7, never copies values into local state, and never gates
+// submit on the presence (or absence) of these entries.
+const CH7_DELIVERABLE_ID = 'ch-07-current-product-line-and-pricing'
+const CH8_DELIVERABLE_ID = 'ch-08-finance-and-revenue-model'
+const isChapter8 = computed(
+  () => props.deliverable.id === CH8_DELIVERABLE_ID
+)
+// The watcher returns loading=false / data=null when the id is an
+// empty string, so this stays a no-op listener on every other chapter.
+const { data: ch7Output, loading: ch7Loading } = outputs.watchOutput(() =>
+  isChapter8.value ? CH7_DELIVERABLE_ID : ''
+)
+// Flatten Market Builder entries across every Chapter 7 section so the
+// panel reads as one product list, not a nested section view. Section
+// title comes along so the reference still names where each entry was
+// authored.
+interface Ch7MarketEntryRow {
+  sectionId: string
+  sectionTitle: string
+  entry: MarketBuilderEntry
+}
+const ch7MarketEntries = computed<Ch7MarketEntryRow[]>(() => {
+  if (!ch7Output.value) return []
+  const rows: Ch7MarketEntryRow[] = []
+  for (const section of Object.values(ch7Output.value.sections ?? {})) {
+    if (!section?.marketBuilderEntries?.length) continue
+    for (const entry of section.marketBuilderEntries) {
+      rows.push({
+        sectionId: section.sectionId,
+        sectionTitle: section.sectionTitleSnapshot || section.sectionId,
+        entry
+      })
+    }
+  }
+  return rows
+})
+
 // Editing is only the active path while the deliverable is in
 // draft/needs_revision. in_review and approved render read-only so
 // reviewers see a stable artifact and authors can't quietly mutate
@@ -920,6 +962,91 @@ watch(
         Defendable claims use the structured evidence editor below — claim, source,
         assumption, confidence, risk. Soft signal only; never blocks submit.
       </p>
+    </section>
+
+    <!-- Chapter 7 demand-assumption reference panel.
+         Read-only: never writes back to Chapter 7, never seeds Chapter
+         8 fields, never participates in submit/Playbook readiness.
+         Visible only when this workspace is rendering the Chapter 8
+         deliverable so the cross-chapter listener is a no-op
+         elsewhere. -->
+    <section
+      v-if="isChapter8"
+      class="card space-y-3 border-amber-200 bg-amber-50/40"
+    >
+      <header class="space-y-0.5">
+        <p class="text-xs uppercase tracking-wide text-neutral-500">
+          Cross-chapter reference
+        </p>
+        <h3 class="font-medium text-neutral-900">
+          Demand assumptions from Chapter 7
+        </h3>
+        <p class="text-xs text-neutral-600">
+          Use these Chapter 7 demand assumptions when writing Chapter 8
+          revenue scenarios. Do not treat estimates as facts. Name the
+          assumption and confidence level.
+        </p>
+      </header>
+      <p v-if="ch7Loading" class="text-xs text-neutral-500">
+        Loading Chapter 7 demand assumptions…
+      </p>
+      <p
+        v-else-if="ch7MarketEntries.length === 0"
+        class="text-xs italic text-neutral-500"
+      >
+        No Chapter 7 demand estimates have been saved yet.
+      </p>
+      <ul v-else class="space-y-2">
+        <li
+          v-for="row in ch7MarketEntries"
+          :key="`ch7-market-${row.sectionId}-${row.entry.id}`"
+          class="rounded-md border border-neutral-200 bg-white p-2 text-sm"
+        >
+          <div class="flex flex-wrap items-baseline justify-between gap-2">
+            <p class="font-medium text-neutral-900">{{ row.entry.productName }}</p>
+            <span
+              v-if="row.entry.confidence"
+              class="rounded-full border px-2 py-0.5 text-xs uppercase tracking-wide"
+              :class="confidenceTone(row.entry.confidence)"
+            >{{ row.entry.confidence }} confidence</span>
+          </div>
+          <p class="text-xs text-neutral-500">
+            From Chapter 7 · {{ row.sectionTitle }}
+          </p>
+          <dl class="mt-1 space-y-0.5 text-xs text-neutral-700">
+            <div v-if="row.entry.primaryMarket">
+              <dt class="inline font-medium text-neutral-600">Primary market:</dt> {{ row.entry.primaryMarket }}
+            </div>
+          </dl>
+          <ul
+            v-if="(row.entry.scenarios?.length ?? 0) > 0"
+            class="mt-1 space-y-0.5 text-xs text-neutral-700"
+          >
+            <li
+              v-for="scn in row.entry.scenarios"
+              :key="`ch7-scn-${row.entry.id}-${scn.id}`"
+            >
+              <span class="font-medium text-neutral-600">
+                {{ SCENARIO_LABEL_COPY[scn.label] }}:
+              </span>
+              {{ fmtNumber(deriveBuyers(scn)) }} buyers ·
+              {{ fmtCurrency(deriveRevenue(scn)) }} revenue
+            </li>
+          </ul>
+          <p v-if="row.entry.strongestEvidence" class="mt-1 text-xs text-neutral-700">
+            <span class="font-medium text-neutral-600">Strongest evidence:</span>
+            {{ row.entry.strongestEvidence }}
+          </p>
+          <p v-if="row.entry.weakestAssumption" class="text-xs text-neutral-700">
+            <span class="font-medium text-neutral-600">Weakest assumption:</span>
+            {{ row.entry.weakestAssumption }}
+          </p>
+          <p v-if="row.entry.nextValidation" class="text-xs text-neutral-700">
+            <span class="font-medium text-neutral-600">Next validation:</span>
+            {{ row.entry.nextValidation }}
+          </p>
+        </li>
+      </ul>
     </section>
 
     <p v-if="loading" class="text-sm text-neutral-500">Loading workspace…</p>
