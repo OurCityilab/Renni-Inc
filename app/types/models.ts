@@ -330,6 +330,54 @@ export interface StructuredEvidenceEntry {
   updatedAt?: IsoTimestamp | null
 }
 
+// Market Builder V1 — optional, additive demand-estimation block per
+// section. Students name a likely buyer, size the reachable market,
+// log assumptions, and produce conservative / base / ambitious revenue
+// scenarios. Soft signal only: it informs the Playbook narrative and
+// the Phoenix Nest pitch but never gates submit or approval.
+export type MarketScenarioLevel = 'conservative' | 'base' | 'ambitious'
+
+export interface MarketBuilderScenario {
+  id: string
+  label: MarketScenarioLevel
+  reachableAudience: number | null
+  interestRatePercent: number | null
+  conversionRatePercent: number | null
+  // estimatedBuyers and estimatedRevenue are persisted alongside the
+  // inputs so Firestore reads stay self-contained, but the UI always
+  // re-derives them from the inputs so a stale snapshot can't quietly
+  // present a wrong number.
+  estimatedBuyers: number | null
+  price: number | null
+  estimatedRevenue: number | null
+  notes?: string
+}
+
+export interface MarketBuilderEntry {
+  id: string
+  productName: string
+  productStory?: string
+  primaryMarket?: string
+  secondaryMarket?: string
+  targetAgeRange?: string
+  customerAssumption?: string
+  valueBasedFactor?: string
+  schoolMarketSize?: number | null
+  broaderMarketSize?: number | null
+  evidenceSource?: string
+  sourceType?: string
+  confidence?: EvidenceConfidence
+  weakestAssumption?: string
+  strongestEvidence?: string
+  nextValidation?: string
+  scenarios: MarketBuilderScenario[]
+  linkedRequirementId?: string | null
+  addedByUid?: string | null
+  addedByEmail?: string | null
+  addedAt?: IsoTimestamp | null
+  updatedAt?: IsoTimestamp | null
+}
+
 export interface DeliverableOutputSection {
   sectionId: string
   sectionTitleSnapshot: string
@@ -340,6 +388,9 @@ export interface DeliverableOutputSection {
   // Optional structured evidence entries that defend the section's
   // claims with source / assumption / confidence / risk metadata.
   structuredEvidence?: StructuredEvidenceEntry[]
+  // Optional Market Builder entries — demand estimates with scenarios.
+  // Old output docs without this field render fine; we never migrate.
+  marketBuilderEntries?: MarketBuilderEntry[]
   status?: DeliverableOutputSectionStatus
   updatedAt?: IsoTimestamp | null
   updatedByUid?: string | null

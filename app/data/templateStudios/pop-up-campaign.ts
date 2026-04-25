@@ -31,7 +31,8 @@ export const popUpCampaign: TemplateStudio = {
         'For each customer group, log structured evidence — claim (who they are), source (conversation, observation, survey, labeled assumption), confidence, risk.',
       sourceGuidance: [
         'Quotes from real customer conversations beat paraphrases or invented personas.',
-        'If this is an estimate, mark confidence low / medium / high and name what would tighten it.'
+        'If this is an estimate, mark confidence low / medium / high and name what would tighten it.',
+        'For each customer group, use the Market Builder block to size the reachable school audience and the broader Detroit-adjacent audience — keep school and broader as separate numbers.'
       ]
     },
     {

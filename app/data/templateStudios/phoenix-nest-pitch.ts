@@ -44,7 +44,8 @@ export const phoenixNestPitch: TemplateStudio = {
         'Every pitch number deserves a structured evidence entry — claim, evidence, source (/revenue, /pricing, customer quote), confidence, risk.',
       sourceGuidance: [
         'If a number is from /revenue or /pricing, name it explicitly so the buyer can verify.',
-        'Customer quotes belong as their own evidence entries with the customer source identified.'
+        'Customer quotes belong as their own evidence entries with the customer source identified.',
+        'Use the Market Builder block to project carry-volume scenarios — conservative, base, and ambitious buyer counts at the proposed wholesale price. Buyers respond better to a defended range than to a single number.'
       ]
     },
     {

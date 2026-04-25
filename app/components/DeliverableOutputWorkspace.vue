@@ -4,6 +4,7 @@ import { useAuthStore } from '~/stores/auth'
 import {
   useDeliverableOutputs,
   type NewEvidenceLinkInput,
+  type NewMarketBuilderInput,
   type NewStructuredEvidenceInput,
   type SectionSavePayload
 } from '~/composables/useDeliverableOutputs'
@@ -15,6 +16,9 @@ import type {
   DeliverableOutputSectionStatus,
   EvidenceConfidence,
   EvidenceLinkType,
+  MarketBuilderEntry,
+  MarketBuilderScenario,
+  MarketScenarioLevel,
   StructuredEvidenceEntry
 } from '~/types/models'
 import type {
@@ -306,6 +310,7 @@ const readiness = computed(() => {
   let withEvidence = 0
   let withStructuredEvidence = 0
   let totalStructuredEvidence = 0
+  let totalMarketBuilder = 0
   let missingFinal = 0
   for (const s of sections) {
     const p = persistedSection(s)
@@ -317,6 +322,7 @@ const readiness = computed(() => {
     const seCount = p?.structuredEvidence?.length ?? 0
     if (seCount > 0) withStructuredEvidence += 1
     totalStructuredEvidence += seCount
+    totalMarketBuilder += p?.marketBuilderEntries?.length ?? 0
   }
   return {
     total: sections.length,
@@ -326,6 +332,7 @@ const readiness = computed(() => {
     withEvidence,
     withStructuredEvidence,
     totalStructuredEvidence,
+    totalMarketBuilder,
     missingFinal
   }
 })
@@ -493,6 +500,300 @@ function fmtWhen(iso?: string | null): string {
       })
 }
 
+// --- market builder state (Market Builder V1) ---
+// Per-section form buffer + editing-entry id. Same edit/cancel pattern
+// as structured evidence so the two blocks behave the same.
+const SCENARIO_LABELS: MarketScenarioLevel[] = [
+  'conservative',
+  'base',
+  'ambitious'
+]
+const SCENARIO_LABEL_COPY: Record<MarketScenarioLevel, string> = {
+  conservative: 'Conservative',
+  base: 'Base',
+  ambitious: 'Ambitious'
+}
+
+function blankScenarios(): MarketBuilderScenario[] {
+  return SCENARIO_LABELS.map((label) => ({
+    // Form-buffer ids; the real ids land when the composable persists.
+    id: `mb-scn-${label}`,
+    label,
+    reachableAudience: null,
+    interestRatePercent: null,
+    conversionRatePercent: null,
+    estimatedBuyers: null,
+    price: null,
+    estimatedRevenue: null,
+    notes: undefined
+  }))
+}
+
+function emptyMarketForm(): NewMarketBuilderInput {
+  return {
+    productName: '',
+    productStory: '',
+    primaryMarket: '',
+    secondaryMarket: '',
+    targetAgeRange: '',
+    customerAssumption: '',
+    valueBasedFactor: '',
+    schoolMarketSize: null,
+    broaderMarketSize: null,
+    evidenceSource: '',
+    sourceType: '',
+    confidence: undefined,
+    weakestAssumption: '',
+    strongestEvidence: '',
+    nextValidation: '',
+    scenarios: blankScenarios(),
+    linkedRequirementId: null
+  }
+}
+
+const marketForms = ref<Record<string, NewMarketBuilderInput>>({})
+const marketEditing = ref<Record<string, string | null>>({})
+const marketErrors = ref<Record<string, string>>({})
+const marketBusyId = ref<string | null>(null)
+const marketFormOpen = ref<Record<string, boolean>>({})
+
+function ensureMarketForm(sectionId: string) {
+  if (!marketForms.value[sectionId]) {
+    marketForms.value[sectionId] = emptyMarketForm()
+  }
+  if (marketEditing.value[sectionId] === undefined) {
+    marketEditing.value[sectionId] = null
+  }
+}
+
+function startNewMarket(sectionId: string) {
+  marketForms.value[sectionId] = emptyMarketForm()
+  marketEditing.value[sectionId] = null
+  marketErrors.value[sectionId] = ''
+  marketFormOpen.value[sectionId] = true
+}
+
+function startEditMarket(sectionId: string, entry: MarketBuilderEntry) {
+  // Clone scenarios into the form buffer so edits don't mutate the
+  // persisted snapshot directly. Pre-seed any missing rows so the
+  // editor always renders all three levels even if a legacy entry
+  // saved fewer rows.
+  const byLabel = new Map<MarketScenarioLevel, MarketBuilderScenario>()
+  for (const s of entry.scenarios ?? []) byLabel.set(s.label, s)
+  const scenarios: MarketBuilderScenario[] = SCENARIO_LABELS.map((label) => {
+    const existing = byLabel.get(label)
+    return existing
+      ? { ...existing }
+      : {
+          id: `mb-scn-${label}`,
+          label,
+          reachableAudience: null,
+          interestRatePercent: null,
+          conversionRatePercent: null,
+          estimatedBuyers: null,
+          price: null,
+          estimatedRevenue: null,
+          notes: undefined
+        }
+  })
+  marketForms.value[sectionId] = {
+    productName: entry.productName,
+    productStory: entry.productStory ?? '',
+    primaryMarket: entry.primaryMarket ?? '',
+    secondaryMarket: entry.secondaryMarket ?? '',
+    targetAgeRange: entry.targetAgeRange ?? '',
+    customerAssumption: entry.customerAssumption ?? '',
+    valueBasedFactor: entry.valueBasedFactor ?? '',
+    schoolMarketSize: entry.schoolMarketSize ?? null,
+    broaderMarketSize: entry.broaderMarketSize ?? null,
+    evidenceSource: entry.evidenceSource ?? '',
+    sourceType: entry.sourceType ?? '',
+    confidence: entry.confidence,
+    weakestAssumption: entry.weakestAssumption ?? '',
+    strongestEvidence: entry.strongestEvidence ?? '',
+    nextValidation: entry.nextValidation ?? '',
+    scenarios,
+    linkedRequirementId: entry.linkedRequirementId ?? null
+  }
+  marketEditing.value[sectionId] = entry.id
+  marketErrors.value[sectionId] = ''
+  marketFormOpen.value[sectionId] = true
+}
+
+function cancelMarketForm(sectionId: string) {
+  marketForms.value[sectionId] = emptyMarketForm()
+  marketEditing.value[sectionId] = null
+  marketErrors.value[sectionId] = ''
+  marketFormOpen.value[sectionId] = false
+}
+
+// Calculation helpers — also exported into the template so the visible
+// math matches what gets persisted. Conservative arithmetic, no
+// surprises: percent is treated as 0–100, buyers are rounded, anything
+// missing reads as null and the cell shows "—".
+function deriveBuyers(s: MarketBuilderScenario): number | null {
+  const audience = s.reachableAudience
+  const interest = s.interestRatePercent
+  const conversion = s.conversionRatePercent
+  if (audience == null || interest == null || conversion == null) return null
+  if (
+    !Number.isFinite(audience) ||
+    !Number.isFinite(interest) ||
+    !Number.isFinite(conversion)
+  ) {
+    return null
+  }
+  const raw = audience * (interest / 100) * (conversion / 100)
+  if (!Number.isFinite(raw)) return null
+  return Math.max(0, Math.round(raw))
+}
+
+function deriveRevenue(s: MarketBuilderScenario): number | null {
+  const buyers = deriveBuyers(s)
+  const price = s.price
+  if (buyers == null || price == null) return null
+  if (!Number.isFinite(price)) return null
+  const raw = buyers * price
+  if (!Number.isFinite(raw)) return null
+  // Round to whole dollars in Playbook copy; cents would be misleading
+  // for forecasts that depend on student-entered percentages.
+  return Math.round(raw)
+}
+
+function fmtNumber(n: number | null | undefined): string {
+  if (n == null || !Number.isFinite(n)) return '—'
+  return n.toLocaleString()
+}
+
+function fmtCurrency(n: number | null | undefined): string {
+  if (n == null || !Number.isFinite(n)) return '—'
+  return `$${n.toLocaleString()}`
+}
+
+function recomputeFormScenarios(sectionId: string) {
+  const f = marketForms.value[sectionId]
+  if (!f?.scenarios) return
+  for (const s of f.scenarios) {
+    s.estimatedBuyers = deriveBuyers(s)
+    s.estimatedRevenue = deriveRevenue(s)
+  }
+}
+
+// Numeric inputs come back as either '' (empty) or a string. Coerce
+// explicitly so blank fields stay null instead of NaN.
+function setMarketNumber(
+  sectionId: string,
+  key: 'schoolMarketSize' | 'broaderMarketSize',
+  raw: string
+) {
+  const f = marketForms.value[sectionId]
+  if (!f) return
+  if (raw === '' || raw == null) {
+    f[key] = null
+    return
+  }
+  const n = Number(raw)
+  f[key] = Number.isFinite(n) ? n : null
+}
+
+function setScenarioNumber(
+  sectionId: string,
+  scenarioIndex: number,
+  key: 'reachableAudience' | 'interestRatePercent' | 'conversionRatePercent' | 'price',
+  raw: string
+) {
+  const f = marketForms.value[sectionId]
+  if (!f?.scenarios?.[scenarioIndex]) return
+  if (raw === '' || raw == null) {
+    f.scenarios[scenarioIndex][key] = null
+  } else {
+    const n = Number(raw)
+    f.scenarios[scenarioIndex][key] = Number.isFinite(n) ? n : null
+  }
+  recomputeFormScenarios(sectionId)
+}
+
+function marketFormValid(form: NewMarketBuilderInput): string | null {
+  if (!form.productName.trim()) return 'Product name is required.'
+  return null
+}
+
+async function submitMarket(s: TemplateStudioSection) {
+  if (!editingEnabled.value) return
+  if (!auth.user || !auth.profile) return
+  ensureMarketForm(s.id)
+  const form = marketForms.value[s.id]
+  const err = marketFormValid(form)
+  if (err) {
+    marketErrors.value[s.id] = err
+    return
+  }
+  // Recompute one more time so the persisted scenarios match the
+  // numbers the student saw when they hit save.
+  recomputeFormScenarios(s.id)
+  marketErrors.value[s.id] = ''
+  marketBusyId.value = s.id
+  try {
+    const persisted = persistedSection(s)
+    const current = persisted?.marketBuilderEntries ?? []
+    const editingId = marketEditing.value[s.id]
+    const actor = {
+      uid: auth.user.uid,
+      email: auth.profile.email || auth.user.email || ''
+    }
+    if (editingId) {
+      await outputs.updateMarketBuilderEntry(
+        props.deliverable.id,
+        s.id,
+        current,
+        editingId,
+        form,
+        actor
+      )
+    } else {
+      await outputs.addMarketBuilderEntry(
+        props.deliverable.id,
+        s.id,
+        current,
+        form,
+        actor
+      )
+    }
+    cancelMarketForm(s.id)
+  } catch (e) {
+    marketErrors.value[s.id] = e instanceof Error ? e.message : String(e)
+  } finally {
+    marketBusyId.value = null
+  }
+}
+
+async function removeMarketEntry(s: TemplateStudioSection, entryId: string) {
+  if (!editingEnabled.value) return
+  if (!auth.user || !auth.profile) return
+  marketBusyId.value = s.id
+  try {
+    const persisted = persistedSection(s)
+    const current = persisted?.marketBuilderEntries ?? []
+    await outputs.removeMarketBuilderEntry(
+      props.deliverable.id,
+      s.id,
+      current,
+      entryId,
+      {
+        uid: auth.user.uid,
+        email: auth.profile.email || auth.user.email || ''
+      }
+    )
+    if (marketEditing.value[s.id] === entryId) {
+      cancelMarketForm(s.id)
+    }
+  } catch (e) {
+    marketErrors.value[s.id] = e instanceof Error ? e.message : String(e)
+  } finally {
+    marketBusyId.value = null
+  }
+}
+
 // Make sure each section has a draft + link form + evidence form
 // initialized so the template can bind v-model into them safely on
 // first render.
@@ -503,6 +804,7 @@ watch(
       ensureDraft(s)
       ensureLinkForm(s)
       ensureEvidenceForm(s.id)
+      ensureMarketForm(s.id)
     }
   },
   { immediate: true }
@@ -566,12 +868,13 @@ watch(
       <p v-else class="mt-1 text-xs text-emerald-700">
         Every section has final Playbook text. Nice.
       </p>
-      <dl class="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-neutral-600 sm:grid-cols-5">
+      <dl class="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-neutral-600 sm:grid-cols-6">
         <div><dt class="inline">Source notes</dt><dd class="inline"> · {{ readiness.withSourceNotes }}/{{ readiness.total }}</dd></div>
         <div><dt class="inline">Draft text</dt><dd class="inline"> · {{ readiness.withDraft }}/{{ readiness.total }}</dd></div>
         <div><dt class="inline">Final text</dt><dd class="inline"> · {{ readiness.withFinal }}/{{ readiness.total }}</dd></div>
         <div><dt class="inline">Links</dt><dd class="inline"> · {{ readiness.withEvidence }}/{{ readiness.total }}</dd></div>
         <div><dt class="inline">Evidence entries</dt><dd class="inline"> · {{ readiness.totalStructuredEvidence }}</dd></div>
+        <div><dt class="inline">Demand entries</dt><dd class="inline"> · {{ readiness.totalMarketBuilder }}</dd></div>
       </dl>
       <p class="mt-1 text-xs text-neutral-500">
         Defendable claims use the structured evidence editor below — claim, source,
@@ -1020,6 +1323,458 @@ watch(
             </div>
           </div>
         </section>
+
+        <!-- Market Builder V1 — demand estimate per section.
+             Soft signal only: students name the likely buyer, size the
+             reachable market, log assumptions, and produce conservative
+             / base / ambitious revenue scenarios. Never gates submit.
+             Numbers re-derive from inputs in real time so the visible
+             math always matches what gets persisted. -->
+        <section class="space-y-2 rounded-md border border-amber-200 bg-amber-50/40 p-2">
+          <header class="flex flex-wrap items-baseline justify-between gap-2">
+            <div>
+              <h4 class="text-xs font-medium text-neutral-800">Market Builder</h4>
+              <p class="text-xs text-neutral-600">
+                Quantify the demand assumption for this section. Name the likely
+                buyer, size the reachable market, and project conservative, base,
+                and ambitious scenarios. Estimates only — do not present them as facts.
+              </p>
+            </div>
+            <span class="text-xs text-neutral-500">
+              Demand entries: {{ persistedSection(s)?.marketBuilderEntries?.length ?? 0 }}
+            </span>
+          </header>
+
+          <p
+            v-if="(persistedSection(s)?.marketBuilderEntries?.length ?? 0) === 0"
+            class="text-xs text-neutral-500"
+          >
+            No demand estimates yet. Add one for any product or audience claim
+            in this section.
+          </p>
+
+          <ul
+            v-if="persistedSection(s) && (persistedSection(s)!.marketBuilderEntries?.length ?? 0) > 0"
+            class="space-y-2"
+          >
+            <li
+              v-for="entry in persistedSection(s)!.marketBuilderEntries"
+              :key="entry.id"
+              class="rounded-md border border-neutral-200 bg-white p-2 text-sm"
+            >
+              <div class="flex flex-wrap items-baseline justify-between gap-2">
+                <p class="font-medium text-neutral-900">{{ entry.productName }}</p>
+                <span
+                  v-if="entry.confidence"
+                  class="rounded-full border px-2 py-0.5 text-xs uppercase tracking-wide"
+                  :class="confidenceTone(entry.confidence)"
+                >{{ entry.confidence }} confidence</span>
+              </div>
+              <dl class="mt-1 space-y-0.5 text-xs text-neutral-700">
+                <div v-if="entry.primaryMarket">
+                  <dt class="inline font-medium text-neutral-600">Primary market:</dt> {{ entry.primaryMarket }}
+                </div>
+                <div v-if="entry.secondaryMarket">
+                  <dt class="inline font-medium text-neutral-600">Secondary market:</dt> {{ entry.secondaryMarket }}
+                </div>
+                <div v-if="entry.targetAgeRange">
+                  <dt class="inline font-medium text-neutral-600">Target age:</dt> {{ entry.targetAgeRange }}
+                </div>
+                <div v-if="entry.schoolMarketSize != null">
+                  <dt class="inline font-medium text-neutral-600">School market:</dt> {{ fmtNumber(entry.schoolMarketSize) }}
+                </div>
+                <div v-if="entry.broaderMarketSize != null">
+                  <dt class="inline font-medium text-neutral-600">Broader market:</dt> {{ fmtNumber(entry.broaderMarketSize) }}
+                </div>
+                <div v-if="entry.customerAssumption">
+                  <dt class="inline font-medium text-neutral-600">Customer assumption:</dt> {{ entry.customerAssumption }}
+                </div>
+                <div v-if="entry.valueBasedFactor">
+                  <dt class="inline font-medium text-neutral-600">Value-based factor:</dt> {{ entry.valueBasedFactor }}
+                </div>
+                <div v-if="entry.evidenceSource">
+                  <dt class="inline font-medium text-neutral-600">Evidence / source:</dt> {{ entry.evidenceSource }}
+                  <span v-if="entry.sourceType"> · {{ entry.sourceType }}</span>
+                </div>
+                <div v-if="entry.strongestEvidence">
+                  <dt class="inline font-medium text-neutral-600">Strongest evidence:</dt> {{ entry.strongestEvidence }}
+                </div>
+                <div v-if="entry.weakestAssumption">
+                  <dt class="inline font-medium text-neutral-600">Weakest assumption:</dt> {{ entry.weakestAssumption }}
+                </div>
+                <div v-if="entry.nextValidation">
+                  <dt class="inline font-medium text-neutral-600">Next validation:</dt> {{ entry.nextValidation }}
+                </div>
+                <div v-if="entry.linkedRequirementId">
+                  <dt class="inline font-medium text-neutral-600">Linked requirement:</dt>
+                  {{
+                    studio.requirements.find((r) => r.id === entry.linkedRequirementId)?.label
+                      || entry.linkedRequirementId
+                  }}
+                </div>
+              </dl>
+              <div
+                v-if="(entry.scenarios?.length ?? 0) > 0"
+                class="mt-2 overflow-x-auto"
+              >
+                <table class="min-w-full text-xs">
+                  <thead>
+                    <tr class="text-left text-neutral-500">
+                      <th class="py-1 pr-2 font-medium">Scenario</th>
+                      <th class="py-1 pr-2 font-medium">Audience</th>
+                      <th class="py-1 pr-2 font-medium">Interest %</th>
+                      <th class="py-1 pr-2 font-medium">Conversion %</th>
+                      <th class="py-1 pr-2 font-medium">Buyers</th>
+                      <th class="py-1 pr-2 font-medium">Price</th>
+                      <th class="py-1 pr-2 font-medium">Revenue</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr
+                      v-for="scn in entry.scenarios"
+                      :key="scn.id"
+                      class="align-top"
+                    >
+                      <td class="py-1 pr-2 font-medium text-neutral-800">
+                        {{ SCENARIO_LABEL_COPY[scn.label] }}
+                      </td>
+                      <td class="py-1 pr-2 text-neutral-700">{{ fmtNumber(scn.reachableAudience) }}</td>
+                      <td class="py-1 pr-2 text-neutral-700">
+                        {{ scn.interestRatePercent != null ? `${scn.interestRatePercent}%` : '—' }}
+                      </td>
+                      <td class="py-1 pr-2 text-neutral-700">
+                        {{ scn.conversionRatePercent != null ? `${scn.conversionRatePercent}%` : '—' }}
+                      </td>
+                      <td class="py-1 pr-2 text-neutral-800">{{ fmtNumber(deriveBuyers(scn)) }}</td>
+                      <td class="py-1 pr-2 text-neutral-700">{{ fmtCurrency(scn.price) }}</td>
+                      <td class="py-1 pr-2 font-medium text-neutral-900">{{ fmtCurrency(deriveRevenue(scn)) }}</td>
+                    </tr>
+                  </tbody>
+                </table>
+                <p class="mt-1 text-[11px] text-neutral-500">
+                  Buyers = audience × (interest % ÷ 100) × (conversion % ÷ 100). Revenue = buyers × price.
+                </p>
+              </div>
+              <div v-if="editingEnabled" class="mt-2 flex flex-wrap items-center gap-3 text-xs">
+                <button
+                  class="text-phoenix-700 hover:underline"
+                  @click="startEditMarket(s.id, entry)"
+                >Edit</button>
+                <button
+                  class="text-rose-700 hover:underline"
+                  :disabled="marketBusyId === s.id"
+                  @click="removeMarketEntry(s, entry.id)"
+                >Remove</button>
+                <span
+                  v-if="entry.updatedAt"
+                  class="text-neutral-400"
+                >Last edited {{ fmtWhen(entry.updatedAt) }}</span>
+              </div>
+            </li>
+          </ul>
+
+          <div v-if="editingEnabled" class="space-y-2">
+            <button
+              v-if="!marketFormOpen[s.id]"
+              class="text-xs text-phoenix-700 hover:underline"
+              @click="startNewMarket(s.id)"
+            >+ Add demand estimate</button>
+
+            <div
+              v-if="marketFormOpen[s.id]"
+              class="space-y-2 rounded-md border border-neutral-200 bg-white p-2"
+            >
+              <p class="text-xs font-semibold text-neutral-800">
+                {{ marketEditing[s.id] ? 'Edit demand estimate' : 'New demand estimate' }}
+              </p>
+              <ul class="list-disc space-y-0.5 pl-4 text-xs text-neutral-500">
+                <li>If you use a number, name the source or clearly label the assumption.</li>
+                <li>Use conservative, base, and ambitious scenarios — not a single guess.</li>
+                <li>Explain the weakest assumption before relying on this number.</li>
+                <li>Name the next validation step (survey, preorder, customer interview, pop-up observation).</li>
+              </ul>
+
+              <label class="block text-xs font-medium text-neutral-800">
+                Product
+                <input
+                  v-model="marketForms[s.id].productName"
+                  type="text"
+                  placeholder="House Phoenix beanie, Humble Oven cookies, etc."
+                  class="mt-1 w-full rounded border border-neutral-300 p-2 text-sm"
+                />
+              </label>
+              <label class="block text-xs font-medium text-neutral-800">
+                Product story (optional)
+                <textarea
+                  v-model="marketForms[s.id].productStory"
+                  rows="2"
+                  placeholder="One or two sentences a Phoenix Nest buyer would understand."
+                  class="mt-1 w-full rounded border border-neutral-300 p-2 text-sm"
+                />
+              </label>
+              <div class="grid gap-2 sm:grid-cols-2">
+                <label class="block text-xs font-medium text-neutral-800">
+                  Primary market
+                  <input
+                    v-model="marketForms[s.id].primaryMarket"
+                    type="text"
+                    placeholder="Who is the most likely buyer?"
+                    class="mt-1 w-full rounded border border-neutral-300 p-2 text-sm"
+                  />
+                </label>
+                <label class="block text-xs font-medium text-neutral-800">
+                  Secondary market
+                  <input
+                    v-model="marketForms[s.id].secondaryMarket"
+                    type="text"
+                    placeholder="Who else might buy this?"
+                    class="mt-1 w-full rounded border border-neutral-300 p-2 text-sm"
+                  />
+                </label>
+                <label class="block text-xs font-medium text-neutral-800">
+                  Target age range
+                  <input
+                    v-model="marketForms[s.id].targetAgeRange"
+                    type="text"
+                    placeholder="e.g. 14–18 students, 30–55 parents"
+                    class="mt-1 w-full rounded border border-neutral-300 p-2 text-sm"
+                  />
+                </label>
+                <label class="block text-xs font-medium text-neutral-800">
+                  Value-based factor
+                  <input
+                    v-model="marketForms[s.id].valueBasedFactor"
+                    type="text"
+                    placeholder="What makes this worth the price to them?"
+                    class="mt-1 w-full rounded border border-neutral-300 p-2 text-sm"
+                  />
+                </label>
+                <label class="block text-xs font-medium text-neutral-800">
+                  School market size
+                  <input
+                    :value="marketForms[s.id].schoolMarketSize ?? ''"
+                    type="number"
+                    min="0"
+                    step="1"
+                    placeholder="Reachable inside Renaissance"
+                    class="mt-1 w-full rounded border border-neutral-300 p-2 text-sm"
+                    @input="(event) => setMarketNumber(s.id, 'schoolMarketSize', (event.target as HTMLInputElement).value)"
+                  />
+                </label>
+                <label class="block text-xs font-medium text-neutral-800">
+                  Broader Detroit-adjacent market size
+                  <input
+                    :value="marketForms[s.id].broaderMarketSize ?? ''"
+                    type="number"
+                    min="0"
+                    step="1"
+                    placeholder="Estimated reach beyond Renaissance"
+                    class="mt-1 w-full rounded border border-neutral-300 p-2 text-sm"
+                    @input="(event) => setMarketNumber(s.id, 'broaderMarketSize', (event.target as HTMLInputElement).value)"
+                  />
+                </label>
+              </div>
+              <label class="block text-xs font-medium text-neutral-800">
+                Customer assumption
+                <textarea
+                  v-model="marketForms[s.id].customerAssumption"
+                  rows="2"
+                  placeholder="What are we assuming about who buys and why?"
+                  class="mt-1 w-full rounded border border-neutral-300 p-2 text-sm"
+                />
+              </label>
+              <div class="grid gap-2 sm:grid-cols-2">
+                <label class="block text-xs font-medium text-neutral-800">
+                  Evidence / source
+                  <input
+                    v-model="marketForms[s.id].evidenceSource"
+                    type="text"
+                    placeholder="Where does the demand signal come from?"
+                    class="mt-1 w-full rounded border border-neutral-300 p-2 text-sm"
+                  />
+                </label>
+                <label class="block text-xs font-medium text-neutral-800">
+                  Source type
+                  <input
+                    v-model="marketForms[s.id].sourceType"
+                    type="text"
+                    placeholder="Survey, interview, observation, preorder, comp brand…"
+                    class="mt-1 w-full rounded border border-neutral-300 p-2 text-sm"
+                  />
+                </label>
+                <label class="block text-xs font-medium text-neutral-800">
+                  Confidence
+                  <select
+                    v-model="marketForms[s.id].confidence"
+                    class="mt-1 w-full rounded border border-neutral-300 p-2 text-sm"
+                  >
+                    <option :value="undefined">— Not set —</option>
+                    <option v-for="c in CONFIDENCE_OPTIONS" :key="c" :value="c">{{ c }}</option>
+                  </select>
+                </label>
+                <label class="block text-xs font-medium text-neutral-800">
+                  Strongest evidence
+                  <input
+                    v-model="marketForms[s.id].strongestEvidence"
+                    type="text"
+                    placeholder="The single best proof point we have."
+                    class="mt-1 w-full rounded border border-neutral-300 p-2 text-sm"
+                  />
+                </label>
+              </div>
+              <label class="block text-xs font-medium text-neutral-800">
+                Weakest assumption
+                <textarea
+                  v-model="marketForms[s.id].weakestAssumption"
+                  rows="2"
+                  placeholder="What could most easily make this estimate wrong?"
+                  class="mt-1 w-full rounded border border-neutral-300 p-2 text-sm"
+                />
+              </label>
+              <label class="block text-xs font-medium text-neutral-800">
+                Next validation step
+                <input
+                  v-model="marketForms[s.id].nextValidation"
+                  type="text"
+                  placeholder="e.g. preorder test, intercept survey at the pop-up"
+                  class="mt-1 w-full rounded border border-neutral-300 p-2 text-sm"
+                />
+              </label>
+              <label
+                v-if="studio.requirements.length"
+                class="block text-xs font-medium text-neutral-800"
+              >
+                Linked requirement (optional)
+                <select
+                  v-model="marketForms[s.id].linkedRequirementId"
+                  class="mt-1 w-full rounded border border-neutral-300 p-2 text-sm"
+                >
+                  <option :value="null">— None —</option>
+                  <option
+                    v-for="r in studio.requirements"
+                    :key="r.id"
+                    :value="r.id"
+                  >{{ r.label }}</option>
+                </select>
+              </label>
+
+              <!-- Scenarios -->
+              <div class="space-y-1">
+                <p class="text-xs font-semibold text-neutral-800">
+                  Conservative · Base · Ambitious
+                </p>
+                <p class="text-[11px] text-neutral-500">
+                  Buyers = audience × (interest % ÷ 100) × (conversion % ÷ 100). Revenue = buyers × price.
+                </p>
+                <div class="overflow-x-auto">
+                  <table class="min-w-full text-xs">
+                    <thead>
+                      <tr class="text-left text-neutral-500">
+                        <th class="py-1 pr-2 font-medium">Scenario</th>
+                        <th class="py-1 pr-2 font-medium">Reachable audience</th>
+                        <th class="py-1 pr-2 font-medium">Interest %</th>
+                        <th class="py-1 pr-2 font-medium">Conversion %</th>
+                        <th class="py-1 pr-2 font-medium">Buyers</th>
+                        <th class="py-1 pr-2 font-medium">Price</th>
+                        <th class="py-1 pr-2 font-medium">Revenue</th>
+                        <th class="py-1 pr-2 font-medium">Notes</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr
+                        v-for="(scn, scnIndex) in marketForms[s.id].scenarios"
+                        :key="scn.id"
+                        class="align-top"
+                      >
+                        <td class="py-1 pr-2 font-medium text-neutral-800">
+                          {{ SCENARIO_LABEL_COPY[scn.label] }}
+                        </td>
+                        <td class="py-1 pr-2">
+                          <input
+                            :value="scn.reachableAudience ?? ''"
+                            type="number"
+                            min="0"
+                            step="1"
+                            class="w-24 rounded border border-neutral-300 p-1 text-xs"
+                            @input="(event) => setScenarioNumber(s.id, scnIndex, 'reachableAudience', (event.target as HTMLInputElement).value)"
+                          />
+                        </td>
+                        <td class="py-1 pr-2">
+                          <input
+                            :value="scn.interestRatePercent ?? ''"
+                            type="number"
+                            min="0"
+                            max="100"
+                            step="0.1"
+                            class="w-20 rounded border border-neutral-300 p-1 text-xs"
+                            @input="(event) => setScenarioNumber(s.id, scnIndex, 'interestRatePercent', (event.target as HTMLInputElement).value)"
+                          />
+                        </td>
+                        <td class="py-1 pr-2">
+                          <input
+                            :value="scn.conversionRatePercent ?? ''"
+                            type="number"
+                            min="0"
+                            max="100"
+                            step="0.1"
+                            class="w-20 rounded border border-neutral-300 p-1 text-xs"
+                            @input="(event) => setScenarioNumber(s.id, scnIndex, 'conversionRatePercent', (event.target as HTMLInputElement).value)"
+                          />
+                        </td>
+                        <td class="py-1 pr-2 text-neutral-800">{{ fmtNumber(deriveBuyers(scn)) }}</td>
+                        <td class="py-1 pr-2">
+                          <input
+                            :value="scn.price ?? ''"
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            class="w-20 rounded border border-neutral-300 p-1 text-xs"
+                            @input="(event) => setScenarioNumber(s.id, scnIndex, 'price', (event.target as HTMLInputElement).value)"
+                          />
+                        </td>
+                        <td class="py-1 pr-2 font-medium text-neutral-900">
+                          {{ fmtCurrency(deriveRevenue(scn)) }}
+                        </td>
+                        <td class="py-1 pr-2">
+                          <input
+                            v-model="scn.notes"
+                            type="text"
+                            placeholder="Anything to flag?"
+                            class="w-32 rounded border border-neutral-300 p-1 text-xs"
+                          />
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <p v-if="marketErrors[s.id]" class="text-xs text-rose-600">
+                {{ marketErrors[s.id] }}
+              </p>
+              <div class="flex flex-wrap items-center justify-end gap-2">
+                <button
+                  class="text-xs text-neutral-600 hover:underline"
+                  :disabled="marketBusyId === s.id"
+                  @click="cancelMarketForm(s.id)"
+                >Cancel</button>
+                <button
+                  class="btn-primary text-xs"
+                  :disabled="marketBusyId === s.id"
+                  @click="submitMarket(s)"
+                >
+                  {{
+                    marketBusyId === s.id
+                      ? 'Saving…'
+                      : marketEditing[s.id]
+                        ? 'Save changes'
+                        : 'Add demand estimate'
+                  }}
+                </button>
+              </div>
+            </div>
+          </div>
+        </section>
       </li>
     </ol>
 
@@ -1103,6 +1858,80 @@ watch(
                 </p>
                 <p v-if="entry.nextValidation" class="text-neutral-700">
                   <span class="font-medium text-neutral-600">Next validation:</span> {{ entry.nextValidation }}
+                </p>
+              </li>
+            </ul>
+          </div>
+          <!-- Market Builder roll-up under the section's final text.
+               Compact format: product + target market on top, scenarios
+               on a single row, then strongest evidence / weakest
+               assumption / next validation. Mirrors the Playbook
+               sentence the chapter is meant to produce. -->
+          <div
+            v-if="(persistedSection(s)?.marketBuilderEntries?.length ?? 0) > 0"
+            class="mt-2 space-y-1.5"
+          >
+            <p class="text-xs font-medium uppercase tracking-wide text-neutral-500">
+              Demand estimate
+            </p>
+            <ul class="space-y-1.5 text-xs">
+              <li
+                v-for="entry in persistedSection(s)!.marketBuilderEntries"
+                :key="`preview-market-${entry.id}`"
+                class="rounded border border-neutral-200 bg-neutral-50 p-2"
+              >
+                <div class="flex flex-wrap items-baseline justify-between gap-2">
+                  <p class="font-medium text-neutral-900">{{ entry.productName }}</p>
+                  <span
+                    v-if="entry.confidence"
+                    class="rounded-full border px-1.5 py-0.5 text-[10px] uppercase tracking-wide"
+                    :class="confidenceTone(entry.confidence)"
+                  >{{ entry.confidence }}</span>
+                </div>
+                <p
+                  v-if="entry.primaryMarket || entry.secondaryMarket"
+                  class="text-neutral-700"
+                >
+                  <span class="font-medium text-neutral-600">Likely buyer:</span>
+                  {{ entry.primaryMarket || '—' }}
+                  <span v-if="entry.secondaryMarket"> · also {{ entry.secondaryMarket }}</span>
+                </p>
+                <p
+                  v-if="entry.schoolMarketSize != null || entry.broaderMarketSize != null"
+                  class="text-neutral-700"
+                >
+                  <span class="font-medium text-neutral-600">Market size:</span>
+                  <span v-if="entry.schoolMarketSize != null">school {{ fmtNumber(entry.schoolMarketSize) }}</span>
+                  <span v-if="entry.schoolMarketSize != null && entry.broaderMarketSize != null"> · </span>
+                  <span v-if="entry.broaderMarketSize != null">broader {{ fmtNumber(entry.broaderMarketSize) }}</span>
+                </p>
+                <ul
+                  v-if="(entry.scenarios?.length ?? 0) > 0"
+                  class="mt-1 space-y-0.5"
+                >
+                  <li
+                    v-for="scn in entry.scenarios"
+                    :key="`preview-market-${entry.id}-${scn.id}`"
+                    class="text-neutral-700"
+                  >
+                    <span class="font-medium text-neutral-600">
+                      {{ SCENARIO_LABEL_COPY[scn.label] }}:
+                    </span>
+                    {{ fmtNumber(deriveBuyers(scn)) }} buyers ·
+                    {{ fmtCurrency(deriveRevenue(scn)) }} revenue
+                  </li>
+                </ul>
+                <p v-if="entry.strongestEvidence" class="mt-1 text-neutral-700">
+                  <span class="font-medium text-neutral-600">Strongest evidence:</span>
+                  {{ entry.strongestEvidence }}
+                </p>
+                <p v-if="entry.weakestAssumption" class="text-neutral-700">
+                  <span class="font-medium text-neutral-600">Weakest assumption:</span>
+                  {{ entry.weakestAssumption }}
+                </p>
+                <p v-if="entry.nextValidation" class="text-neutral-700">
+                  <span class="font-medium text-neutral-600">Next validation:</span>
+                  {{ entry.nextValidation }}
                 </p>
               </li>
             </ul>

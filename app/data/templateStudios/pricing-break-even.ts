@@ -94,7 +94,8 @@ export const pricingBreakEven: TemplateStudio = {
         'Each scenario should have a structured evidence entry: claim (the revenue number), source (foot-traffic estimate, conversion rate), assumption, calculation, confidence, and risk.',
       sourceGuidance: [
         'Foot-traffic and conversion-rate assumptions should come from CSGO/CMO with CFO signoff — log who provided the number.',
-        'If the number is an estimate, mark confidence and name what would tighten it.'
+        'If the number is an estimate, mark confidence and name what would tighten it.',
+        'Use the Market Builder block on this section to log audience × interest × conversion for each scenario; the revenue here should reconcile with the Market Builder output.'
       ]
     },
     {

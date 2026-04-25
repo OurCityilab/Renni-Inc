@@ -117,6 +117,9 @@ export const currentProductLine: TemplateStudio = {
       completionCriteria: [
         'Two or three pricing risks are named.',
         'Each risk has a one-line response plan.'
+      ],
+      sourceGuidance: [
+        'If a pricing risk is "demand could be lower than we think", use the Market Builder block to size that scenario explicitly instead of leaving it as a feeling.'
       ]
     },
     {
@@ -132,6 +135,10 @@ export const currentProductLine: TemplateStudio = {
       completionCriteria: [
         'At least one product is recommended for Phoenix Nest carry with a price.',
         'Reasoning is buyer-facing, not internal-only.'
+      ],
+      sourceGuidance: [
+        'For each recommended product, use the Market Builder block to project conservative / base / ambitious buyer counts and revenue at the proposed retail price.',
+        'Name the strongest evidence and the weakest assumption — buyers are more persuaded by an honest range than by a single guess.'
       ]
     }
   ],

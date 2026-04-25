@@ -21,6 +21,9 @@ import type {
   DeliverableOutputSectionStatus,
   EvidenceConfidence,
   EvidenceLinkType,
+  MarketBuilderEntry,
+  MarketBuilderScenario,
+  MarketScenarioLevel,
   StructuredEvidenceEntry
 } from '~/types/models'
 import type { TemplateStudio } from '~/types/templateStudio'
@@ -70,6 +73,33 @@ export interface NewStructuredEvidenceInput {
 // Patch shape for updating a structured evidence entry. Only the fields
 // the caller passes are written; everything else is preserved.
 export type StructuredEvidencePatch = Partial<NewStructuredEvidenceInput>
+
+// Market Builder V1 — caller supplies product / market / assumption
+// fields and (optionally) a starter scenarios array. The composable
+// fills in id / audit fields. Scenarios that the caller doesn't pass
+// are seeded at conservative / base / ambitious so the UI always has
+// the three rows ready to fill in.
+export interface NewMarketBuilderInput {
+  productName: string
+  productStory?: string
+  primaryMarket?: string
+  secondaryMarket?: string
+  targetAgeRange?: string
+  customerAssumption?: string
+  valueBasedFactor?: string
+  schoolMarketSize?: number | null
+  broaderMarketSize?: number | null
+  evidenceSource?: string
+  sourceType?: string
+  confidence?: EvidenceConfidence
+  weakestAssumption?: string
+  strongestEvidence?: string
+  nextValidation?: string
+  scenarios?: MarketBuilderScenario[]
+  linkedRequirementId?: string | null
+}
+
+export type MarketBuilderPatch = Partial<NewMarketBuilderInput>
 
 function genId(): string {
   // crypto.randomUUID is available on App Hosting's Node runtime and in
@@ -367,6 +397,179 @@ export function useDeliverableOutputs() {
     })
   }
 
+  // --- market builder (Market Builder V1) ---
+  // Same array-replacement pattern as evidenceLinks / structuredEvidence:
+  // caller passes the current array, we append / patch / filter and
+  // write the whole list back. Sibling sections and other section fields
+  // (sourceNotes / draftText / finalText / evidenceLinks /
+  // structuredEvidence) are untouched because every write uses dotted
+  // paths into `sections.${sectionId}.marketBuilderEntries`.
+
+  function makeDefaultScenarios(): MarketBuilderScenario[] {
+    const labels: MarketScenarioLevel[] = ['conservative', 'base', 'ambitious']
+    return labels.map((label) => ({
+      id: genId(),
+      label,
+      reachableAudience: null,
+      interestRatePercent: null,
+      conversionRatePercent: null,
+      estimatedBuyers: null,
+      price: null,
+      estimatedRevenue: null,
+      notes: undefined
+    }))
+  }
+
+  async function addMarketBuilderEntry(
+    deliverableId: string,
+    sectionId: string,
+    currentEntries: MarketBuilderEntry[],
+    input: NewMarketBuilderInput,
+    actor: DeliverableOutputActor
+  ): Promise<MarketBuilderEntry> {
+    const now = new Date().toISOString()
+    const entry: MarketBuilderEntry = {
+      id: genId(),
+      productName: input.productName.trim(),
+      productStory: input.productStory?.trim() || undefined,
+      primaryMarket: input.primaryMarket?.trim() || undefined,
+      secondaryMarket: input.secondaryMarket?.trim() || undefined,
+      targetAgeRange: input.targetAgeRange?.trim() || undefined,
+      customerAssumption: input.customerAssumption?.trim() || undefined,
+      valueBasedFactor: input.valueBasedFactor?.trim() || undefined,
+      schoolMarketSize: input.schoolMarketSize ?? null,
+      broaderMarketSize: input.broaderMarketSize ?? null,
+      evidenceSource: input.evidenceSource?.trim() || undefined,
+      sourceType: input.sourceType?.trim() || undefined,
+      confidence: input.confidence,
+      weakestAssumption: input.weakestAssumption?.trim() || undefined,
+      strongestEvidence: input.strongestEvidence?.trim() || undefined,
+      nextValidation: input.nextValidation?.trim() || undefined,
+      scenarios:
+        input.scenarios && input.scenarios.length > 0
+          ? input.scenarios
+          : makeDefaultScenarios(),
+      linkedRequirementId: input.linkedRequirementId ?? null,
+      addedByUid: actor.uid,
+      addedByEmail: actor.email,
+      addedAt: now,
+      updatedAt: now
+    }
+    const next = [...currentEntries, entry]
+    const r = ref_(deliverableId)
+    await updateDoc(r, {
+      [`sections.${sectionId}.marketBuilderEntries`]: next,
+      [`sections.${sectionId}.updatedAt`]: now,
+      [`sections.${sectionId}.updatedByUid`]: actor.uid,
+      [`sections.${sectionId}.updatedByEmail`]: actor.email,
+      updatedAt: now,
+      updatedByUid: actor.uid,
+      updatedByEmail: actor.email
+    })
+    return entry
+  }
+
+  async function updateMarketBuilderEntry(
+    deliverableId: string,
+    sectionId: string,
+    currentEntries: MarketBuilderEntry[],
+    entryId: string,
+    patch: MarketBuilderPatch,
+    actor: DeliverableOutputActor
+  ): Promise<void> {
+    const now = new Date().toISOString()
+    // hasOwnProperty checks let callers explicitly clear an optional
+    // field by passing `undefined` (same trick the structured-evidence
+    // editor uses to clear `confidence`).
+    const has = (k: keyof MarketBuilderPatch) =>
+      Object.prototype.hasOwnProperty.call(patch, k)
+    const next = currentEntries.map((e) => {
+      if (e.id !== entryId) return e
+      return {
+        ...e,
+        ...(patch.productName !== undefined && {
+          productName: patch.productName.trim()
+        }),
+        ...(patch.productStory !== undefined && {
+          productStory: patch.productStory.trim() || undefined
+        }),
+        ...(patch.primaryMarket !== undefined && {
+          primaryMarket: patch.primaryMarket.trim() || undefined
+        }),
+        ...(patch.secondaryMarket !== undefined && {
+          secondaryMarket: patch.secondaryMarket.trim() || undefined
+        }),
+        ...(patch.targetAgeRange !== undefined && {
+          targetAgeRange: patch.targetAgeRange.trim() || undefined
+        }),
+        ...(patch.customerAssumption !== undefined && {
+          customerAssumption: patch.customerAssumption.trim() || undefined
+        }),
+        ...(patch.valueBasedFactor !== undefined && {
+          valueBasedFactor: patch.valueBasedFactor.trim() || undefined
+        }),
+        ...(has('schoolMarketSize') && {
+          schoolMarketSize: patch.schoolMarketSize ?? null
+        }),
+        ...(has('broaderMarketSize') && {
+          broaderMarketSize: patch.broaderMarketSize ?? null
+        }),
+        ...(patch.evidenceSource !== undefined && {
+          evidenceSource: patch.evidenceSource.trim() || undefined
+        }),
+        ...(patch.sourceType !== undefined && {
+          sourceType: patch.sourceType.trim() || undefined
+        }),
+        ...(has('confidence') && { confidence: patch.confidence }),
+        ...(patch.weakestAssumption !== undefined && {
+          weakestAssumption: patch.weakestAssumption.trim() || undefined
+        }),
+        ...(patch.strongestEvidence !== undefined && {
+          strongestEvidence: patch.strongestEvidence.trim() || undefined
+        }),
+        ...(patch.nextValidation !== undefined && {
+          nextValidation: patch.nextValidation.trim() || undefined
+        }),
+        ...(patch.scenarios !== undefined && { scenarios: patch.scenarios }),
+        ...(has('linkedRequirementId') && {
+          linkedRequirementId: patch.linkedRequirementId ?? null
+        }),
+        updatedAt: now
+      }
+    })
+    const r = ref_(deliverableId)
+    await updateDoc(r, {
+      [`sections.${sectionId}.marketBuilderEntries`]: next,
+      [`sections.${sectionId}.updatedAt`]: now,
+      [`sections.${sectionId}.updatedByUid`]: actor.uid,
+      [`sections.${sectionId}.updatedByEmail`]: actor.email,
+      updatedAt: now,
+      updatedByUid: actor.uid,
+      updatedByEmail: actor.email
+    })
+  }
+
+  async function removeMarketBuilderEntry(
+    deliverableId: string,
+    sectionId: string,
+    currentEntries: MarketBuilderEntry[],
+    entryId: string,
+    actor: DeliverableOutputActor
+  ): Promise<void> {
+    const next = currentEntries.filter((e) => e.id !== entryId)
+    const r = ref_(deliverableId)
+    const now = new Date().toISOString()
+    await updateDoc(r, {
+      [`sections.${sectionId}.marketBuilderEntries`]: next,
+      [`sections.${sectionId}.updatedAt`]: now,
+      [`sections.${sectionId}.updatedByUid`]: actor.uid,
+      [`sections.${sectionId}.updatedByEmail`]: actor.email,
+      updatedAt: now,
+      updatedByUid: actor.uid,
+      updatedByEmail: actor.email
+    })
+  }
+
   return {
     watchOutput,
     createOutputIfMissing,
@@ -375,6 +578,9 @@ export function useDeliverableOutputs() {
     removeEvidenceLink,
     addStructuredEvidence,
     updateStructuredEvidence,
-    removeStructuredEvidence
+    removeStructuredEvidence,
+    addMarketBuilderEntry,
+    updateMarketBuilderEntry,
+    removeMarketBuilderEntry
   }
 }
