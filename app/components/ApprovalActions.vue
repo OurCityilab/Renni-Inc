@@ -4,7 +4,25 @@ import { useAuthStore } from '~/stores/auth'
 import { useDeliverables } from '~/composables/useDeliverables'
 import type { Deliverable, Role } from '~/types/models'
 
-const props = defineProps<{ deliverable: Deliverable }>()
+// Gate props (all optional, all derived upstream) let the deliverable
+// detail page tell ApprovalActions whether the submit button should be
+// disabled and why. Keeps this component free of Template Studio /
+// task-query knowledge — it just renders what it's told.
+const props = withDefaults(
+  defineProps<{
+    deliverable: Deliverable
+    submitBlocked?: boolean
+    submitBlockReason?: string
+    missingRequiredLabels?: string[]
+    isCheckingSubmitRequirements?: boolean
+  }>(),
+  {
+    submitBlocked: false,
+    submitBlockReason: '',
+    missingRequiredLabels: () => [] as string[],
+    isCheckingSubmitRequirements: false
+  }
+)
 
 const auth = useAuthStore()
 const deliverables = useDeliverables()
@@ -95,7 +113,37 @@ async function returnRevision() {
       <p class="text-sm text-neutral-700">
         You own this deliverable. When it's complete and accurate against the rubric, submit it for review.
       </p>
-      <button class="btn-primary" :disabled="submitting" @click="submit">
+
+      <!-- Coverage check is still loading: neutral notice, button disabled. -->
+      <p
+        v-if="isCheckingSubmitRequirements"
+        class="rounded-md border border-neutral-200 bg-neutral-50 p-2 text-xs text-neutral-700"
+      >
+        {{ submitBlockReason || 'Checking required task coverage…' }}
+      </p>
+
+      <!-- Coverage check finished and required requirements still lack tasks. -->
+      <div
+        v-else-if="submitBlocked"
+        class="rounded-md border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900 space-y-2"
+      >
+        <p class="font-medium">{{ submitBlockReason }}</p>
+        <ul
+          v-if="missingRequiredLabels.length"
+          class="list-disc space-y-0.5 pl-5"
+        >
+          <li v-for="label in missingRequiredLabels" :key="label">{{ label }}</li>
+        </ul>
+        <p class="text-amber-800/80">
+          Tasks created from the requirement cards count automatically.
+        </p>
+      </div>
+
+      <button
+        class="btn-primary"
+        :disabled="submitting || submitBlocked || isCheckingSubmitRequirements"
+        @click="submit"
+      >
         Submit for review
       </button>
     </div>

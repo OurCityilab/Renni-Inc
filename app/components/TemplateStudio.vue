@@ -6,6 +6,11 @@ import type {
   TemplateStudioRequirement
 } from '~/types/templateStudio'
 import { findTemplateRequirement } from '~/data/templateStudios'
+import {
+  computeRequirementCoverage,
+  type RequirementCoverageEntry,
+  type RequirementCoverageState
+} from '~/utils/requirementCoverage'
 
 const props = defineProps<{
   deliverable: Deliverable
@@ -15,32 +20,19 @@ const props = defineProps<{
   canAssign: boolean
 }>()
 
-// Requirement coverage derivation. A task "covers" a requirement when its
-// requirementId matches. Status rolls up into one of five visual states
-// so chiefs can scan at a glance.
-type Coverage = 'none' | 'planned' | 'in_progress' | 'blocked' | 'done'
-
-function coverageFor(req: TemplateStudioRequirement): {
-  state: Coverage
-  linked: Task[]
-} {
-  const linked = props.relatedTasks.filter((t) => t.requirementId === req.id)
-  if (!linked.length) return { state: 'none', linked }
-  if (linked.some((t) => t.status === 'blocked')) return { state: 'blocked', linked }
-  if (linked.every((t) => t.status === 'done')) return { state: 'done', linked }
-  if (linked.some((t) => t.status === 'in_progress'))
-    return { state: 'in_progress', linked }
-  return { state: 'planned', linked }
+// Requirement coverage now derives from the shared helper so the chips
+// here, the submit-gate on deliverable detail, and the backfill audit
+// script can never drift apart. precedence:
+// blocked > done > in_progress > planned > none.
+const coverage = computed(() =>
+  computeRequirementCoverage(props.studio.requirements, props.relatedTasks)
+)
+function coverageEntry(req: TemplateStudioRequirement): RequirementCoverageEntry {
+  // Helper guarantees an entry per requirement.
+  return coverage.value.byRequirementId[req.id]!
 }
 
-const coverageLabel: Record<Coverage, string> = {
-  none: 'No task yet',
-  planned: 'Task planned',
-  in_progress: 'In progress',
-  blocked: 'Blocked',
-  done: 'Complete'
-}
-const coverageTone: Record<Coverage, string> = {
+const coverageTone: Record<RequirementCoverageState, string> = {
   none: 'border-neutral-300 text-neutral-600',
   planned: 'border-sky-300 bg-sky-50 text-sky-800',
   in_progress: 'border-amber-300 bg-amber-50 text-amber-800',
@@ -80,18 +72,8 @@ function plannerNoteFor(req: TemplateStudioRequirement): string {
   return `Planning hint: ${suggested.dependency}.`
 }
 
-const completedRequirementCount = computed(
-  () =>
-    props.studio.requirements.filter(
-      (r) => coverageFor(r).state === 'done'
-    ).length
-)
-const coveredRequirementCount = computed(
-  () =>
-    props.studio.requirements.filter(
-      (r) => coverageFor(r).state !== 'none'
-    ).length
-)
+const completedRequirementCount = computed(() => coverage.value.completeRequirements)
+const coveredRequirementCount = computed(() => coverage.value.coveredRequirements)
 </script>
 
 <template>
@@ -232,8 +214,8 @@ const coveredRequirementCount = computed(
                 class="rounded-full border px-2 py-0.5 text-xs"
                 :class="relatedTasksLoading
                   ? 'border-neutral-300 text-neutral-500'
-                  : coverageTone[coverageFor(req).state]"
-              >{{ relatedTasksLoading ? 'Checking…' : coverageLabel[coverageFor(req).state] }}</span>
+                  : coverageTone[coverageEntry(req).state]"
+              >{{ relatedTasksLoading ? 'Checking…' : coverageEntry(req).stateLabel }}</span>
               <button
                 v-if="canAssign"
                 class="text-xs text-phoenix-700 hover:underline"
@@ -246,10 +228,10 @@ const coveredRequirementCount = computed(
 
           <!-- Linked tasks summary -->
           <ul
-            v-if="!relatedTasksLoading && coverageFor(req).linked.length"
+            v-if="!relatedTasksLoading && coverageEntry(req).linkedTasks.length"
             class="mt-1 space-y-0.5 text-xs text-neutral-600"
           >
-            <li v-for="t in coverageFor(req).linked" :key="t.id">
+            <li v-for="t in coverageEntry(req).linkedTasks" :key="t.id">
               ↳ {{ t.title }}
               <span class="text-neutral-500">· {{ t.ownerEmail }}</span>
               <span v-if="t.dueDate" class="text-neutral-500">

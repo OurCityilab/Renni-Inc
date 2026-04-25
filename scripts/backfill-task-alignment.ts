@@ -26,6 +26,10 @@ import { db } from './lib/admin'
 // we import it here to check that requirementId values on tasks actually
 // refer to a known requirement on their deliverable's studio.
 import { templateStudios } from '../app/data/templateStudios'
+// Same coverage helper Template Studio + the deliverable submit-gate
+// use, so chip / gate / audit can never disagree.
+import { computeRequirementCoverage } from '../app/utils/requirementCoverage'
+import type { Task } from '../app/types/models'
 
 interface TaskRow {
   deliverableId?: string | null
@@ -161,24 +165,29 @@ async function main() {
     }
   }
 
-  // Report uncovered studio requirements. A requirement is "covered"
-  // when at least one task has its requirementId. Required-for-approval
-  // requirements without coverage are the actionable signal.
-  const coveredByDeliverable = new Map<string, Set<string>>()
+  // Report uncovered studio requirements via the same shared helper the
+  // UI uses. A requirement is "covered" when ≥1 task references its id;
+  // required-for-approval requirements without coverage are the
+  // actionable signal.
+  const tasksByDeliverable = new Map<string, Task[]>()
   tasksSnap.forEach((doc) => {
-    const t = doc.data() as TaskRow
-    if (!t.deliverableId || !t.requirementId) return
-    const s = coveredByDeliverable.get(t.deliverableId) ?? new Set<string>()
-    s.add(t.requirementId)
-    coveredByDeliverable.set(t.deliverableId, s)
+    const t = doc.data() as Task
+    if (!t.deliverableId) return
+    const arr = tasksByDeliverable.get(t.deliverableId) ?? []
+    arr.push(t)
+    tasksByDeliverable.set(t.deliverableId, arr)
   })
   for (const [deliverableId, studio] of Object.entries(templateStudios)) {
-    const covered = coveredByDeliverable.get(deliverableId) ?? new Set<string>()
-    for (const req of studio.requirements) {
-      if (covered.has(req.id)) continue
-      const tag = req.requiredForApproval ? 'required' : 'optional'
+    const tasksForDeliverable = tasksByDeliverable.get(deliverableId) ?? []
+    const summary = computeRequirementCoverage(
+      studio.requirements,
+      tasksForDeliverable
+    )
+    for (const entry of Object.values(summary.byRequirementId)) {
+      if (entry.hasTaskCoverage) continue
+      const tag = entry.requiredForApproval ? 'required' : 'optional'
       warnings.push(
-        `  - ${deliverableId} requirement "${req.id}" (${tag}): no task covers it yet.`
+        `  - ${deliverableId} requirement "${entry.requirementId}" (${tag}): no task covers it yet.`
       )
     }
   }

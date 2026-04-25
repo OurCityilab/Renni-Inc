@@ -8,6 +8,7 @@ import { useTemplatePreview } from '~/composables/useTemplatePreview'
 import { getTemplateStudio } from '~/data/templateStudios'
 import type { DeliverableEvent } from '~/types/models'
 import { taskStatusLabel } from '~/utils/taskStatus'
+import { computeRequirementCoverage } from '~/utils/requirementCoverage'
 
 const route = useRoute()
 const auth = useAuthStore()
@@ -79,6 +80,51 @@ const taskProgress = computed(() => {
   if (!total) return { total: 0, done: 0, percent: 0 }
   const done = relatedTasks.value.filter((t) => t.status === 'done').length
   return { total, done, percent: Math.round((done / total) * 100) }
+})
+
+// --- submit-for-review gate (studio-backed deliverables only) ---
+// This is a *task-coverage* gate, not a *task-completion* gate. A studio
+// deliverable should not be submitted until every required Template
+// Studio requirement has at least one linked task. Tasks don't need to
+// be done — they just need to exist. Non-studio deliverables submit
+// exactly as before.
+const requirementCoverage = computed(() =>
+  studio.value
+    ? computeRequirementCoverage(
+        studio.value.requirements,
+        relatedTasks.value
+      )
+    : null
+)
+const submitEligible = computed(
+  () =>
+    deliverable.value?.status === 'draft' ||
+    deliverable.value?.status === 'needs_revision'
+)
+const isCheckingRequirementCoverage = computed(
+  () => !!studio.value && submitEligible.value && relatedTasksLoading.value
+)
+const missingRequiredLabels = computed<string[]>(() =>
+  (requirementCoverage.value?.requiredRequirementsWithoutTasks ?? []).map(
+    (r) => r.label
+  )
+)
+const submitBlocked = computed(() => {
+  // Non-studio deliverables: never blocked here.
+  if (!studio.value) return false
+  // Only relevant on submit-eligible statuses.
+  if (!submitEligible.value) return false
+  // While tasks are still loading, block submit so an empty list can't
+  // produce a false negative (helper would say "missing everything").
+  if (isCheckingRequirementCoverage.value) return true
+  return missingRequiredLabels.value.length > 0
+})
+const submitBlockReason = computed(() => {
+  if (isCheckingRequirementCoverage.value) {
+    return 'Checking required task coverage…'
+  }
+  if (!submitBlocked.value) return ''
+  return 'Before you submit, create at least one task for each required Template Studio requirement.'
 })
 
 // Reverse-chronological; most recent at top.
@@ -180,7 +226,13 @@ async function saveNotes() {
             :can-assign="canAssignForDeliverable"
           />
 
-          <ApprovalActions :deliverable="deliverable" />
+          <ApprovalActions
+            :deliverable="deliverable"
+            :submit-blocked="submitBlocked"
+            :submit-block-reason="submitBlockReason"
+            :missing-required-labels="missingRequiredLabels"
+            :is-checking-submit-requirements="isCheckingRequirementCoverage"
+          />
 
           <!-- Review notes: prominent when the deliverable is in a review state. -->
           <section
