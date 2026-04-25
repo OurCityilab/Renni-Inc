@@ -311,7 +311,11 @@ export function useDeliverableOutputs() {
       addedAt: now,
       updatedAt: now
     }
-    const next = [...currentEvidence, entry]
+    // Same Firestore-undefined risk Market Builder hit: blank optional
+    // fields (assumption, calculation, risk, nextValidation) leave the
+    // form as `undefined`, and a "Not set" confidence is also undefined.
+    // Sanitize the array before writing so updateDoc never sees those.
+    const next = stripUndefinedDeep([...currentEvidence, entry])
     const r = ref_(deliverableId)
     await updateDoc(r, {
       [`sections.${sectionId}.structuredEvidence`]: next,
@@ -364,9 +368,10 @@ export function useDeliverableOutputs() {
         updatedAt: now
       }
     })
+    const sanitized = stripUndefinedDeep(next)
     const r = ref_(deliverableId)
     await updateDoc(r, {
-      [`sections.${sectionId}.structuredEvidence`]: next,
+      [`sections.${sectionId}.structuredEvidence`]: sanitized,
       [`sections.${sectionId}.updatedAt`]: now,
       [`sections.${sectionId}.updatedByUid`]: actor.uid,
       [`sections.${sectionId}.updatedByEmail`]: actor.email,
@@ -383,7 +388,9 @@ export function useDeliverableOutputs() {
     entryId: string,
     actor: DeliverableOutputActor
   ): Promise<void> {
-    const next = currentEvidence.filter((e) => e.id !== entryId)
+    const next = stripUndefinedDeep(
+      currentEvidence.filter((e) => e.id !== entryId)
+    )
     const r = ref_(deliverableId)
     const now = new Date().toISOString()
     await updateDoc(r, {
