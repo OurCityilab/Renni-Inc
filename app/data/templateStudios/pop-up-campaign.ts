@@ -13,6 +13,7 @@ export const popUpCampaign: TemplateStudio = {
   connectedOutcome: 'TechTown pop-up',
   sections: [
     {
+      id: 'audience',
       title: 'Who are we trying to reach?',
       lesson:
         'Start with the same audience the brand story picked. If the campaign is aimed at someone else, one of them is wrong.',
@@ -25,6 +26,7 @@ export const popUpCampaign: TemplateStudio = {
       ]
     },
     {
+      id: 'touchpoints',
       title: 'What touchpoints?',
       lesson:
         'A touchpoint is every moment someone could see us before they show up. Signage, posts, classroom mentions, peer DMs.',
@@ -41,6 +43,7 @@ export const popUpCampaign: TemplateStudio = {
       ]
     },
     {
+      id: 'messaging',
       title: 'What do we say?',
       lesson:
         'Use the brand voice. Every piece of content should pass the test: "Could this only be House Phoenix?"',
@@ -54,6 +57,7 @@ export const popUpCampaign: TemplateStudio = {
       ]
     },
     {
+      id: 'measurement',
       title: 'How will we know what worked?',
       lesson:
         'Even a single question at the table — "How did you hear about us?" — gives next cohort signal. No analytics required.',

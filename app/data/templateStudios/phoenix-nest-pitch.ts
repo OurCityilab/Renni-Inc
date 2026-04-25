@@ -13,6 +13,7 @@ export const phoenixNestPitch: TemplateStudio = {
   connectedOutcome: 'Phoenix Nest pitch',
   sections: [
     {
+      id: 'identity',
       title: 'Who are we?',
       lesson:
         'Start with a one-line identity a buyer can repeat. Borrow from the House Phoenix brand story — do not reinvent it here.',
@@ -25,6 +26,7 @@ export const phoenixNestPitch: TemplateStudio = {
       ]
     },
     {
+      id: 'evidence',
       title: 'What did the pop-up actually prove?',
       lesson:
         'A buyer wants evidence, not optimism. Use real numbers from /revenue and /pricing.',
@@ -40,6 +42,7 @@ export const phoenixNestPitch: TemplateStudio = {
       ]
     },
     {
+      id: 'offer',
       title: 'What would retail carry look like?',
       lesson:
         'Buyers need a concrete offer: what SKUs, what quantities, what margin, what timing. Vague pitches die in the meeting.',
@@ -53,6 +56,7 @@ export const phoenixNestPitch: TemplateStudio = {
       ]
     },
     {
+      id: 'ask',
       title: 'What is the ask?',
       lesson:
         'End every pitch with one concrete next step the buyer can say yes to. Do not ask for the whole commitment in the first meeting.',

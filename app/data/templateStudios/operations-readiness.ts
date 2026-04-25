@@ -13,6 +13,7 @@ export const operationsReadiness: TemplateStudio = {
   connectedOutcome: 'TechTown pop-up',
   sections: [
     {
+      id: 'inventory',
       title: 'What are we actually bringing?',
       lesson:
         'Inventory is the bet. Count what we have, note what is missing, decide what to order.',
@@ -28,6 +29,7 @@ export const operationsReadiness: TemplateStudio = {
       ]
     },
     {
+      id: 'day-of-sop',
       title: 'How does pop-up day run?',
       lesson:
         'SOP = Standard Operating Procedure. Write the steps someone who was not in planning meetings could follow.',
@@ -44,6 +46,7 @@ export const operationsReadiness: TemplateStudio = {
       ]
     },
     {
+      id: 'baked-goods-sop',
       title: 'Baked goods — food safety',
       lesson:
         'Humble Oven baked goods need separate handling. Temperature, allergens, labeling, and sell-by timing matter.',
@@ -59,6 +62,7 @@ export const operationsReadiness: TemplateStudio = {
       ]
     },
     {
+      id: 'continuity',
       title: 'Handoff to next cohort',
       lesson:
         'Continuity is the Playbook\'s real point. Write what would have saved you a week if the last cohort had written it down.',

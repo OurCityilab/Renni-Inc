@@ -275,6 +275,63 @@ export interface Decision {
   updatedAt?: IsoTimestamp
 }
 
+// -------- deliverableOutputs/{deliverableId} --------
+// Student-authored artifact content keyed by deliverable. One doc per
+// deliverable; sections live in a map keyed by stable Template Studio
+// section id. Authored content (notes / draft / final / evidence) is
+// kept separate from the Deliverable doc so the deliverable model stays
+// small and approvals stay decoupled from authorship.
+export type DeliverableOutputSectionStatus = 'empty' | 'in_progress' | 'ready'
+
+export type EvidenceLinkType =
+  | 'doc'
+  | 'sheet'
+  | 'slide'
+  | 'folder'
+  | 'image'
+  | 'design'
+  | 'external'
+  | 'other'
+
+export interface DeliverableEvidenceLink {
+  id: string
+  label: string
+  url: string
+  type: EvidenceLinkType
+  sectionId: string
+  requirementId?: string | null
+  addedByUid?: string | null
+  addedByEmail?: string | null
+  addedAt?: IsoTimestamp | null
+}
+
+export interface DeliverableOutputSection {
+  sectionId: string
+  sectionTitleSnapshot: string
+  sourceNotes: string
+  draftText: string
+  finalText: string
+  evidenceLinks: DeliverableEvidenceLink[]
+  status?: DeliverableOutputSectionStatus
+  updatedAt?: IsoTimestamp | null
+  updatedByUid?: string | null
+  updatedByEmail?: string | null
+}
+
+export interface DeliverableOutput {
+  id: string
+  deliverableId: string
+  studioVersion?: string | null
+  studioTitleSnapshot?: string | null
+  sections: Record<string, DeliverableOutputSection>
+  createdAt?: IsoTimestamp | null
+  createdByUid?: string | null
+  createdByEmail?: string | null
+  updatedAt?: IsoTimestamp | null
+  updatedByUid?: string | null
+  updatedByEmail?: string | null
+}
+
 // -------- pricingScenarios/{scenarioId} --------
 // One pricing / break-even scenario per pop-up product. Derived math
 // (revenue, margin, break-even units) is computed in the UI; we only store

@@ -15,6 +15,10 @@ export type ConnectedOutcome =
   | 'Phoenix Nest pitch'
 
 export interface TemplateStudioSection {
+  // Stable, unique-per-studio identifier used as the persistence key for
+  // student-authored output (notes / draft / final / evidence). Section
+  // titles change as curriculum is refined; ids must not.
+  id: string
   title: string
   lesson: string
   example?: string

@@ -65,6 +65,21 @@ const canAssignForDeliverable = computed(() => {
 })
 const assigningOpen = ref(false)
 
+// Mirrors the deliverableOutputs Firestore rule: admin / Co-CEO / COO,
+// the deliverable's owner, or a chief whose department matches.
+// Status-based read-only-ness is layered inside the workspace itself.
+const canEditOutput = computed(() => {
+  if (!deliverable.value) return false
+  if (auth.isAdmin || auth.isCoCEO) return true
+  if (auth.profile?.role === 'coo') return true
+  if (auth.user && auth.user.uid === deliverable.value.ownerUid) return true
+  if (
+    auth.isChief &&
+    auth.profile?.department === deliverable.value.department
+  ) return true
+  return false
+})
+
 // Template Studio lookup. If a curated studio exists for this deliverable,
 // the detail page renders the guided workspace in addition to (not instead
 // of) the plain markdown preview that's below. Deliverables without a
@@ -225,6 +240,15 @@ async function saveNotes() {
             :related-tasks-loading="relatedTasksLoading"
             :can-assign="canAssignForDeliverable"
           />
+          <!-- Output workspace: where students actually produce the artifact.
+               Mounted right after Template Studio guidance on draft so the
+               authoring surface follows the teaching surface. -->
+          <DeliverableOutputWorkspace
+            v-if="studio && deliverable.status === 'draft'"
+            :deliverable="deliverable"
+            :studio="studio"
+            :can-edit="canEditOutput"
+          />
 
           <ApprovalActions
             :deliverable="deliverable"
@@ -288,6 +312,15 @@ async function saveNotes() {
             :related-tasks="relatedTasks"
             :related-tasks-loading="relatedTasksLoading"
             :can-assign="canAssignForDeliverable"
+          />
+          <!-- Output workspace for in_review / needs_revision / approved.
+               Workspace renders read-only or editable depending on status
+               and the viewer's permission. -->
+          <DeliverableOutputWorkspace
+            v-if="studio && deliverable.status !== 'draft'"
+            :deliverable="deliverable"
+            :studio="studio"
+            :can-edit="canEditOutput"
           />
 
           <!-- What this deliverable needs -->

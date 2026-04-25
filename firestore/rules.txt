@@ -166,6 +166,23 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
+    // -------- deliverable outputs --------
+    // Student-authored artifact content, keyed by deliverable id.
+    // Read: any signed-in user — chiefs and approvers need to see what
+    //   owners have written, the same way they see the deliverable itself.
+    // Write: admin / Co-CEO / COO, plus the deliverable's owner, plus
+    //   chiefs whose department matches the deliverable's department.
+    //   Approval is a separate axis (handled on /deliverables) — being
+    //   able to author output never grants approval rights.
+    match /deliverableOutputs/{deliverableId} {
+      allow read: if isSignedIn();
+      allow create, update: if isAdmin() || isCoCEO() || hasRole('coo')
+        || get(/databases/$(database)/documents/deliverables/$(deliverableId)).data.ownerUid == request.auth.uid
+        || (isChief()
+          && get(/databases/$(database)/documents/deliverables/$(deliverableId)).data.department == userDoc().department);
+      allow delete: if isAdminOrCoCEO();
+    }
+
     // -------- pricing scenarios --------
     // Anyone signed-in can read. Mutations are limited to admin/Co-CEO/CFO
     // since pricing decisions are financial and the CFO owns the model.

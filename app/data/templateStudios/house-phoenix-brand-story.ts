@@ -13,6 +13,7 @@ export const housePhoenixBrandStory: TemplateStudio = {
   connectedOutcome: 'Playbook',
   sections: [
     {
+      id: 'audience',
       title: 'Who is this for?',
       lesson:
         'Every strong brand starts with a specific audience. "Everyone" is not an audience — it is how brands get bland.',
@@ -30,6 +31,7 @@ export const housePhoenixBrandStory: TemplateStudio = {
       ]
     },
     {
+      id: 'value-proposition',
       title: 'What do we promise them?',
       lesson:
         'A value proposition is the one thing the audience will believe after the pop-up that they did not before. Keep it short enough to fit on a tag.',
@@ -46,6 +48,7 @@ export const housePhoenixBrandStory: TemplateStudio = {
       ]
     },
     {
+      id: 'voice',
       title: 'How does it sound?',
       lesson:
         'Voice is how the brand writes, posts, and signs. Decide it once so the team sounds consistent everywhere.',
@@ -58,6 +61,7 @@ export const housePhoenixBrandStory: TemplateStudio = {
       ]
     },
     {
+      id: 'identity',
       title: 'How does it look?',
       lesson:
         'Identity decisions — wordmark, color, type — lock down how the brand shows up on merch, signage, and packaging.',

@@ -13,6 +13,7 @@ export const pricingBreakEven: TemplateStudio = {
   connectedOutcome: 'TechTown pop-up',
   sections: [
     {
+      id: 'unit-cost',
       title: 'What does a unit cost?',
       lesson:
         'Unit cost is every dollar spent per item before markup — blank garment, printing, baking ingredients, packaging. If an expense only exists because we sold the unit, it belongs here.',
@@ -29,6 +30,7 @@ export const pricingBreakEven: TemplateStudio = {
       ]
     },
     {
+      id: 'sale-price',
       title: 'What should we charge?',
       lesson:
         'Sale price is a decision about the brand and the margin. Too cheap reads as not-real; too expensive leaves unsold inventory at the end of the pop-up. Pick a price the team can defend to a buyer.',
@@ -41,6 +43,7 @@ export const pricingBreakEven: TemplateStudio = {
       ]
     },
     {
+      id: 'planned-quantity',
       title: 'How many are we making?',
       lesson:
         'Planned quantity is your inventory bet. Over-order and you eat leftovers; under-order and you leave revenue behind. Small safety stock is better than stockouts for a one-day pop-up.',
@@ -55,6 +58,7 @@ export const pricingBreakEven: TemplateStudio = {
       ]
     },
     {
+      id: 'break-even',
       title: 'Does the math work?',
       lesson:
         'Break-even units = fixed cost share ÷ (sale price − unit cost). Below that number, the product loses money on allocated overhead.',
