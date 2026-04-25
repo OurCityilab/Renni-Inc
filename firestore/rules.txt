@@ -32,6 +32,16 @@ service cloud.firestore {
     function isCoCEO() { return hasRole('coceo'); }
     function isAdminOrCoCEO() { return isAdmin() || isCoCEO(); }
     function isChief() { return isSignedIn() && userDoc().isChief == true; }
+    function deliverableDoc(id) {
+      return get(/databases/$(database)/documents/deliverables/$(id)).data;
+    }
+    function hasDeliverableDoc(id) {
+      return exists(/databases/$(database)/documents/deliverables/$(id));
+    }
+    function deliverableOutputEditable(id) {
+      return hasDeliverableDoc(id)
+        && deliverableDoc(id).status in ['draft', 'needs_revision'];
+    }
 
     // -------- roster --------
     // Seed-populated registry of allowed accounts, keyed by email.
@@ -176,11 +186,14 @@ service cloud.firestore {
     //   able to author output never grants approval rights.
     match /deliverableOutputs/{deliverableId} {
       allow read: if isSignedIn();
-      allow create, update: if isAdmin() || isCoCEO() || hasRole('coo')
-        || get(/databases/$(database)/documents/deliverables/$(deliverableId)).data.ownerUid == request.auth.uid
-        || (isChief()
-          && get(/databases/$(database)/documents/deliverables/$(deliverableId)).data.department == userDoc().department);
-      allow delete: if isAdminOrCoCEO();
+      allow create, update: if deliverableOutputEditable(deliverableId)
+        && (
+          isAdmin() || isCoCEO() || hasRole('coo')
+          || deliverableDoc(deliverableId).ownerUid == request.auth.uid
+          || (isChief()
+            && deliverableDoc(deliverableId).department == userDoc().department)
+        );
+      allow delete: if isAdminOrCoCEO() && deliverableOutputEditable(deliverableId);
     }
 
     // -------- pricing scenarios --------

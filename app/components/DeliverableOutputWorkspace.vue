@@ -33,8 +33,8 @@ const { data: output, loading } = outputs.watchOutput(() => props.deliverable.id
 // Editing is only the active path while the deliverable is in
 // draft/needs_revision. in_review and approved render read-only so
 // reviewers see a stable artifact and authors can't quietly mutate
-// content under review. The Firestore rule still permits admin/Co-CEO/
-// COO writes in any state if a future "edit anyway" flow lands.
+// content under review. Firestore rules match this V1 behavior so the
+// lock is enforced server-side, not just by the UI.
 const editingEnabled = computed(
   () =>
     props.canEdit &&
@@ -59,7 +59,7 @@ const lockMessage = computed(() => {
 // the workspace. Idempotent — does nothing if the doc already exists.
 const provisioningError = ref<string | null>(null)
 async function ensureOutputDoc() {
-  if (!props.canEdit) return
+  if (!editingEnabled.value) return
   if (!auth.user || !auth.profile) return
   if (output.value) return
   if (loading.value) return
@@ -593,7 +593,7 @@ watch(
         </p>
         <h3 class="font-medium text-neutral-900">{{ studio.title }}</h3>
         <p class="text-xs text-neutral-600">
-          Read-only roll-up. This is what the Playbook will show.
+          Read-only roll-up. This is the Playbook-ready version of the deliverable.
         </p>
       </header>
       <ol class="space-y-3">
