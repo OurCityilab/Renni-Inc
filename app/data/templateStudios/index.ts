@@ -3,10 +3,13 @@
 // — so this is additive, never a blocker.
 
 import type { TemplateStudio } from '~/types/templateStudio'
+import { brandArchitecture } from './brand-architecture'
 import { businessModelCanvas } from './business-model-canvas'
 import { currentProductLine } from './current-product-line'
 import { executiveSummary } from './executive-summary'
 import { housePhoenixBrandStory } from './house-phoenix-brand-story'
+import { marketingCustomerInsights } from './marketing-customer-insights'
+import { missionVisionValues } from './mission-vision-values'
 import { operationsReadiness } from './operations-readiness'
 import { phoenixNestPitch } from './phoenix-nest-pitch'
 import { popUpCampaign } from './pop-up-campaign'
@@ -14,8 +17,11 @@ import { pricingBreakEven } from './pricing-break-even'
 
 export const templateStudios: Record<string, TemplateStudio> = {
   'ch-01-executive-summary': executiveSummary,
+  'ch-02-renni-overview-and-brand-architecture': brandArchitecture,
+  'ch-03-company-structure-and-continuity': missionVisionValues,
   'ch-04-business-model-canvas': businessModelCanvas,
   'ch-05-house-phoenix-brand-book': housePhoenixBrandStory,
+  'ch-06-supporting-brand-sheets': marketingCustomerInsights,
   'ch-07-current-product-line-and-pricing': currentProductLine,
   'ch-08-finance-and-revenue-model': pricingBreakEven,
   'ch-09-operations-and-continuity-systems': operationsReadiness,
