@@ -713,9 +713,49 @@ function setScenarioNumber(
   recomputeFormScenarios(sectionId)
 }
 
+// Numeric guardrails for Market Builder. We block save (rather than
+// silently clamping) so students see that an assumption was rejected
+// and have to fix it themselves — the chapter is meant to teach
+// disciplined assumptions, not to round bad numbers into looking ok.
+//
+// Empty stays empty: a null value means "not entered yet" and should
+// keep rendering as "—". Only entered-but-invalid values trip the
+// validator. NaN / Infinity already get coerced to null by the input
+// handlers (setMarketNumber / setScenarioNumber), so by the time we
+// get here every field is either null or a finite number.
+function isNegative(n: number | null | undefined): boolean {
+  return n != null && Number.isFinite(n) && n < 0
+}
+function isOutOfPercentRange(n: number | null | undefined): boolean {
+  if (n == null || !Number.isFinite(n)) return false
+  return n < 0 || n > 100
+}
+
 function marketFormValid(form: NewMarketBuilderInput): string | null {
   if (!form.productName.trim()) return 'Product name is required.'
-  return null
+
+  const hasNegative =
+    isNegative(form.schoolMarketSize) ||
+    isNegative(form.broaderMarketSize) ||
+    (form.scenarios?.some(
+      (s) => isNegative(s.reachableAudience) || isNegative(s.price)
+    ) ?? false)
+
+  const hasOutOfRangePercent =
+    form.scenarios?.some(
+      (s) =>
+        isOutOfPercentRange(s.interestRatePercent) ||
+        isOutOfPercentRange(s.conversionRatePercent)
+    ) ?? false
+
+  const messages: string[] = []
+  if (hasNegative) {
+    messages.push('Audience, market size, and price cannot be negative.')
+  }
+  if (hasOutOfRangePercent) {
+    messages.push('Interest and conversion rates must be between 0 and 100.')
+  }
+  return messages.length ? messages.join(' ') : null
 }
 
 async function submitMarket(s: TemplateStudioSection) {

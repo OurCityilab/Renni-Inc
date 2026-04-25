@@ -420,6 +420,32 @@ export function useDeliverableOutputs() {
     }))
   }
 
+  // Defense in depth — Firestore should never receive NaN or Infinity
+  // for these fields, so coerce non-finite values to null at write time
+  // even if a future caller bypasses the form-level validation. Negative
+  // values, which are blocked by the form, are *not* silently clamped
+  // here: we surface them as-is so a regression in the UI guard is
+  // easier to spot than to mask.
+  function safeNumeric(n: number | null | undefined): number | null {
+    if (n == null) return null
+    return Number.isFinite(n) ? n : null
+  }
+  function normalizeScenario(s: MarketBuilderScenario): MarketBuilderScenario {
+    const reachableAudience = safeNumeric(s.reachableAudience)
+    const interestRatePercent = safeNumeric(s.interestRatePercent)
+    const conversionRatePercent = safeNumeric(s.conversionRatePercent)
+    const price = safeNumeric(s.price)
+    return {
+      ...s,
+      reachableAudience,
+      interestRatePercent,
+      conversionRatePercent,
+      price,
+      estimatedBuyers: safeNumeric(s.estimatedBuyers),
+      estimatedRevenue: safeNumeric(s.estimatedRevenue)
+    }
+  }
+
   async function addMarketBuilderEntry(
     deliverableId: string,
     sectionId: string,
@@ -437,8 +463,8 @@ export function useDeliverableOutputs() {
       targetAgeRange: input.targetAgeRange?.trim() || undefined,
       customerAssumption: input.customerAssumption?.trim() || undefined,
       valueBasedFactor: input.valueBasedFactor?.trim() || undefined,
-      schoolMarketSize: input.schoolMarketSize ?? null,
-      broaderMarketSize: input.broaderMarketSize ?? null,
+      schoolMarketSize: safeNumeric(input.schoolMarketSize),
+      broaderMarketSize: safeNumeric(input.broaderMarketSize),
       evidenceSource: input.evidenceSource?.trim() || undefined,
       sourceType: input.sourceType?.trim() || undefined,
       confidence: input.confidence,
@@ -447,7 +473,7 @@ export function useDeliverableOutputs() {
       nextValidation: input.nextValidation?.trim() || undefined,
       scenarios:
         input.scenarios && input.scenarios.length > 0
-          ? input.scenarios
+          ? input.scenarios.map(normalizeScenario)
           : makeDefaultScenarios(),
       linkedRequirementId: input.linkedRequirementId ?? null,
       addedByUid: actor.uid,
@@ -509,10 +535,10 @@ export function useDeliverableOutputs() {
           valueBasedFactor: patch.valueBasedFactor.trim() || undefined
         }),
         ...(has('schoolMarketSize') && {
-          schoolMarketSize: patch.schoolMarketSize ?? null
+          schoolMarketSize: safeNumeric(patch.schoolMarketSize)
         }),
         ...(has('broaderMarketSize') && {
-          broaderMarketSize: patch.broaderMarketSize ?? null
+          broaderMarketSize: safeNumeric(patch.broaderMarketSize)
         }),
         ...(patch.evidenceSource !== undefined && {
           evidenceSource: patch.evidenceSource.trim() || undefined
@@ -530,7 +556,9 @@ export function useDeliverableOutputs() {
         ...(patch.nextValidation !== undefined && {
           nextValidation: patch.nextValidation.trim() || undefined
         }),
-        ...(patch.scenarios !== undefined && { scenarios: patch.scenarios }),
+        ...(patch.scenarios !== undefined && {
+          scenarios: patch.scenarios.map(normalizeScenario)
+        }),
         ...(has('linkedRequirementId') && {
           linkedRequirementId: patch.linkedRequirementId ?? null
         }),
