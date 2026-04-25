@@ -6,7 +6,7 @@ rules_version = '2';
 // Role model (users/{uid}.role):
 //   admin   - instructor / program lead; may override anything
 //   coceo   - Co-CEO; may approve any deliverable, override due dates, edit roster-linked data
-//   coo|cfo|cmo|cdo|csgo - department chiefs
+//   coo|cfo|cmo|csgo - department chiefs
 //   member  - student, department-scoped
 //
 // Deliverable statuses: draft | in_review | needs_revision | approved
