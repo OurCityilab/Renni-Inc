@@ -446,6 +446,36 @@ export function useDeliverableOutputs() {
     }
   }
 
+  // Recursively remove keys whose value is `undefined` from plain
+  // objects, walking arrays in place. The Firestore web SDK rejects any
+  // `undefined` value in an updateDoc payload — including values nested
+  // inside objects inside arrays — and Market Builder entries carry
+  // several optional text fields that the form leaves as `undefined`
+  // when blank (productStory, secondaryMarket, etc.). Without this scrub
+  // a save with any blank optional fails with
+  //   "Function updateDoc() called with invalid data. Unsupported field
+  //    value: undefined"
+  // so we sanitize the array right before it lands in the dotted-path
+  // payload. Primitives, null, Date, and arrays pass through untouched.
+  function stripUndefinedDeep<T>(value: T): T {
+    if (value === null || value === undefined) return value
+    if (Array.isArray(value)) {
+      return value.map((item) => stripUndefinedDeep(item)) as unknown as T
+    }
+    // Don't walk class instances (Date, Timestamp, etc.). Plain objects
+    // come from JSON-shaped Firestore data and form buffers; they have
+    // Object.prototype as their prototype.
+    if (typeof value === 'object' && Object.getPrototypeOf(value) === Object.prototype) {
+      const out: Record<string, unknown> = {}
+      for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
+        if (v === undefined) continue
+        out[k] = stripUndefinedDeep(v)
+      }
+      return out as unknown as T
+    }
+    return value
+  }
+
   async function addMarketBuilderEntry(
     deliverableId: string,
     sectionId: string,
@@ -481,7 +511,7 @@ export function useDeliverableOutputs() {
       addedAt: now,
       updatedAt: now
     }
-    const next = [...currentEntries, entry]
+    const next = stripUndefinedDeep([...currentEntries, entry])
     const r = ref_(deliverableId)
     await updateDoc(r, {
       [`sections.${sectionId}.marketBuilderEntries`]: next,
@@ -565,9 +595,10 @@ export function useDeliverableOutputs() {
         updatedAt: now
       }
     })
+    const sanitized = stripUndefinedDeep(next)
     const r = ref_(deliverableId)
     await updateDoc(r, {
-      [`sections.${sectionId}.marketBuilderEntries`]: next,
+      [`sections.${sectionId}.marketBuilderEntries`]: sanitized,
       [`sections.${sectionId}.updatedAt`]: now,
       [`sections.${sectionId}.updatedByUid`]: actor.uid,
       [`sections.${sectionId}.updatedByEmail`]: actor.email,
@@ -584,7 +615,9 @@ export function useDeliverableOutputs() {
     entryId: string,
     actor: DeliverableOutputActor
   ): Promise<void> {
-    const next = currentEntries.filter((e) => e.id !== entryId)
+    const next = stripUndefinedDeep(
+      currentEntries.filter((e) => e.id !== entryId)
+    )
     const r = ref_(deliverableId)
     const now = new Date().toISOString()
     await updateDoc(r, {
