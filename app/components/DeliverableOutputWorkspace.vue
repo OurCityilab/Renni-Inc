@@ -25,6 +25,17 @@ import type {
   TemplateStudio,
   TemplateStudioSection
 } from '~/types/templateStudio'
+import {
+  SCENARIO_LABEL_COPY,
+  confidenceTone,
+  deriveBuyers,
+  deriveRevenue,
+  fmtCurrency,
+  fmtNumber
+} from '~/utils/marketBuilderMath'
+import MarketEvidenceReferencePanel, {
+  type ReferencedMarketEntry
+} from '~/components/MarketEvidenceReferencePanel.vue'
 
 const props = defineProps<{
   deliverable: Deliverable
@@ -46,26 +57,31 @@ const { data: output, loading } = outputs.watchOutput(() => props.deliverable.id
 // submit on the presence (or absence) of these entries.
 const CH7_DELIVERABLE_ID = 'ch-07-current-product-line-and-pricing'
 const CH8_DELIVERABLE_ID = 'ch-08-finance-and-revenue-model'
+const CH11_DELIVERABLE_ID = 'ch-11-phoenix-nest-retail-carry-pitch'
 const isChapter8 = computed(
   () => props.deliverable.id === CH8_DELIVERABLE_ID
 )
+const isChapter11 = computed(
+  () => props.deliverable.id === CH11_DELIVERABLE_ID
+)
 // The watcher returns loading=false / data=null when the id is an
-// empty string, so this stays a no-op listener on every other chapter.
+// empty string, so each cross-chapter listener stays a no-op on every
+// chapter that doesn't reference it. Chapter 7 is read by both Chapter
+// 8 and Chapter 11; Chapter 8 finalText is read by Chapter 11 only.
 const { data: ch7Output, loading: ch7Loading } = outputs.watchOutput(() =>
-  isChapter8.value ? CH7_DELIVERABLE_ID : ''
+  isChapter8.value || isChapter11.value ? CH7_DELIVERABLE_ID : ''
+)
+const { data: ch8Output, loading: ch8Loading } = outputs.watchOutput(() =>
+  isChapter11.value ? CH8_DELIVERABLE_ID : ''
 )
 // Flatten Market Builder entries across every Chapter 7 section so the
 // panel reads as one product list, not a nested section view. Section
 // title comes along so the reference still names where each entry was
-// authored.
-interface Ch7MarketEntryRow {
-  sectionId: string
-  sectionTitle: string
-  entry: MarketBuilderEntry
-}
-const ch7MarketEntries = computed<Ch7MarketEntryRow[]>(() => {
+// authored. Shape matches the panel component's `ReferencedMarketEntry`
+// prop type so we can hand the array straight in.
+const ch7MarketEntries = computed<ReferencedMarketEntry[]>(() => {
   if (!ch7Output.value) return []
-  const rows: Ch7MarketEntryRow[] = []
+  const rows: ReferencedMarketEntry[] = []
   for (const section of Object.values(ch7Output.value.sections ?? {})) {
     if (!section?.marketBuilderEntries?.length) continue
     for (const entry of section.marketBuilderEntries) {
@@ -77,6 +93,38 @@ const ch7MarketEntries = computed<Ch7MarketEntryRow[]>(() => {
     }
   }
   return rows
+})
+
+// Chapter 8 → Chapter 11 finalText status, used by the Ch 11 reference
+// panel only. We surface section titles where finalText exists (so a
+// Ch 11 author can see which revenue blocks the Ch 8 team has actually
+// finalized) and a compact excerpt of the `revenue-scenarios` section
+// when present. We never copy or summarize beyond a length-capped
+// snippet — the brief explicitly forbids generating new content.
+interface Ch8FinalSectionRow {
+  sectionId: string
+  sectionTitle: string
+}
+const REVENUE_SCENARIOS_SECTION_ID = 'revenue-scenarios'
+const CH8_EXCERPT_MAX_CHARS = 320
+const ch8FinalSections = computed<Ch8FinalSectionRow[]>(() => {
+  if (!ch8Output.value) return []
+  const rows: Ch8FinalSectionRow[] = []
+  for (const section of Object.values(ch8Output.value.sections ?? {})) {
+    if (!section?.finalText || !section.finalText.trim()) continue
+    rows.push({
+      sectionId: section.sectionId,
+      sectionTitle: section.sectionTitleSnapshot || section.sectionId
+    })
+  }
+  return rows
+})
+const ch8RevenueScenariosExcerpt = computed<string | null>(() => {
+  const section = ch8Output.value?.sections?.[REVENUE_SCENARIOS_SECTION_ID]
+  const text = section?.finalText?.trim()
+  if (!text) return null
+  if (text.length <= CH8_EXCERPT_MAX_CHARS) return text
+  return `${text.slice(0, CH8_EXCERPT_MAX_CHARS).trimEnd()}…`
 })
 
 // Editing is only the active path while the deliverable is in
@@ -522,13 +570,6 @@ async function removeEvidenceEntry(s: TemplateStudioSection, entryId: string) {
   }
 }
 
-function confidenceTone(c?: EvidenceConfidence): string {
-  if (c === 'high') return 'border-emerald-300 bg-emerald-50 text-emerald-800'
-  if (c === 'medium') return 'border-amber-300 bg-amber-50 text-amber-800'
-  if (c === 'low') return 'border-rose-300 bg-rose-50 text-rose-800'
-  return 'border-neutral-300 bg-neutral-50 text-neutral-700'
-}
-
 function fmtWhen(iso?: string | null): string {
   if (!iso) return ''
   const d = new Date(iso)
@@ -550,12 +591,6 @@ const SCENARIO_LABELS: MarketScenarioLevel[] = [
   'base',
   'ambitious'
 ]
-const SCENARIO_LABEL_COPY: Record<MarketScenarioLevel, string> = {
-  conservative: 'Conservative',
-  base: 'Base',
-  ambitious: 'Ambitious'
-}
-
 function blankScenarios(): MarketBuilderScenario[] {
   return SCENARIO_LABELS.map((label) => ({
     // Form-buffer ids; the real ids land when the composable persists.
@@ -667,49 +702,6 @@ function cancelMarketForm(sectionId: string) {
   marketEditing.value[sectionId] = null
   marketErrors.value[sectionId] = ''
   marketFormOpen.value[sectionId] = false
-}
-
-// Calculation helpers — also exported into the template so the visible
-// math matches what gets persisted. Conservative arithmetic, no
-// surprises: percent is treated as 0–100, buyers are rounded, anything
-// missing reads as null and the cell shows "—".
-function deriveBuyers(s: MarketBuilderScenario): number | null {
-  const audience = s.reachableAudience
-  const interest = s.interestRatePercent
-  const conversion = s.conversionRatePercent
-  if (audience == null || interest == null || conversion == null) return null
-  if (
-    !Number.isFinite(audience) ||
-    !Number.isFinite(interest) ||
-    !Number.isFinite(conversion)
-  ) {
-    return null
-  }
-  const raw = audience * (interest / 100) * (conversion / 100)
-  if (!Number.isFinite(raw)) return null
-  return Math.max(0, Math.round(raw))
-}
-
-function deriveRevenue(s: MarketBuilderScenario): number | null {
-  const buyers = deriveBuyers(s)
-  const price = s.price
-  if (buyers == null || price == null) return null
-  if (!Number.isFinite(price)) return null
-  const raw = buyers * price
-  if (!Number.isFinite(raw)) return null
-  // Round to whole dollars in Playbook copy; cents would be misleading
-  // for forecasts that depend on student-entered percentages.
-  return Math.round(raw)
-}
-
-function fmtNumber(n: number | null | undefined): string {
-  if (n == null || !Number.isFinite(n)) return '—'
-  return n.toLocaleString()
-}
-
-function fmtCurrency(n: number | null | undefined): string {
-  if (n == null || !Number.isFinite(n)) return '—'
-  return `$${n.toLocaleString()}`
 }
 
 function recomputeFormScenarios(sectionId: string) {
@@ -987,66 +979,86 @@ watch(
           assumption and confidence level.
         </p>
       </header>
-      <p v-if="ch7Loading" class="text-xs text-neutral-500">
-        Loading Chapter 7 demand assumptions…
-      </p>
-      <p
-        v-else-if="ch7MarketEntries.length === 0"
-        class="text-xs italic text-neutral-500"
-      >
-        No Chapter 7 demand estimates have been saved yet.
-      </p>
-      <ul v-else class="space-y-2">
-        <li
-          v-for="row in ch7MarketEntries"
-          :key="`ch7-market-${row.sectionId}-${row.entry.id}`"
-          class="rounded-md border border-neutral-200 bg-white p-2 text-sm"
+      <MarketEvidenceReferencePanel
+        source-label="Chapter 7"
+        :entries="ch7MarketEntries"
+        :loading="ch7Loading"
+        empty-message="No Chapter 7 demand estimates have been saved yet."
+      />
+    </section>
+
+    <!-- Chapter 11 retail-carry evidence reference panel.
+         Combines Chapter 7 demand entries with a Chapter 8 finalText
+         status block so a Phoenix Nest pitch author can see which
+         demand and revenue claims have actually been authored upstream.
+         Read-only end-to-end: no writes, no copies, no summarization
+         beyond a length-capped excerpt of the revenue-scenarios final
+         text. The cross-chapter listeners only fire when this section
+         is the active deliverable. -->
+    <section
+      v-if="isChapter11"
+      class="card space-y-3 border-amber-200 bg-amber-50/40"
+    >
+      <header class="space-y-0.5">
+        <p class="text-xs uppercase tracking-wide text-neutral-500">
+          Cross-chapter reference
+        </p>
+        <h3 class="font-medium text-neutral-900">
+          Retail carry evidence from Chapters 7 and 8
+        </h3>
+        <p class="text-xs text-neutral-600">
+          Use this evidence to write the Phoenix Nest carry ask. Do not
+          treat estimates as facts. Name the buyer, scenario, price,
+          weakest assumption, and next validation step.
+        </p>
+      </header>
+      <div>
+        <p class="text-xs font-semibold uppercase tracking-wide text-neutral-600">
+          Chapter 7 demand assumptions
+        </p>
+        <MarketEvidenceReferencePanel
+          source-label="Chapter 7"
+          :entries="ch7MarketEntries"
+          :loading="ch7Loading"
+          empty-message="No Chapter 7 demand estimates have been saved yet."
+        />
+      </div>
+      <div>
+        <p class="text-xs font-semibold uppercase tracking-wide text-neutral-600">
+          Chapter 8 revenue reasoning
+        </p>
+        <p v-if="ch8Loading" class="text-xs text-neutral-500">
+          Loading Chapter 8 revenue reasoning…
+        </p>
+        <p
+          v-else-if="ch8FinalSections.length === 0"
+          class="text-xs italic text-neutral-500"
         >
-          <div class="flex flex-wrap items-baseline justify-between gap-2">
-            <p class="font-medium text-neutral-900">{{ row.entry.productName }}</p>
-            <span
-              v-if="row.entry.confidence"
-              class="rounded-full border px-2 py-0.5 text-xs uppercase tracking-wide"
-              :class="confidenceTone(row.entry.confidence)"
-            >{{ row.entry.confidence }} confidence</span>
-          </div>
-          <p class="text-xs text-neutral-500">
-            From Chapter 7 · {{ row.sectionTitle }}
-          </p>
-          <dl class="mt-1 space-y-0.5 text-xs text-neutral-700">
-            <div v-if="row.entry.primaryMarket">
-              <dt class="inline font-medium text-neutral-600">Primary market:</dt> {{ row.entry.primaryMarket }}
-            </div>
-          </dl>
-          <ul
-            v-if="(row.entry.scenarios?.length ?? 0) > 0"
-            class="mt-1 space-y-0.5 text-xs text-neutral-700"
+          Chapter 8 revenue reasoning has not been finalized yet.
+        </p>
+        <ul
+          v-else
+          class="space-y-0.5 text-xs text-neutral-700"
+        >
+          <li
+            v-for="row in ch8FinalSections"
+            :key="`ch8-final-${row.sectionId}`"
           >
-            <li
-              v-for="scn in row.entry.scenarios"
-              :key="`ch7-scn-${row.entry.id}-${scn.id}`"
-            >
-              <span class="font-medium text-neutral-600">
-                {{ SCENARIO_LABEL_COPY[scn.label] }}:
-              </span>
-              {{ fmtNumber(deriveBuyers(scn)) }} buyers ·
-              {{ fmtCurrency(deriveRevenue(scn)) }} revenue
-            </li>
-          </ul>
-          <p v-if="row.entry.strongestEvidence" class="mt-1 text-xs text-neutral-700">
-            <span class="font-medium text-neutral-600">Strongest evidence:</span>
-            {{ row.entry.strongestEvidence }}
+            ✓ {{ row.sectionTitle }}
+          </li>
+        </ul>
+        <div
+          v-if="ch8RevenueScenariosExcerpt"
+          class="mt-2 rounded-md border border-neutral-200 bg-white p-2 text-xs"
+        >
+          <p class="font-medium uppercase tracking-wide text-neutral-500">
+            Revenue scenarios excerpt
           </p>
-          <p v-if="row.entry.weakestAssumption" class="text-xs text-neutral-700">
-            <span class="font-medium text-neutral-600">Weakest assumption:</span>
-            {{ row.entry.weakestAssumption }}
+          <p class="mt-1 whitespace-pre-wrap text-neutral-800">
+            {{ ch8RevenueScenariosExcerpt }}
           </p>
-          <p v-if="row.entry.nextValidation" class="text-xs text-neutral-700">
-            <span class="font-medium text-neutral-600">Next validation:</span>
-            {{ row.entry.nextValidation }}
-          </p>
-        </li>
-      </ul>
+        </div>
+      </div>
     </section>
 
     <p v-if="loading" class="text-sm text-neutral-500">Loading workspace…</p>
@@ -1496,15 +1508,23 @@ watch(
              reachable market, log assumptions, and produce conservative
              / base / ambitious revenue scenarios. Never gates submit.
              Numbers re-derive from inputs in real time so the visible
-             math always matches what gets persisted. -->
-        <section class="space-y-2 rounded-md border border-amber-200 bg-amber-50/40 p-2">
+             math always matches what gets persisted.
+             Visibility is opt-in per section via studio metadata
+             (s.marketBuilder?.enabled). Sections that don't opt in skip
+             the editor entirely; any pre-existing entries on disabled
+             sections stay in Firestore untouched. -->
+        <section
+          v-if="s.marketBuilder?.enabled"
+          class="space-y-2 rounded-md border border-amber-200 bg-amber-50/40 p-2"
+        >
           <header class="flex flex-wrap items-baseline justify-between gap-2">
             <div>
               <h4 class="text-xs font-medium text-neutral-800">Market Builder</h4>
               <p class="text-xs text-neutral-600">
-                Quantify the demand assumption for this section. Name the likely
-                buyer, size the reachable market, and project conservative, base,
-                and ambitious scenarios. Estimates only — do not present them as facts.
+                {{
+                  s.marketBuilder?.guidance ||
+                  'Quantify the demand assumption for this section. Name the likely buyer, size the reachable market, and project conservative, base, and ambitious scenarios. Estimates only — do not present them as facts.'
+                }}
               </p>
             </div>
             <span class="text-xs text-neutral-500">
@@ -2033,9 +2053,12 @@ watch(
                Compact format: product + target market on top, scenarios
                on a single row, then strongest evidence / weakest
                assumption / next validation. Mirrors the Playbook
-               sentence the chapter is meant to produce. -->
+               sentence the chapter is meant to produce.
+               Same opt-in gate as the editor: sections that haven't
+               enabled Market Builder skip the roll-up so the Playbook
+               preview matches what the section can actually author. -->
           <div
-            v-if="(persistedSection(s)?.marketBuilderEntries?.length ?? 0) > 0"
+            v-if="s.marketBuilder?.enabled && (persistedSection(s)?.marketBuilderEntries?.length ?? 0) > 0"
             class="mt-2 space-y-1.5"
           >
             <p class="text-xs font-medium uppercase tracking-wide text-neutral-500">

@@ -40,7 +40,16 @@ export const pricingBreakEven: TemplateStudio = {
       ],
       completionCriteria: [
         'Sale price is written on the /pricing page with the reasoning.'
-      ]
+      ],
+      sourceGuidance: [
+        'Use a clearly labeled demand assumption when the price depends on expected sell-through.',
+        'Reference the Chapter 7 demand estimate used to support this price.'
+      ],
+      marketBuilder: {
+        enabled: true,
+        guidance:
+          'For each price, log the demand it assumes — buyers per scenario at the proposed sale price. The Phoenix Nest pitch will read this same entry.'
+      }
     },
     {
       id: 'planned-quantity',
@@ -55,7 +64,16 @@ export const pricingBreakEven: TemplateStudio = {
       requiredInputs: ['Expected foot traffic', 'Assumed conversion rate'],
       completionCriteria: [
         'Planned quantity is defended with foot-traffic and conversion math.'
-      ]
+      ],
+      sourceGuidance: [
+        'Use conservative, base, and ambitious scenarios when planned quantity depends on demand.',
+        'Name the source for foot traffic and conversion — observation, prior pop-up, comparable event — or label as an assumption.'
+      ],
+      marketBuilder: {
+        enabled: true,
+        guidance:
+          'Plan inventory against the conservative scenario. Ambitious is the upside; planning to ambitious is how teams over-order.'
+      }
     },
     {
       id: 'break-even',
@@ -96,8 +114,14 @@ export const pricingBreakEven: TemplateStudio = {
         'Foot-traffic and conversion-rate assumptions should come from CSGO/CMO with CFO signoff — log who provided the number.',
         'If the number is an estimate, mark confidence and name what would tighten it.',
         'Use the Market Builder block on this section to log audience × interest × conversion for each scenario; the revenue here should reconcile with the Market Builder output.',
-        'Reference the Chapter 7 Market Builder scenario used for each revenue assumption — the Chapter 7 demand panel above the section list shows the entries to draw from.'
-      ]
+        'Reference the Chapter 7 Market Builder scenario used for each revenue assumption — the Chapter 7 demand panel above the section list shows the entries to draw from.',
+        'Do not present estimates as facts.'
+      ],
+      marketBuilder: {
+        enabled: true,
+        guidance:
+          'Conservative / base / ambitious is required here because the rest of the pop-up plan keys off these numbers. Reconcile with the Chapter 7 demand entry for the same product.'
+      }
     },
     {
       id: 'donation-scenarios',

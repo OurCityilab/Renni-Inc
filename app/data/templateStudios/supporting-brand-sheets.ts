@@ -40,7 +40,12 @@ export const supportingBrandSheets: TemplateStudio = {
       sourceGuidance: [
         'If a price point is "what we hope to charge", mark it as an assumption with confidence.',
         'Name the next validation step (vendor confirmation, buyer feedback, comp analysis).'
-      ]
+      ],
+      marketBuilder: {
+        enabled: true,
+        guidance:
+          'Size Lumen demand by audience × interest × conversion at the proposed price. Conservative / base / ambitious — the buyer will weigh the range, not a single number.'
+      }
     },
     {
       id: 'notice-sheet',
@@ -70,7 +75,12 @@ export const supportingBrandSheets: TemplateStudio = {
       sourceGuidance: [
         'Photo-of-comp-piece + price = a stronger source than "we think it should cost X".',
         'Name the assumption behind material costs if vendor quotes are pending.'
-      ]
+      ],
+      marketBuilder: {
+        enabled: true,
+        guidance:
+          'Size Notice demand at the proposed retail and wholesale prices. Use comparable jewelry brands as your interest-rate baseline and label the assumption.'
+      }
     },
     {
       id: 'humble-oven-sheet',
@@ -100,7 +110,12 @@ export const supportingBrandSheets: TemplateStudio = {
       sourceGuidance: [
         'If shelf-life is "we think 48 hours", mark confidence and name the validation step.',
         'Allergen labeling rules should cite the school/kitchen policy or a credible source.'
-      ]
+      ],
+      marketBuilder: {
+        enabled: true,
+        guidance:
+          'Size Humble Oven demand at the pop-up. Audience is foot traffic; interest and conversion should be based on prior bake-sale or pop-up patterns, not a guess.'
+      }
     },
     {
       id: 'supporting-brand-comparison',
@@ -115,7 +130,16 @@ export const supportingBrandSheets: TemplateStudio = {
       completionCriteria: [
         'Comparison covers every supporting brand on the same dimensions.',
         'At least one overlap or gap is named with a one-line response.'
-      ]
+      ],
+      sourceGuidance: [
+        'When comparing, use clearly labeled demand assumptions, not guesses.',
+        'Reference each brand sheet\'s Market Builder entry so the comparison is grounded.'
+      ],
+      marketBuilder: {
+        enabled: true,
+        guidance:
+          'Add a comparison-level entry per supporting brand so overlaps and gaps come from real demand math, not vibes.'
+      }
     },
     {
       id: 'cross-brand-rules',
@@ -146,7 +170,16 @@ export const supportingBrandSheets: TemplateStudio = {
       completionCriteria: [
         'Every supporting brand has a TechTown and Phoenix Nest readiness flag.',
         'Largest gap per brand is named with an owner.'
-      ]
+      ],
+      sourceGuidance: [
+        'When readiness depends on demand ("can we sell enough to justify the inventory?"), use a clearly labeled demand assumption.',
+        'Name the source or explain why this is an estimate.'
+      ],
+      marketBuilder: {
+        enabled: true,
+        guidance:
+          'Project conservative / base / ambitious demand per supporting brand at launch. Inventory and prep decisions should reconcile with the conservative scenario.'
+      }
     },
     {
       id: 'open-questions',

@@ -45,8 +45,14 @@ export const phoenixNestPitch: TemplateStudio = {
       sourceGuidance: [
         'If a number is from /revenue or /pricing, name it explicitly so the buyer can verify.',
         'Customer quotes belong as their own evidence entries with the customer source identified.',
-        'Use the Market Builder block to project carry-volume scenarios — conservative, base, and ambitious buyer counts at the proposed wholesale price. Buyers respond better to a defended range than to a single number.'
-      ]
+        'Use the Market Builder block to project carry-volume scenarios — conservative, base, and ambitious buyer counts at the proposed wholesale price. Buyers respond better to a defended range than to a single number.',
+        'Reference the Chapter 7 demand estimate and Chapter 8 revenue scenario used to support this claim — the cross-chapter panel above the section list shows them.'
+      ],
+      marketBuilder: {
+        enabled: true,
+        guidance:
+          'Project carry-volume at the proposed wholesale price. The Phoenix Nest buyer reads the conservative number first; do not lead with the ambitious one.'
+      }
     },
     {
       id: 'offer',
@@ -60,7 +66,17 @@ export const phoenixNestPitch: TemplateStudio = {
       ],
       completionCriteria: [
         'Specific SKUs, wholesale price, and suggested reorder cadence are written.'
-      ]
+      ],
+      sourceGuidance: [
+        'Reference the Chapter 7 demand estimate and Chapter 8 revenue scenario used to support each carry quantity.',
+        'Use a clearly labeled demand assumption, not a guess.',
+        'Do not present estimates as facts.'
+      ],
+      marketBuilder: {
+        enabled: true,
+        guidance:
+          'For each SKU, log carry-volume scenarios at the wholesale price. Reorder cadence should reconcile with the conservative scenario.'
+      }
     },
     {
       id: 'ask',
@@ -74,7 +90,16 @@ export const phoenixNestPitch: TemplateStudio = {
       ],
       completionCriteria: [
         'One-line ask exists and is believable.'
-      ]
+      ],
+      sourceGuidance: [
+        'The ask should be backed by the Market Builder conservative scenario — small enough to say yes to, large enough to be meaningful.',
+        'Reference the Chapter 7 demand estimate that justifies the ask quantity.'
+      ],
+      marketBuilder: {
+        enabled: true,
+        guidance:
+          'Size the ask against the conservative scenario. If the ask is bigger than conservative buyers, the buyer will spot the mismatch.'
+      }
     }
   ],
   requirements: [

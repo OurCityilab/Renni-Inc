@@ -64,8 +64,14 @@ export const currentProductLine: TemplateStudio = {
         'Log a structured evidence entry per product price tying it to a vendor quote, comp data, or labeled assumption.',
       sourceGuidance: [
         'If you use a number, name the source or explain the assumption.',
-        'Mark confidence low / medium / high so reviewers know what to push on.'
-      ]
+        'Mark confidence low / medium / high so reviewers know what to push on.',
+        'Use a clearly labeled demand assumption when the price depends on expected sell-through.'
+      ],
+      marketBuilder: {
+        enabled: true,
+        guidance:
+          'For each product price, log the demand the price assumes — buyers per scenario at the proposed retail. The Phoenix Nest pitch and Chapter 8 revenue model both pull from this entry.'
+      }
     },
     {
       id: 'margin-and-break-even',
@@ -119,8 +125,14 @@ export const currentProductLine: TemplateStudio = {
         'Each risk has a one-line response plan.'
       ],
       sourceGuidance: [
-        'If a pricing risk is "demand could be lower than we think", use the Market Builder block to size that scenario explicitly instead of leaving it as a feeling.'
-      ]
+        'If a pricing risk is "demand could be lower than we think", use the Market Builder block to size that scenario explicitly instead of leaving it as a feeling.',
+        'Do not present estimates as facts.'
+      ],
+      marketBuilder: {
+        enabled: true,
+        guidance:
+          'Add a conservative-leaning entry per pricing risk so the response plan has a number behind it.'
+      }
     },
     {
       id: 'retail-recommendations',
@@ -138,8 +150,14 @@ export const currentProductLine: TemplateStudio = {
       ],
       sourceGuidance: [
         'For each recommended product, use the Market Builder block to project conservative / base / ambitious buyer counts and revenue at the proposed retail price.',
-        'Name the strongest evidence and the weakest assumption — buyers are more persuaded by an honest range than by a single guess.'
-      ]
+        'Name the strongest evidence and the weakest assumption — buyers are more persuaded by an honest range than by a single guess.',
+        'Reference the Chapter 8 revenue scenario used to support each recommendation.'
+      ],
+      marketBuilder: {
+        enabled: true,
+        guidance:
+          'Phoenix Nest will read this as the demand argument behind the carry ask. Conservative / base / ambitious is required; name the next validation step.'
+      }
     }
   ],
   requirements: [

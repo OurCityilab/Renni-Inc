@@ -34,8 +34,14 @@ export const businessModelCanvas: TemplateStudio = {
       sourceGuidance: [
         'Quotes from real customer conversations beat paraphrases.',
         'If this is an estimate, mark confidence low / medium / high.',
-        'Name the next validation step so the next cohort can test it.'
-      ]
+        'Name the next validation step so the next cohort can test it.',
+        'Use a clearly labeled demand assumption, not a guess.'
+      ],
+      marketBuilder: {
+        enabled: true,
+        guidance:
+          'Size each customer segment using the Market Builder block — name the audience, the interest and conversion assumptions, and a confidence level. Use estimates, not facts.'
+      }
     },
     {
       id: 'value-propositions',
@@ -50,7 +56,17 @@ export const businessModelCanvas: TemplateStudio = {
       completionCriteria: [
         'Value propositions are tied to House Phoenix products or the donation experience.',
         'Each promise reads like a sentence a customer would believe.'
-      ]
+      ],
+      sourceGuidance: [
+        'Use a clearly labeled demand assumption, not a guess.',
+        'Name the source or explain why this is an estimate.',
+        'Do not present estimates as facts.'
+      ],
+      marketBuilder: {
+        enabled: true,
+        guidance:
+          'For each value proposition, log the demand the promise depends on — who would buy it, at what price, and how confident the team is in that estimate.'
+      }
     },
     {
       id: 'channels',
@@ -66,7 +82,16 @@ export const businessModelCanvas: TemplateStudio = {
         'TechTown pop-up is named.',
         'Phoenix Nest is named.',
         'Student/community reach is named where appropriate.'
-      ]
+      ],
+      sourceGuidance: [
+        'Use a clearly labeled demand assumption when channel reach is the basis for a number.',
+        'Name the source or explain why this is an estimate.'
+      ],
+      marketBuilder: {
+        enabled: true,
+        guidance:
+          'For each channel, log the reachable audience and the interest/conversion assumption that turns reach into buyers. Conservative, base, and ambitious scenarios are required.'
+      }
     },
     {
       id: 'customer-relationships',

@@ -31,6 +31,16 @@ export interface TemplateStudioSection {
   evidencePrompt?: string
   analysisPrompt?: string
   sourceGuidance?: string[]
+  // Market Builder visibility metadata. Market Builder defaults to OFF
+  // for any section that doesn't opt in — the editor block was rendering
+  // unconditionally before this flag landed, which made it appear in
+  // every chapter regardless of whether market sizing was relevant.
+  // Sections explicitly enable it and may attach a short coaching line
+  // shown above the editor.
+  marketBuilder?: {
+    enabled: boolean
+    guidance?: string
+  }
 }
 
 export interface TemplateStudioRequirement {

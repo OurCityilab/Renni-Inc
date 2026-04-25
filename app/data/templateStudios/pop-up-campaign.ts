@@ -33,7 +33,12 @@ export const popUpCampaign: TemplateStudio = {
         'Quotes from real customer conversations beat paraphrases or invented personas.',
         'If this is an estimate, mark confidence low / medium / high and name what would tighten it.',
         'For each customer group, use the Market Builder block to size the reachable school audience and the broader Detroit-adjacent audience — keep school and broader as separate numbers.'
-      ]
+      ],
+      marketBuilder: {
+        enabled: true,
+        guidance:
+          'Size each named group separately. School audience and broader Detroit-adjacent audience are different numbers; do not collapse them.'
+      }
     },
     {
       id: 'customer-problems-and-desires',
@@ -48,7 +53,17 @@ export const popUpCampaign: TemplateStudio = {
       completionCriteria: [
         'Each customer group has at least one problem and one desire named.',
         'Language sounds like a customer, not a marketer.'
-      ]
+      ],
+      sourceGuidance: [
+        'Use a clearly labeled demand assumption when problem-severity is the basis for an interest rate.',
+        'Name the source or explain why this is an estimate.',
+        'Do not present estimates as facts.'
+      ],
+      marketBuilder: {
+        enabled: true,
+        guidance:
+          'For each problem/desire pair, log the segment of the audience that actually has the problem strongly enough to buy. That is the interest rate the campaign should plan against.'
+      }
     },
     {
       id: 'insight-evidence',
@@ -70,7 +85,12 @@ export const popUpCampaign: TemplateStudio = {
       sourceGuidance: [
         'Sources include feedback, observation, survey, sales conversation, or labeled assumption.',
         'No insight should ship without a labeled source.'
-      ]
+      ],
+      marketBuilder: {
+        enabled: true,
+        guidance:
+          'When an insight implies a number ("most students would pay $25"), back it with a Market Builder entry — audience, interest, conversion, price, confidence.'
+      }
     },
     {
       id: 'feedback-plan',
@@ -102,7 +122,16 @@ export const popUpCampaign: TemplateStudio = {
       completionCriteria: [
         'Three to five insight-driven decisions are listed with traceability.',
         'At least two risks or unknowns are named.'
-      ]
+      ],
+      sourceGuidance: [
+        'Reference the Chapter 7 demand estimate and Chapter 8 revenue scenario used to support each launch decision.',
+        'Use conservative, base, and ambitious scenarios when the launch decision depends on demand.'
+      ],
+      marketBuilder: {
+        enabled: true,
+        guidance:
+          'For each launch decision tied to demand, log the conservative / base / ambitious split. That is what the Phoenix Nest pitch will reference.'
+      }
     },
     {
       id: 'audience',
@@ -160,7 +189,16 @@ export const popUpCampaign: TemplateStudio = {
       completionCriteria: [
         'At least one measurement plan exists and is owned.',
         'Recap will cite what we learned.'
-      ]
+      ],
+      sourceGuidance: [
+        'Each measurement should validate one Market Builder assumption — name which scenario the result will tighten.',
+        'Do not present estimates as facts; the recap is where assumptions become evidence.'
+      ],
+      marketBuilder: {
+        enabled: true,
+        guidance:
+          'Use the Next-validation field on each Market Builder entry to name the measurement that tightens the assumption.'
+      }
     }
   ],
   requirements: [
