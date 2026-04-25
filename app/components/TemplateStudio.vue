@@ -122,9 +122,11 @@ const coveredRequirementCount = computed(() => coverage.value.coveredRequirement
       <p class="font-medium">Write your own source notes first.</p>
       <p class="mt-1 text-sm">
         Before any future AI coaching can critique or polish your work, capture
-        the team's own thinking in <strong>Owner notes</strong> below:
+        the team's own thinking in the <strong>Output Workspace</strong> below:
         what decision did your team make, why did you make it, what evidence
-        supports it, and what do you still want help improving?
+        supports it, and what do you still want help improving? Use
+        <strong>Owner notes</strong> for deliverable-level context or approval
+        handoff notes, not for the section-by-section Playbook writing itself.
       </p>
     </section>
 
