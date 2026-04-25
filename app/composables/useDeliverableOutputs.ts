@@ -304,6 +304,10 @@ export function useDeliverableOutputs() {
     actor: DeliverableOutputActor
   ): Promise<void> {
     const now = new Date().toISOString()
+    const hasConfidencePatch = Object.prototype.hasOwnProperty.call(
+      patch,
+      'confidence'
+    )
     const next = currentEvidence.map((e) => {
       if (e.id !== entryId) return e
       return {
@@ -317,7 +321,7 @@ export function useDeliverableOutputs() {
         ...(patch.calculation !== undefined && {
           calculation: patch.calculation.trim() || undefined
         }),
-        ...(patch.confidence !== undefined && { confidence: patch.confidence }),
+        ...(hasConfidencePatch && { confidence: patch.confidence }),
         ...(patch.risk !== undefined && {
           risk: patch.risk.trim() || undefined
         }),
