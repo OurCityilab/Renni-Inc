@@ -275,11 +275,11 @@ export const businessModelCanvas: TemplateStudio = {
     },
     {
       title: 'Review value propositions and channels',
-      department: 'marketing',
-      ownerRole: 'cmo',
+      department: 'strategy-growth',
+      ownerRole: 'csgo',
       requirementId: 'bmc-value-props-tied-to-products',
       definitionOfDone:
-        'Value props tied to products; TechTown and Phoenix Nest channels named.',
+        'CSGO ties value props to products, names TechTown and Phoenix Nest channels, and routes customer-facing language to CMO for review.',
       dueOffsetDays: 4
     },
     {
@@ -293,11 +293,11 @@ export const businessModelCanvas: TemplateStudio = {
     },
     {
       title: 'Review key activities and resources',
-      department: 'operations',
-      ownerRole: 'coo',
+      department: 'strategy-growth',
+      ownerRole: 'csgo',
       requirementId: 'bmc-partners-and-resources-realistic',
       definitionOfDone:
-        'Activities cover before/during/after pop-up; resources and partners are real.',
+        'CSGO confirms activities, resources, and partners support the strategy; COO verifies the operational pieces are realistic.',
       dueOffsetDays: 4
     },
     {

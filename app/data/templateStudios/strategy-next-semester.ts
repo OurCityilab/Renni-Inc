@@ -230,22 +230,40 @@ export const strategyNextSemester: TemplateStudio = {
       dueOffsetDays: 4
     },
     {
-      title: 'Add finance/revenue lessons',
-      department: 'finance',
-      ownerRole: 'cfo',
+      title: 'Draft next-semester goals with finance support',
+      department: 'strategy-growth',
+      ownerRole: 'csgo',
       requirementId: 'strategy-next-semester-goals',
       definitionOfDone:
-        'CFO writes finance/revenue lessons and confirms next-semester metric targets.',
+        'CSGO drafts measurable next-semester goals; CFO confirms metric logic and targets are defensible.',
       dueOffsetDays: 4
     },
     {
-      title: 'Add marketing/customer lessons',
-      department: 'marketing',
-      ownerRole: 'cmo',
+      title: 'Draft customer and sales insights',
+      department: 'strategy-growth',
+      ownerRole: 'csgo',
       requirementId: 'strategy-customer-sales-insights',
       definitionOfDone:
-        'CMO writes customer and sales insights and ties each one to evidence.',
+        'CSGO writes customer and sales insights from evidence; CMO reviews customer-facing language and brand implications.',
       dueOffsetDays: 4
+    },
+    {
+      title: 'Draft brand and product priorities',
+      department: 'strategy-growth',
+      ownerRole: 'csgo',
+      requirementId: 'strategy-brand-product-priorities',
+      definitionOfDone:
+        'CSGO recommends keep/change/retire calls for current products and priority directions for every brand.',
+      dueOffsetDays: 5
+    },
+    {
+      title: 'Frame risks and open questions',
+      department: 'strategy-growth',
+      ownerRole: 'csgo',
+      requirementId: 'strategy-risks-open-questions',
+      definitionOfDone:
+        'CSGO names the strategic risks and open questions, then routes them to Co-CEO for coherence review.',
+      dueOffsetDays: 5
     },
     {
       title: 'Final strategy and next-semester review',

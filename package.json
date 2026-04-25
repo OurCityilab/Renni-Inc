@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "Renni Command Center — lightweight production environment for the Renni Inc. Brand and Operations Bible and TechTown pop-up.",
+  "description": "Renni Command Center — lightweight production environment for the Renni Inc. Brand and Operations Playbook and TechTown pop-up.",
   "scripts": {
     "dev": "nuxt dev",
     "build": "nuxt build",
@@ -22,6 +22,7 @@
     "seed:qa-identities": "tsx scripts/seed-qa-identities.ts",
     "cleanup:qa-identities": "tsx scripts/cleanup-qa-identities.ts",
     "cleanup:bible-goal": "tsx scripts/cleanup-bible-goal.ts",
+    "audit:studio-alignment": "tsx scripts/audit-studio-alignment.ts",
     "backfill:tasks": "tsx scripts/backfill-task-alignment.ts",
     "sync:users": "tsx scripts/sync-users-from-roster.ts"
   },

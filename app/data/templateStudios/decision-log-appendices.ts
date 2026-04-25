@@ -219,13 +219,22 @@ export const decisionLogAppendices: TemplateStudio = {
       dueOffsetDays: 5
     },
     {
-      title: 'Add brand/marketing evidence links',
-      department: 'marketing',
-      ownerRole: 'cmo',
+      title: 'Assemble cross-functional evidence links',
+      department: 'strategy-growth',
+      ownerRole: 'csgo',
       requirementId: 'appendix-evidence-linked',
       definitionOfDone:
-        'CMO links the brand assets, customer feedback, and content folders.',
+        'CSGO assembles evidence links across brand, finance, operations, and customer research; CMO, CFO, and COO verify their own source links.',
       dueOffsetDays: 5
+    },
+    {
+      title: 'Frame unresolved decision handoff',
+      department: 'strategy-growth',
+      ownerRole: 'csgo',
+      requirementId: 'appendix-unresolved-decisions',
+      definitionOfDone:
+        'CSGO lists unresolved decisions with triggers and next-cohort owners, then routes the handoff to Co-CEO for review.',
+      dueOffsetDays: 6
     },
     {
       title: 'Final decision log and appendices review',

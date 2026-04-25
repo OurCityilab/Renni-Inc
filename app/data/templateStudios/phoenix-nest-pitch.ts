@@ -130,12 +130,12 @@ export const phoenixNestPitch: TemplateStudio = {
   suggestedTasks: [
     {
       title: 'Pull pop-up actuals into the pitch',
-      department: 'finance',
-      ownerRole: 'cfo',
+      department: 'executive',
+      ownerRole: 'coceo',
       requirementId: 'pitch-evidence',
       dependency: 'pricing-scenarios-live',
       definitionOfDone:
-        'Revenue, units sold, and margin pulled from /revenue + /pricing; screenshots in the pitch.',
+        'Co-CEO owns the buyer-facing proof story; CFO verifies revenue, units sold, and margin from /revenue + /pricing.',
       dueOffsetDays: 2
     },
     {
@@ -144,7 +144,7 @@ export const phoenixNestPitch: TemplateStudio = {
       ownerRole: 'coceo',
       requirementId: 'pitch-offer',
       definitionOfDone:
-        'Offer reviewed by CFO for margin math and CMO for brand fit.',
+        'Offer reviewed by CFO for margin math, COO for inventory/cadence feasibility, and CMO for brand fit.',
       dueOffsetDays: 4
     },
     {
@@ -157,9 +157,11 @@ export const phoenixNestPitch: TemplateStudio = {
     },
     {
       title: 'Capture 3 customer quotes at the pop-up',
-      department: 'marketing',
-      ownerRole: 'member',
+      department: 'strategy-growth',
+      ownerRole: 'csgo',
       requirementId: 'pitch-customer-quotes',
+      definitionOfDone:
+        'CSGO collects or verifies at least three customer quotes, with CMO support for clean buyer-facing wording.',
       dueOffsetDays: 1
     }
   ],
