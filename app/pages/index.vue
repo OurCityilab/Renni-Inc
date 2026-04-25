@@ -16,6 +16,7 @@ const tasks = useTasks()
 const audience = computed<HomeAudience>(() => {
   if (auth.isAdmin) return 'admin'
   if (auth.isCoCEO) return 'coceo'
+  if (auth.profile?.role === 'coo') return 'coceo'
   if (auth.isChief) return 'chief'
   return 'member'
 })
