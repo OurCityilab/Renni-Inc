@@ -4,31 +4,42 @@ import { useAuthStore } from '~/stores/auth'
 
 const auth = useAuthStore()
 
-const nav = computed(() => {
-  const items: Array<{ to: string; label: string }> = [
-    { to: '/', label: 'Home' },
-    { to: '/deliverables', label: 'Deliverables' },
-    { to: '/playbook', label: 'Playbook' },
-    { to: '/tasks', label: 'Tasks' },
-    { to: '/departments', label: 'Departments' },
-    { to: '/workbench', label: 'Workbench' },
-    { to: '/canvas', label: 'Canvas' },
-    { to: '/timeline', label: 'Timeline' },
-    { to: '/goals', label: 'Goals' },
-    { to: '/pricing', label: 'Pricing' },
-    { to: '/revenue', label: 'Revenue' }
+// Grouped nav reduces cognitive load: students see the daily Work cluster
+// first, then Support tools, then any role-specific Admin links. The
+// dedicated "My Department" link was removed because Workbench surfaces
+// the user's team for non-admins and /departments lists every team.
+type NavItem = { to: string; label: string }
+type NavGroup = { label: string; items: NavItem[] }
+
+const navGroups = computed<NavGroup[]>(() => {
+  const groups: NavGroup[] = [
+    {
+      label: 'Work',
+      items: [
+        { to: '/', label: 'Home' },
+        { to: '/tasks', label: 'Tasks' },
+        { to: '/workbench', label: 'Workbench' },
+        { to: '/deliverables', label: 'Deliverables' },
+        { to: '/departments', label: 'Departments' },
+        { to: '/playbook', label: 'Playbook' }
+      ]
+    },
+    {
+      label: 'Support',
+      items: [
+        { to: '/canvas', label: 'Canvas' },
+        { to: '/timeline', label: 'Timeline' },
+        { to: '/goals', label: 'Goals' },
+        { to: '/pricing', label: 'Pricing' },
+        { to: '/revenue', label: 'Revenue' }
+      ]
+    }
   ]
-  const dept = auth.profile?.department
-  if (dept && dept !== 'admin') {
-    items.push({ to: `/departments/${dept}`, label: 'My Department' })
-  }
-  if (auth.isChief || auth.isAdmin) {
-    items.push({ to: '/c-suite', label: 'C-Suite' })
-  }
-  if (auth.isAdmin) {
-    items.push({ to: '/team', label: 'Team' })
-  }
-  return items
+  const adminItems: NavItem[] = []
+  if (auth.isChief || auth.isAdmin) adminItems.push({ to: '/c-suite', label: 'C-Suite' })
+  if (auth.isAdmin) adminItems.push({ to: '/team', label: 'Team' })
+  if (adminItems.length) groups.push({ label: 'Admin', items: adminItems })
+  return groups
 })
 </script>
 
@@ -43,15 +54,23 @@ const nav = computed(() => {
           <span class="font-semibold">Renni Command Center</span>
         </NuxtLink>
         <nav class="hidden md:flex items-center gap-1">
-          <NuxtLink
-            v-for="item in nav"
-            :key="item.to"
-            :to="item.to"
-            class="rounded-md px-3 py-1.5 text-sm text-neutral-700 hover:bg-neutral-100"
-            active-class="bg-neutral-100 text-phoenix-700"
-          >
-            {{ item.label }}
-          </NuxtLink>
+          <template v-for="(group, gi) in navGroups" :key="group.label">
+            <span
+              v-if="gi > 0"
+              aria-hidden="true"
+              class="mx-1 h-5 w-px bg-neutral-200"
+            />
+            <NuxtLink
+              v-for="item in group.items"
+              :key="item.to"
+              :to="item.to"
+              :title="`${group.label} · ${item.label}`"
+              class="rounded-md px-3 py-1.5 text-sm text-neutral-700 hover:bg-neutral-100"
+              active-class="bg-neutral-100 text-phoenix-700"
+            >
+              {{ item.label }}
+            </NuxtLink>
+          </template>
         </nav>
         <div class="flex items-center gap-2">
           <span v-if="auth.profile" class="hidden sm:inline text-xs text-neutral-600">
@@ -63,15 +82,22 @@ const nav = computed(() => {
         </div>
       </div>
       <nav class="md:hidden flex gap-1 overflow-x-auto border-t border-neutral-100 px-2 py-2">
-        <NuxtLink
-          v-for="item in nav"
-          :key="item.to"
-          :to="item.to"
-          class="rounded-md px-3 py-1.5 text-sm text-neutral-700 whitespace-nowrap hover:bg-neutral-100"
-          active-class="bg-neutral-100 text-phoenix-700"
-        >
-          {{ item.label }}
-        </NuxtLink>
+        <template v-for="(group, gi) in navGroups" :key="group.label">
+          <span
+            v-if="gi > 0"
+            aria-hidden="true"
+            class="my-1 mx-1 w-px shrink-0 bg-neutral-200"
+          />
+          <NuxtLink
+            v-for="item in group.items"
+            :key="item.to"
+            :to="item.to"
+            class="rounded-md px-3 py-1.5 text-sm text-neutral-700 whitespace-nowrap hover:bg-neutral-100"
+            active-class="bg-neutral-100 text-phoenix-700"
+          >
+            {{ item.label }}
+          </NuxtLink>
+        </template>
       </nav>
     </header>
     <main class="flex-1">

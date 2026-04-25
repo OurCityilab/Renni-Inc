@@ -334,9 +334,9 @@ const dependencyCandidates = computed<Task[]>(() =>
         <p class="text-sm text-neutral-500">Planning</p>
         <h1 class="text-2xl font-semibold">Timeline Planner</h1>
         <p class="text-sm text-neutral-600">
-          Chiefs assign tasks in plain language. The app generates a Gantt-style Timeline Dashboard
-          from task owners, dates, and dependencies. Students track their work on
-          <NuxtLink to="/tasks" class="text-phoenix-700 hover:underline">/tasks</NuxtLink>.
+          Timeline is the schedule view generated from tasks. Use it to see when work is
+          due and what depends on what — update your own work from
+          <NuxtLink to="/tasks" class="text-phoenix-700 hover:underline">Tasks</NuxtLink>.
         </p>
       </div>
       <button

@@ -15,6 +15,7 @@ const props = withDefaults(
     presetRequirementId?: string | null
     presetTitle?: string
     presetDefinitionOfDone?: string
+    presetPlannerNote?: string
     lockDepartment?: boolean
     lockDeliverable?: boolean
     title?: string
@@ -26,6 +27,7 @@ const props = withDefaults(
     presetRequirementId: null,
     presetTitle: '',
     presetDefinitionOfDone: '',
+    presetPlannerNote: '',
     lockDepartment: false,
     lockDeliverable: false,
     title: 'Assign a task'
@@ -273,6 +275,13 @@ async function submit() {
             <option value="high">High</option>
           </select>
         </label>
+        <div v-if="presetPlannerNote" class="sm:col-span-2 rounded-md border border-sky-200 bg-sky-50 p-2 text-xs text-sky-900">
+          <p class="font-medium">Planning note from the Template Studio</p>
+          <p class="mt-0.5">{{ presetPlannerNote }}</p>
+          <p class="mt-1 text-sky-800/80">
+            This is guidance for sequencing. To enforce it, pick the actual prerequisite task below.
+          </p>
+        </div>
         <label class="text-xs font-medium text-neutral-800 sm:col-span-2">
           What has to happen first? (dependencies)
           <select

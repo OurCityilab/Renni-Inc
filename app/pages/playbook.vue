@@ -189,8 +189,8 @@ const statusLabel: Record<ChapterStatus, string> = {
       <p class="text-sm text-neutral-500">Renni Inc. Brand &amp; Operations Playbook</p>
       <h1 class="text-2xl font-semibold">Playbook Chapter Status</h1>
       <p class="text-sm text-neutral-600">
-        Each chapter rolls up from its deliverables. Status reflects the current
-        state across owners, reviewers, and approvals.
+        The Playbook shows final chapter progress and how each deliverable and its
+        tasks are rolling up. Each chapter's status reflects owners, reviewers, and approvals.
       </p>
     </header>
 

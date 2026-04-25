@@ -34,7 +34,8 @@ const filtered = computed(() => {
       <p class="text-sm text-neutral-500">Playbook chapters</p>
       <h1 class="text-2xl font-semibold">Deliverables</h1>
       <p class="text-sm text-neutral-600">
-        Every chapter, who owns it, and where it stands.
+        Deliverables are the parent outcomes. Open one to build the artifact, create
+        tasks, review requirements, and submit for approval.
       </p>
     </header>
 

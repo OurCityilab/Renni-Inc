@@ -9,6 +9,56 @@ const auth = useAuthStore()
 const deliverables = useDeliverables()
 const tasks = useTasks()
 
+// Role-aware orientation. Answers "what should I do next?" without
+// requiring students or chiefs to learn the nav bar first.
+type OrientationAction = { label: string; to: string }
+type Orientation = {
+  headline: string
+  body: string
+  primary: OrientationAction
+  secondary: OrientationAction | null
+}
+const orientation = computed<Orientation>(() => {
+  const dept = auth.profile?.department ?? null
+  const myDeptHref =
+    dept && dept !== 'admin' ? `/departments/${dept}` : '/departments'
+
+  if (auth.isAdmin) {
+    return {
+      headline: 'Start with the company operating view.',
+      body:
+        'You can see every department, every deliverable, and every task. Use the Workbench for what needs attention; use Team to manage roster and roles.',
+      primary: { label: 'Open Workbench', to: '/workbench' },
+      secondary: { label: 'Open Team / Admin', to: '/team' }
+    }
+  }
+  if (auth.isCoCEO) {
+    return {
+      headline: 'Start with company risk and approvals.',
+      body:
+        'You can see every department. Use the Workbench for cross-department blockers and approvals; use the Playbook to see chapter progress at a glance.',
+      primary: { label: 'Open Workbench', to: '/workbench' },
+      secondary: { label: 'Open Playbook', to: '/playbook' }
+    }
+  }
+  if (auth.isChief) {
+    return {
+      headline: 'Start with your Workbench.',
+      body:
+        "Chiefs assign work, monitor blocked or overdue tasks, and keep deliverables moving. The Workbench is your planning view; your Department page shows your team.",
+      primary: { label: 'Open Workbench', to: '/workbench' },
+      secondary: { label: 'View my department', to: myDeptHref }
+    }
+  }
+  return {
+    headline: 'Start with your tasks.',
+    body:
+      'Most students contribute through assigned tasks, not by owning whole deliverables. Open Tasks to update status, mark blockers, and finish work.',
+    primary: { label: 'Open Tasks', to: '/tasks' },
+    secondary: { label: 'View my department', to: myDeptHref }
+  }
+})
+
 const owned = ref<Deliverable[]>([])
 const needsMyApproval = ref<Deliverable[]>([])
 const loading = ref(true)
@@ -56,6 +106,25 @@ const myApproved = computed(() => owned.value.filter((d) => d.status === 'approv
         {{ auth.profile?.title }} · {{ auth.profile?.department }}
       </p>
     </header>
+
+    <!-- Role-aware orientation banner: "what should I do next?" -->
+    <section class="rounded-md border border-phoenix-200 bg-phoenix-50 p-4">
+      <p class="text-sm font-semibold text-phoenix-900">
+        {{ orientation.headline }}
+      </p>
+      <p class="mt-1 text-sm text-phoenix-900/90">{{ orientation.body }}</p>
+      <div class="mt-3 flex flex-wrap gap-2">
+        <NuxtLink
+          :to="orientation.primary.to"
+          class="btn-primary text-sm"
+        >{{ orientation.primary.label }}</NuxtLink>
+        <NuxtLink
+          v-if="orientation.secondary"
+          :to="orientation.secondary.to"
+          class="btn-secondary text-sm"
+        >{{ orientation.secondary.label }}</NuxtLink>
+      </div>
+    </section>
 
     <div class="grid gap-3 sm:grid-cols-3">
       <KpiCard

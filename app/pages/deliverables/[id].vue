@@ -168,6 +168,17 @@ async function saveNotes() {
 
       <div class="grid gap-4 md:grid-cols-3">
         <div class="md:col-span-2 space-y-4">
+          <!-- Draft + studio: lead with the teaching/build surface so students
+               see the guided workspace before review mechanics. -->
+          <TemplateStudio
+            v-if="studio && deliverable.status === 'draft'"
+            :deliverable="deliverable"
+            :studio="studio"
+            :related-tasks="relatedTasks"
+            :related-tasks-loading="relatedTasksLoading"
+            :can-assign="canAssignForDeliverable"
+          />
+
           <ApprovalActions :deliverable="deliverable" />
 
           <!-- Review notes: prominent when the deliverable is in a review state. -->
@@ -215,8 +226,10 @@ async function saveNotes() {
           <!-- Template Studio: the interactive guided workspace. Only
                renders when curated curriculum exists for this deliverable;
                otherwise the plain template preview below still serves. -->
+          <!-- Non-draft path: studio still renders, but after review/approval
+               context so the action panel and review notes lead. -->
           <TemplateStudio
-            v-if="studio"
+            v-if="studio && deliverable.status !== 'draft'"
             :deliverable="deliverable"
             :studio="studio"
             :related-tasks="relatedTasks"
@@ -246,8 +259,12 @@ async function saveNotes() {
             </div>
           </section>
 
-          <!-- Template preview: inline markdown fetched from public/templates. -->
-          <section v-if="deliverable.templateUrl" class="card">
+          <!-- Template preview: inline markdown fetched from public/templates.
+               Suppressed when a Template Studio is active for this deliverable
+               — the studio replaces the raw markdown view. The "Open the
+               template stub" link in "What this deliverable needs" above still
+               provides access to the original document. -->
+          <section v-if="deliverable.templateUrl && !studio" class="card">
             <header class="flex items-center justify-between">
               <h2 class="text-sm font-semibold">Template preview</h2>
               <button

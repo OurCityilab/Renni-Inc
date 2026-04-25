@@ -143,7 +143,7 @@ async function reopen(t: Task) {
       <p class="text-sm text-neutral-500">Working list</p>
       <h1 class="text-2xl font-semibold">Tasks</h1>
       <p class="text-sm text-neutral-600">
-        Tasks roll up to deliverables. Mark blocked with a reason so the team can unblock you.
+        Update the work assigned to you. Start tasks, mark them blocked with a reason, or mark them done.
       </p>
     </header>
 

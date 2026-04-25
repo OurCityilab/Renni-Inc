@@ -72,8 +72,9 @@ const loading = computed(() => rosterLoading.value || tasksLoading.value || delL
       <p class="text-sm text-neutral-500">Company structure</p>
       <h1 class="text-2xl font-semibold">Departments</h1>
       <p class="text-sm text-neutral-600">
-        Every team, who leads it, and what they own. Tap a department to see its
-        people, deliverables, tasks, blockers, and what's due next.
+        Departments show team ownership: who is on each team, what they own, and
+        what needs attention. Tap a department to see its people, deliverables, tasks,
+        blockers, and what's due next.
       </p>
       <p v-if="auth.isAdmin" class="mt-1 text-xs text-neutral-500">
         You're looking at the student-visible view. Use

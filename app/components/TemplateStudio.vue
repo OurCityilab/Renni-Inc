@@ -61,6 +61,26 @@ function toggleCreateFor(req: TemplateStudioRequirement) {
     openForRequirement.value === req.id ? null : req.id
 }
 
+// Resolve the matching suggestedTask for a requirement (if any) and turn
+// its `dependency` string into a human-readable planner note. Suggested
+// tasks are curriculum hints — their `dependency` field is a requirement
+// id or a prose hint, never a task id, so we surface it as helper text
+// and leave the form's dependsOn picker for real prerequisite tasks.
+function plannerNoteFor(req: TemplateStudioRequirement): string {
+  const suggested = props.studio.suggestedTasks.find(
+    (t) => t.requirementId === req.id
+  )
+  if (!suggested?.dependency) return ''
+  const target = props.studio.requirements.find(
+    (r) => r.id === suggested.dependency
+  )
+  if (target) {
+    return `Plan this after: "${target.label}". Pick the real prerequisite task below if one exists.`
+  }
+  // Free-text hint that didn't match a requirement id.
+  return `Planning hint: ${suggested.dependency}.`
+}
+
 const completedRequirementCount = computed(
   () =>
     props.studio.requirements.filter(
@@ -249,6 +269,7 @@ const coveredRequirementCount = computed(
             :preset-requirement-id="req.id"
             :preset-title="req.suggestedTaskTitle || `Cover: ${req.label}`"
             :preset-definition-of-done="req.definitionOfDone || ''"
+            :preset-planner-note="plannerNoteFor(req)"
             lock-deliverable
             title="Create task from this requirement"
             @created="openForRequirement = null"

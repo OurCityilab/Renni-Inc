@@ -179,6 +179,12 @@ const statusColor: Record<string, string> = {
         {{ scope === 'member' ? 'My work' : `Work · ${scopeLabel}` }}
       </h1>
       <p class="text-sm text-neutral-600">
+        Plan and monitor work across your scope. Use this to spot blocked, overdue,
+        due-soon, and uncovered work — go to
+        <NuxtLink to="/tasks" class="text-phoenix-700 hover:underline">Tasks</NuxtLink>
+        when you need to update your own status.
+      </p>
+      <p class="mt-1 text-sm text-neutral-600">
         <template v-if="scope === 'all'">
           Cross-department view — blockers, upcoming deadlines, deliverables in review, unassigned tasks.
         </template>
