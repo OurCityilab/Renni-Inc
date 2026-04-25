@@ -20,3 +20,20 @@ export const templateStudios: Record<string, TemplateStudio> = {
 export function getTemplateStudio(deliverableId: string): TemplateStudio | null {
   return templateStudios[deliverableId] ?? null
 }
+
+export function findTemplateRequirement(requirementId: string): {
+  deliverableId: string
+  studioTitle: string
+  requirementLabel: string
+} | null {
+  for (const [deliverableId, studio] of Object.entries(templateStudios)) {
+    const requirement = studio.requirements.find((r) => r.id === requirementId)
+    if (!requirement) continue
+    return {
+      deliverableId,
+      studioTitle: studio.title,
+      requirementLabel: requirement.label
+    }
+  }
+  return null
+}

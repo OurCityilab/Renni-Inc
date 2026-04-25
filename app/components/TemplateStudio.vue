@@ -5,6 +5,7 @@ import type {
   TemplateStudio,
   TemplateStudioRequirement
 } from '~/types/templateStudio'
+import { findTemplateRequirement } from '~/data/templateStudios'
 
 const props = defineProps<{
   deliverable: Deliverable
@@ -71,11 +72,9 @@ function plannerNoteFor(req: TemplateStudioRequirement): string {
     (t) => t.requirementId === req.id
   )
   if (!suggested?.dependency) return ''
-  const target = props.studio.requirements.find(
-    (r) => r.id === suggested.dependency
-  )
+  const target = findTemplateRequirement(suggested.dependency)
   if (target) {
-    return `Plan this after: "${target.label}". Pick the real prerequisite task below if one exists.`
+    return `Plan this after: "${target.requirementLabel}" in ${target.studioTitle}. Pick the real prerequisite task below if one exists.`
   }
   // Free-text hint that didn't match a requirement id.
   return `Planning hint: ${suggested.dependency}.`
