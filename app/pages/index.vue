@@ -4,76 +4,70 @@ import { useAuthStore } from '~/stores/auth'
 import { useDeliverables } from '~/composables/useDeliverables'
 import { useTasks } from '~/composables/useTasks'
 import type { Deliverable, Department } from '~/types/models'
+import { templateStudios } from '~/data/templateStudios'
 import { taskStatusLabel } from '~/utils/taskStatus'
+import { computeHomeSignals, type HomeAudience } from '~/utils/homeSignals'
 
 const auth = useAuthStore()
 const deliverables = useDeliverables()
 const tasks = useTasks()
 
-// Role-aware orientation. Answers "what should I do next?" without
-// requiring students or chiefs to learn the nav bar first.
-type OrientationAction = { label: string; to: string }
-type Orientation = {
-  headline: string
-  body: string
-  primary: OrientationAction
-  secondary: OrientationAction | null
-}
-const orientation = computed<Orientation>(() => {
-  const dept = auth.profile?.department ?? null
-  const myDeptHref =
-    dept && dept !== 'admin' ? `/departments/${dept}` : '/departments'
-
-  if (auth.isAdmin) {
-    return {
-      headline: 'Start with the company operating view.',
-      body:
-        'You can see every department, every deliverable, and every task. Use the Workbench for what needs attention; use Team to manage roster and roles.',
-      primary: { label: 'Open Workbench', to: '/workbench' },
-      secondary: { label: 'Open Team / Admin', to: '/team' }
-    }
-  }
-  if (auth.isCoCEO) {
-    return {
-      headline: 'Start with company risk and approvals.',
-      body:
-        'You can see every department. Use the Workbench for cross-department blockers and approvals; use the Playbook to see chapter progress at a glance.',
-      primary: { label: 'Open Workbench', to: '/workbench' },
-      secondary: { label: 'Open Playbook', to: '/playbook' }
-    }
-  }
-  if (auth.isChief) {
-    return {
-      headline: 'Start with your Workbench.',
-      body:
-        "Chiefs assign work, monitor blocked or overdue tasks, and keep deliverables moving. The Workbench is your planning view; your Department page shows your team.",
-      primary: { label: 'Open Workbench', to: '/workbench' },
-      secondary: { label: 'View my department', to: myDeptHref }
-    }
-  }
-  return {
-    headline: 'Start with your tasks.',
-    body:
-      'Most students contribute through assigned tasks, not by owning whole deliverables. Open Tasks to update status, mark blockers, and finish work.',
-    primary: { label: 'Open Tasks', to: '/tasks' },
-    secondary: { label: 'View my department', to: myDeptHref }
-  }
+// Audience for Home signal scoping. Mirrors the Workbench scope tree.
+const audience = computed<HomeAudience>(() => {
+  if (auth.isAdmin) return 'admin'
+  if (auth.isCoCEO) return 'coceo'
+  if (auth.isChief) return 'chief'
+  return 'member'
 })
+
+const cardTone: Record<'default' | 'warn' | 'good', string> = {
+  default: 'border-neutral-200 bg-white',
+  warn: 'border-amber-300 bg-amber-50',
+  good: 'border-emerald-300 bg-emerald-50'
+}
 
 const owned = ref<Deliverable[]>([])
 const needsMyApproval = ref<Deliverable[]>([])
 const loading = ref(true)
 
-// Member-focused: surface the tasks the signed-in student owns so Home
-// answers "what should I do next?" without bouncing through the nav.
+// Member-focused subscription — surfaces "Your tasks" + the member
+// signal cards. Always loaded; used by every audience for member-style
+// detail (a chief still has their own assigned tasks).
 const myUid = computed(() => auth.user?.uid || '')
-const { data: myTasks, loading: tasksLoading } = tasks.watchByOwner(myUid.value)
+const { data: myTasks, loading: myTasksLoading } = tasks.watchByOwner(myUid.value)
 const myOpenTasks = computed(() =>
   [...myTasks.value]
     .filter((t) => t.status !== 'done')
     .sort((a, b) => (a.dueDate || '9999') < (b.dueDate || '9999') ? -1 : 1)
 )
 const myDept = computed<Department | null>(() => auth.profile?.department ?? null)
+
+// Chief / Co-CEO / admin signals need company-wide tasks and deliverables.
+// We always start the watchers (cheap given current volume) so the
+// `audience` computed can flip without re-mounting; they're harmless for
+// a member because the cards they back are not rendered for that audience.
+const { data: allTasks, loading: allTasksLoading } = tasks.watchAll()
+const { data: allDeliverables, loading: allDeliverablesLoading } =
+  deliverables.watchList()
+
+// Loading state the dynamic banner trusts. Member only needs their own
+// tasks; chief / Co-CEO / admin need company-wide data.
+const signalsLoading = computed(() => {
+  if (audience.value === 'member') return myTasksLoading.value
+  return myTasksLoading.value || allTasksLoading.value || allDeliverablesLoading.value
+})
+
+const homeSignals = computed(() =>
+  computeHomeSignals({
+    audience: audience.value,
+    myUid: auth.user?.uid ?? null,
+    myDept: myDept.value,
+    myTasks: myTasks.value,
+    allTasks: allTasks.value,
+    allDeliverables: allDeliverables.value,
+    studios: templateStudios
+  })
+)
 
 onMounted(async () => {
   if (!auth.user) return
@@ -108,22 +102,73 @@ const myApproved = computed(() => owned.value.filter((d) => d.status === 'approv
       </p>
     </header>
 
-    <!-- Role-aware orientation banner: "what should I do next?" -->
+    <!-- Dynamic role-aware banner. While snapshots are still loading we
+         show neutral copy so we don't briefly claim "all clear" before
+         risk lands. CTA stays role-appropriate either way. -->
     <section class="rounded-md border border-phoenix-200 bg-phoenix-50 p-4">
-      <p class="text-sm font-semibold text-phoenix-900">
-        {{ orientation.headline }}
-      </p>
-      <p class="mt-1 text-sm text-phoenix-900/90">{{ orientation.body }}</p>
+      <template v-if="signalsLoading">
+        <p class="text-sm font-semibold text-phoenix-900">
+          Checking your current work…
+        </p>
+        <p class="mt-1 text-sm text-phoenix-900/90">
+          We're loading your tasks and deliverables to surface what needs attention.
+        </p>
+      </template>
+      <template v-else>
+        <p class="text-sm font-semibold text-phoenix-900">
+          {{ homeSignals.primary.headline }}
+        </p>
+        <p class="mt-1 text-sm text-phoenix-900/90">{{ homeSignals.primary.body }}</p>
+      </template>
       <div class="mt-3 flex flex-wrap gap-2">
         <NuxtLink
-          :to="orientation.primary.to"
+          :to="homeSignals.primaryAction.to"
           class="btn-primary text-sm"
-        >{{ orientation.primary.label }}</NuxtLink>
+        >{{ homeSignals.primaryAction.label }}</NuxtLink>
         <NuxtLink
-          v-if="orientation.secondary"
-          :to="orientation.secondary.to"
+          v-if="homeSignals.secondaryAction"
+          :to="homeSignals.secondaryAction.to"
           class="btn-secondary text-sm"
-        >{{ orientation.secondary.label }}</NuxtLink>
+        >{{ homeSignals.secondaryAction.label }}</NuxtLink>
+      </div>
+    </section>
+
+    <!-- Today's signals: compact cards, role-scoped. Loading-aware so
+         no card claims zero risk before data arrives. -->
+    <section class="space-y-2">
+      <header class="flex items-baseline justify-between">
+        <h2 class="text-sm font-semibold text-neutral-700">Today's signals</h2>
+        <span v-if="signalsLoading" class="text-xs text-neutral-500">
+          Loading…
+        </span>
+      </header>
+      <p v-if="signalsLoading" class="text-sm text-neutral-500">
+        Checking your current work…
+      </p>
+      <div
+        v-else
+        class="grid gap-2 sm:grid-cols-2 lg:grid-cols-5"
+      >
+        <NuxtLink
+          v-for="card in homeSignals.cards"
+          :key="card.id"
+          :to="card.to"
+          class="block rounded-md border p-3 hover:border-phoenix-300 transition"
+          :class="cardTone[card.tone]"
+        >
+          <p class="text-xs font-medium uppercase tracking-wide text-neutral-500">
+            {{ card.label }}
+          </p>
+          <p
+            class="mt-1 text-2xl font-semibold"
+            :class="card.tone === 'warn'
+              ? 'text-amber-900'
+              : card.tone === 'good'
+                ? 'text-emerald-900'
+                : 'text-neutral-900'"
+          >{{ card.value }}</p>
+          <p class="mt-1 text-xs text-neutral-600">{{ card.blurb }}</p>
+        </NuxtLink>
       </div>
     </section>
 
@@ -150,7 +195,7 @@ const myApproved = computed(() => owned.value.filter((d) => d.status === 'approv
           Open Tasks →
         </NuxtLink>
       </header>
-      <p v-if="tasksLoading" class="text-sm text-neutral-500">Loading…</p>
+      <p v-if="myTasksLoading" class="text-sm text-neutral-500">Loading…</p>
       <p v-else-if="!myOpenTasks.length" class="text-sm text-neutral-500">
         No open tasks assigned to you right now.
         <NuxtLink to="/workbench" class="text-phoenix-700 hover:underline">
