@@ -4,6 +4,7 @@ import { useAuthStore } from '~/stores/auth'
 import { useDeliverables } from '~/composables/useDeliverables'
 import { useTasks } from '~/composables/useTasks'
 import type { Task, TaskStatus } from '~/types/models'
+import { taskStatusLabel } from '~/utils/taskStatus'
 
 const auth = useAuthStore()
 const tasks = useTasks()
@@ -56,12 +57,6 @@ const doneCount = computed(
   () => currentSet.value.filter((t) => t.status === 'done').length
 )
 
-const statusLabel: Record<TaskStatus, string> = {
-  not_started: 'Not started',
-  in_progress: 'In progress',
-  blocked: 'Blocked',
-  done: 'Done'
-}
 
 const deliverableLabelById = computed(() => {
   const m = new Map<string, string>()
@@ -213,7 +208,7 @@ async function reopen(t: Task) {
               'border-rose-300 bg-rose-50 text-rose-800': t.status === 'blocked',
               'border-emerald-300 bg-emerald-50 text-emerald-800': t.status === 'done'
             }"
-          >{{ statusLabel[t.status] }}</span>
+          >{{ taskStatusLabel(t.status) }}</span>
         </div>
 
         <p

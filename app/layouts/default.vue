@@ -54,12 +54,11 @@ const navGroups = computed<NavGroup[]>(() => {
           <span class="font-semibold">Renni Command Center</span>
         </NuxtLink>
         <nav class="hidden md:flex items-center gap-1">
-          <template v-for="(group, gi) in navGroups" :key="group.label">
+          <template v-for="group in navGroups" :key="group.label">
             <span
-              v-if="gi > 0"
-              aria-hidden="true"
-              class="mx-1 h-5 w-px bg-neutral-200"
-            />
+              class="ml-2 mr-1 select-none text-[10px] font-semibold uppercase tracking-wider text-neutral-400"
+              :aria-label="`${group.label} navigation group`"
+            >{{ group.label }}</span>
             <NuxtLink
               v-for="item in group.items"
               :key="item.to"
@@ -81,13 +80,12 @@ const navGroups = computed<NavGroup[]>(() => {
           </button>
         </div>
       </div>
-      <nav class="md:hidden flex gap-1 overflow-x-auto border-t border-neutral-100 px-2 py-2">
-        <template v-for="(group, gi) in navGroups" :key="group.label">
+      <nav class="md:hidden flex items-center gap-1 overflow-x-auto border-t border-neutral-100 px-2 py-2">
+        <template v-for="group in navGroups" :key="group.label">
           <span
-            v-if="gi > 0"
-            aria-hidden="true"
-            class="my-1 mx-1 w-px shrink-0 bg-neutral-200"
-          />
+            class="select-none whitespace-nowrap pl-2 pr-1 text-[10px] font-semibold uppercase tracking-wider text-neutral-400"
+            :aria-label="`${group.label} navigation group`"
+          >{{ group.label }}</span>
           <NuxtLink
             v-for="item in group.items"
             :key="item.to"

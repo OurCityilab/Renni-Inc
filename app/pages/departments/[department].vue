@@ -9,6 +9,20 @@ import { useRoster } from '~/composables/useRoster'
 import { useTasks } from '~/composables/useTasks'
 import { DEPARTMENTS } from '~/types/models'
 import type { Deliverable, Department, RosterEntry, Task } from '~/types/models'
+import { taskStatusLabel } from '~/utils/taskStatus'
+
+// Local goal-status label map. Goals are simpler (4 values, single
+// surface) so an inline map is preferred over another shared util.
+const GOAL_STATUS_LABEL: Record<string, string> = {
+  not_started: 'Not started',
+  on_track: 'On track',
+  at_risk: 'At risk',
+  complete: 'Complete'
+}
+function goalStatusLabel(s?: string | null): string {
+  if (!s) return ''
+  return GOAL_STATUS_LABEL[s] ?? s
+}
 
 const route = useRoute()
 const auth = useAuthStore()
@@ -122,12 +136,6 @@ const statusColor: Record<string, string> = {
   done: 'border-emerald-300 bg-emerald-50 text-emerald-800'
 }
 
-const statusLabel: Record<Task['status'], string> = {
-  not_started: 'Not started',
-  in_progress: 'In progress',
-  blocked: 'Blocked',
-  done: 'Done'
-}
 
 const deliverableLabelById = computed(() => {
   const m = new Map<string, string>()
@@ -275,7 +283,7 @@ function deliverableLinkLabel(t: Task) {
               <span
                 class="shrink-0 rounded-full border px-2 py-0.5 text-xs"
                 :class="statusColor[t.status]"
-              >{{ statusLabel[t.status] }}</span>
+              >{{ taskStatusLabel(t.status) }}</span>
             </div>
             <p
               v-if="t.status === 'blocked' && t.blockedBy"
@@ -342,7 +350,7 @@ function deliverableLinkLabel(t: Task) {
           >
             <div class="flex items-center justify-between">
               <p class="text-sm font-medium">{{ g.metricName }}</p>
-              <span class="text-xs text-neutral-500">{{ g.status }}</span>
+              <span class="text-xs text-neutral-500">{{ goalStatusLabel(g.status) }}</span>
             </div>
             <p class="mt-1 text-xs text-neutral-600">{{ g.current }} / {{ g.target }}</p>
             <div class="mt-2 h-1.5 rounded-full bg-neutral-100">

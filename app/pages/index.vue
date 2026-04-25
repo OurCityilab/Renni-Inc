@@ -4,6 +4,7 @@ import { useAuthStore } from '~/stores/auth'
 import { useDeliverables } from '~/composables/useDeliverables'
 import { useTasks } from '~/composables/useTasks'
 import type { Deliverable, Department } from '~/types/models'
+import { taskStatusLabel } from '~/utils/taskStatus'
 
 const auth = useAuthStore()
 const deliverables = useDeliverables()
@@ -184,7 +185,7 @@ const myApproved = computed(() => owned.value.filter((d) => d.status === 'approv
                 'border-amber-300 bg-amber-50 text-amber-800': t.status === 'in_progress',
                 'border-rose-300 bg-rose-50 text-rose-800': t.status === 'blocked'
               }"
-            >{{ t.status }}</span>
+            >{{ taskStatusLabel(t.status) }}</span>
           </div>
         </li>
         <li v-if="myOpenTasks.length > 5" class="text-xs text-neutral-500">

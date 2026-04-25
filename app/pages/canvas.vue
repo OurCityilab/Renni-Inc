@@ -147,7 +147,7 @@ const statusTone = {
               v-if="byKey[key]!.status"
               class="rounded-full border px-2 py-0.5 text-xs"
               :class="statusTone[byKey[key]!.status!] || statusTone.draft"
-            >{{ byKey[key]!.status }}</span>
+            >{{ byKey[key]!.status === 'reviewed' ? 'Reviewed' : 'Draft' }}</span>
           </header>
 
           <p class="text-xs text-neutral-600">{{ byKey[key]!.prompt }}</p>

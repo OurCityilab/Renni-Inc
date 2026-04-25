@@ -13,6 +13,7 @@ import {
   type TaskPriority,
   type TaskStatus
 } from '~/types/models'
+import { taskStatusLabel } from '~/utils/taskStatus'
 
 const auth = useAuthStore()
 const tasks = useTasks()
@@ -559,7 +560,7 @@ const dependencyCandidates = computed<Task[]>(() =>
                       'border-rose-300 bg-rose-50 text-rose-800': t.status === 'blocked',
                       'border-emerald-300 bg-emerald-50 text-emerald-800': t.status === 'done'
                     }"
-                  >{{ t.status }}</span>
+                  >{{ taskStatusLabel(t.status) }}</span>
                   <span
                     v-if="t.priority"
                     class="rounded-full border px-2 py-0.5 text-xs"

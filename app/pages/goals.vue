@@ -10,6 +10,13 @@ import {
   type GoalStatus
 } from '~/types/models'
 
+const GOAL_STATUS_LABEL: Record<GoalStatus, string> = {
+  not_started: 'Not started',
+  on_track: 'On track',
+  at_risk: 'At risk',
+  complete: 'Complete'
+}
+
 const auth = useAuthStore()
 const goals = useGoals()
 const { data: allGoals, loading } = goals.watchList()
@@ -176,7 +183,7 @@ async function save(g: Goal) {
               'border-rose-300 bg-rose-50 text-rose-800': g.status === 'at_risk',
               'border-emerald-300 bg-emerald-50 text-emerald-800': g.status === 'complete'
             }"
-          >{{ g.status }}</span>
+          >{{ GOAL_STATUS_LABEL[g.status] }}</span>
         </div>
 
         <div>

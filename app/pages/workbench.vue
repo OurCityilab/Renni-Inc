@@ -5,6 +5,7 @@ import { useDeliverables } from '~/composables/useDeliverables'
 import { useRoster } from '~/composables/useRoster'
 import { useTasks } from '~/composables/useTasks'
 import type { Deliverable, Department, RosterEntry, Task } from '~/types/models'
+import { taskStatusLabel } from '~/utils/taskStatus'
 
 const auth = useAuthStore()
 const tasks = useTasks()
@@ -425,23 +426,38 @@ const statusColor: Record<string, string> = {
               <span
                 class="shrink-0 rounded-full border px-2 py-0.5 text-xs"
                 :class="statusColor[t.status]"
-              >{{ t.status }}</span>
+              >{{ taskStatusLabel(t.status) }}</span>
             </div>
           </li>
         </ul>
       </section>
 
       <!-- Member: direct links to deeper tools -->
-      <section v-if="scope === 'member'" class="flex flex-wrap gap-2 text-xs">
-        <NuxtLink to="/tasks" class="rounded-md border border-neutral-200 bg-white px-3 py-2 hover:border-phoenix-300">
-          Full Tasks →
-        </NuxtLink>
-        <NuxtLink to="/deliverables" class="rounded-md border border-neutral-200 bg-white px-3 py-2 hover:border-phoenix-300">
-          Deliverables →
-        </NuxtLink>
-        <NuxtLink to="/timeline" class="rounded-md border border-neutral-200 bg-white px-3 py-2 hover:border-phoenix-300">
-          Timeline →
-        </NuxtLink>
+      <section v-if="scope === 'member'" class="space-y-2">
+        <p class="text-xs text-neutral-600">
+          Need to update your work? Go to <strong>Tasks</strong>. Timeline is a
+          schedule view — useful to see what's due, but not where you change status.
+        </p>
+        <div class="flex flex-wrap gap-2 text-xs">
+          <NuxtLink
+            to="/tasks"
+            class="rounded-md border border-phoenix-300 bg-phoenix-50 px-3 py-2 font-medium text-phoenix-800 hover:border-phoenix-400"
+          >
+            Update tasks →
+          </NuxtLink>
+          <NuxtLink
+            to="/deliverables"
+            class="rounded-md border border-neutral-200 bg-white px-3 py-2 hover:border-phoenix-300"
+          >
+            Deliverables →
+          </NuxtLink>
+          <NuxtLink
+            to="/timeline"
+            class="rounded-md border border-neutral-200 bg-white px-3 py-2 hover:border-phoenix-300"
+          >
+            Timeline (schedule view) →
+          </NuxtLink>
+        </div>
       </section>
     </template>
   </section>

@@ -7,6 +7,7 @@ import { useTasks } from '~/composables/useTasks'
 import { useTemplatePreview } from '~/composables/useTemplatePreview'
 import { getTemplateStudio } from '~/data/templateStudios'
 import type { DeliverableEvent } from '~/types/models'
+import { taskStatusLabel } from '~/utils/taskStatus'
 
 const route = useRoute()
 const auth = useAuthStore()
@@ -434,7 +435,7 @@ async function saveNotes() {
                       'border-rose-300 bg-rose-50 text-rose-800': t.status === 'blocked',
                       'border-emerald-300 bg-emerald-50 text-emerald-800': t.status === 'done'
                     }"
-                  >{{ t.status }}</span>
+                  >{{ taskStatusLabel(t.status) }}</span>
                 </div>
                 <p
                   v-if="t.status === 'blocked' && t.blockedBy"
