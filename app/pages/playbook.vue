@@ -1,8 +1,15 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onMounted, onScopeDispose, reactive, ref, watch } from 'vue'
+import { doc, onSnapshot, type Unsubscribe } from 'firebase/firestore'
 import { useDeliverables } from '~/composables/useDeliverables'
 import { useTasks } from '~/composables/useTasks'
-import type { Deliverable, Task } from '~/types/models'
+import { getTemplateStudio } from '~/data/templateStudios'
+import {
+  computeOutputReadiness,
+  type OutputReadinessSummary
+} from '~/utils/outputReadiness'
+import type { Deliverable, DeliverableOutput, Task } from '~/types/models'
+import type { TemplateStudio } from '~/types/templateStudio'
 
 const deliverables = useDeliverables()
 const tasks = useTasks()
@@ -140,6 +147,151 @@ const chapters = computed<ChapterRollup[]>(() => {
   return out.sort((a, b) => a.chapter - b.chapter)
 })
 
+// ---- studio-backed output readiness (soft signal only) ----
+// Subscribe to deliverableOutputs/{deliverableId} for studio-backed
+// deliverables only. We never create or write the doc here — Playbook is
+// strictly read-only on outputs. The map uses Vue's reactive Map support
+// so per-doc snapshot updates trigger the per-chapter rollup.
+//
+// "id not in the map yet" means still loading (we render neutral copy);
+// `null` means the doc doesn't exist (= "Output workspace not started").
+const outputs = reactive(new Map<string, DeliverableOutput | null>())
+const outputSubs = new Map<string, Unsubscribe>()
+
+const studioBackedDeliverables = computed<
+  { deliverableId: string; chapter: number; studio: TemplateStudio }[]
+>(() => {
+  const items: {
+    deliverableId: string
+    chapter: number
+    studio: TemplateStudio
+  }[] = []
+  for (const d of all.value) {
+    const studio = getTemplateStudio(d.id)
+    if (!studio) continue
+    const chapter = Number(d.chapter)
+    if (!chapter) continue
+    items.push({ deliverableId: d.id, chapter, studio })
+  }
+  return items
+})
+
+const studioBackedIds = computed(() =>
+  studioBackedDeliverables.value.map((s) => s.deliverableId)
+)
+
+// Defer Firestore subscriptions until after mount so SSR doesn't try to
+// open snapshots. Re-bind whenever the studio-backed id set changes;
+// non-studio deliverables never get a watcher.
+onMounted(() => {
+  const { $firebase } = useNuxtApp()
+  watch(
+    studioBackedIds,
+    (ids) => {
+      const idSet = new Set(ids)
+      for (const [id, unsub] of outputSubs) {
+        if (!idSet.has(id)) {
+          unsub()
+          outputSubs.delete(id)
+          outputs.delete(id)
+        }
+      }
+      for (const id of ids) {
+        if (outputSubs.has(id)) continue
+        const ref_ = doc($firebase.db, 'deliverableOutputs', id)
+        const unsub = onSnapshot(ref_, (snap) => {
+          outputs.set(
+            id,
+            snap.exists() ? (snap.data() as DeliverableOutput) : null
+          )
+        })
+        outputSubs.set(id, unsub)
+      }
+    },
+    { immediate: true }
+  )
+})
+onScopeDispose(() => {
+  for (const unsub of outputSubs.values()) unsub()
+  outputSubs.clear()
+})
+
+interface ChapterOutputReadiness {
+  loading: boolean
+  hasOutput: boolean
+  totalSections: number
+  sectionsWithFinalText: number
+  missingFinalTextSections: number
+  label: string
+  detail: string | null
+}
+
+const outputReadinessByChapter = computed<Map<number, ChapterOutputReadiness>>(
+  () => {
+    const result = new Map<number, ChapterOutputReadiness>()
+    const byChapter = new Map<
+      number,
+      { deliverableId: string; studio: TemplateStudio }[]
+    >()
+    for (const item of studioBackedDeliverables.value) {
+      const arr = byChapter.get(item.chapter) ?? []
+      arr.push({ deliverableId: item.deliverableId, studio: item.studio })
+      byChapter.set(item.chapter, arr)
+    }
+    for (const [chapter, items] of byChapter) {
+      let stillLoading = false
+      let totalSections = 0
+      let sectionsWithFinalText = 0
+      let hasOutput = false
+      for (const { deliverableId, studio } of items) {
+        if (!outputs.has(deliverableId)) {
+          stillLoading = true
+          totalSections += studio.sections.length
+          continue
+        }
+        const summary: OutputReadinessSummary = computeOutputReadiness(
+          studio,
+          outputs.get(deliverableId) ?? null
+        )
+        totalSections += summary.totalSections
+        sectionsWithFinalText += summary.sectionsWithFinalText
+        if (summary.hasOutput) hasOutput = true
+      }
+      const missingFinalTextSections = Math.max(
+        totalSections - sectionsWithFinalText,
+        0
+      )
+      let label: string
+      let detail: string | null = null
+      if (stillLoading) {
+        label = 'Checking output readiness…'
+      } else if (!hasOutput) {
+        label = 'Output workspace not started yet.'
+      } else {
+        label = `Final text: ${sectionsWithFinalText} of ${totalSections} sections ready`
+        if (missingFinalTextSections > 0) {
+          detail =
+            missingFinalTextSections === 1
+              ? '1 section still needs final Playbook text.'
+              : `${missingFinalTextSections} sections still need final Playbook text.`
+        } else {
+          detail = 'All sections have final Playbook text.'
+        }
+      }
+      result.set(chapter, {
+        loading: stillLoading,
+        hasOutput,
+        totalSections,
+        sectionsWithFinalText,
+        missingFinalTextSections,
+        label,
+        detail
+      })
+    }
+    return result
+  }
+)
+
 // ---- company-wide summary ----
 
 const totalChapters = computed(() => chapters.value.length)
@@ -273,6 +425,39 @@ const statusLabel: Record<ChapterStatus, string> = {
               v-if="c.taskBlocked > 0"
               class="text-rose-700"
             >Blocked {{ c.taskBlocked }}</span>
+          </template>
+        </div>
+
+        <!-- Playbook output readiness: soft signal only, studio-backed
+             chapters only. Does not block submission or change approval. -->
+        <div
+          v-if="outputReadinessByChapter.get(c.chapter)"
+          class="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs"
+        >
+          <template v-if="outputReadinessByChapter.get(c.chapter)!.loading">
+            <span class="text-neutral-500">Checking output readiness…</span>
+          </template>
+          <template v-else-if="!outputReadinessByChapter.get(c.chapter)!.hasOutput">
+            <span class="text-neutral-500">
+              {{ outputReadinessByChapter.get(c.chapter)!.label }}
+            </span>
+          </template>
+          <template v-else>
+            <span
+              :class="
+                outputReadinessByChapter.get(c.chapter)!.missingFinalTextSections === 0
+                  ? 'text-emerald-700'
+                  : 'text-neutral-700'
+              "
+            >{{ outputReadinessByChapter.get(c.chapter)!.label }}</span>
+            <span
+              v-if="outputReadinessByChapter.get(c.chapter)!.detail"
+              :class="
+                outputReadinessByChapter.get(c.chapter)!.missingFinalTextSections === 0
+                  ? 'text-emerald-700'
+                  : 'text-neutral-500'
+              "
+            >{{ outputReadinessByChapter.get(c.chapter)!.detail }}</span>
           </template>
         </div>
 
