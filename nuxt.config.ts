@@ -42,6 +42,16 @@ export default defineNuxtConfig({
     // `public`, and never import them from code under app/.
     firebaseClientEmail: process.env.FIREBASE_CLIENT_EMAIL,
     firebasePrivateKey: process.env.FIREBASE_PRIVATE_KEY,
+    // AI Critique V1 — server-only provider config. Anthropic Messages
+    // API by default; baseUrl/model are configurable so a compatible
+    // host can be plugged in without code changes. The API key MUST
+    // stay top-level. Nuxt only ships `runtimeConfig.public` to the
+    // browser; these three never reach client code.
+    aiCritiqueApiKey: process.env.NUXT_AI_CRITIQUE_API_KEY,
+    aiCritiqueBaseUrl:
+      process.env.NUXT_AI_CRITIQUE_BASE_URL || 'https://api.anthropic.com',
+    aiCritiqueModel:
+      process.env.NUXT_AI_CRITIQUE_MODEL || 'claude-haiku-4-5-20251001',
     public: {
       // Safe to ship to the browser. Firebase web config is not a secret.
       firebase: {

@@ -36,6 +36,11 @@ import {
 import MarketEvidenceReferencePanel, {
   type ReferencedMarketEntry
 } from '~/components/MarketEvidenceReferencePanel.vue'
+import MarketEvidenceCritiquePanel from '~/components/MarketEvidenceCritiquePanel.vue'
+import type {
+  AiCritiqueRequirementInput,
+  MarketEvidenceCritiqueRequest
+} from '~/types/aiCritique'
 
 const props = defineProps<{
   deliverable: Deliverable
@@ -58,11 +63,20 @@ const { data: output, loading } = outputs.watchOutput(() => props.deliverable.id
 const CH7_DELIVERABLE_ID = 'ch-07-current-product-line-and-pricing'
 const CH8_DELIVERABLE_ID = 'ch-08-finance-and-revenue-model'
 const CH11_DELIVERABLE_ID = 'ch-11-phoenix-nest-retail-carry-pitch'
+const isChapter7 = computed(
+  () => props.deliverable.id === CH7_DELIVERABLE_ID
+)
 const isChapter8 = computed(
   () => props.deliverable.id === CH8_DELIVERABLE_ID
 )
 const isChapter11 = computed(
   () => props.deliverable.id === CH11_DELIVERABLE_ID
+)
+// AI Critique V1 is gated to the three market-evidence chapters. The
+// section-level marketBuilder flag still has to be set; this computed
+// only handles the chapter scope so we can short-circuit cleanly.
+const aiCritiqueChapterEligible = computed(
+  () => isChapter7.value || isChapter8.value || isChapter11.value
 )
 // The watcher returns loading=false / data=null when the id is an
 // empty string, so each cross-chapter listener stays a no-op on every
@@ -865,6 +879,112 @@ async function removeMarketEntry(s: TemplateStudioSection, entryId: string) {
     marketErrors.value[s.id] = e instanceof Error ? e.message : String(e)
   } finally {
     marketBusyId.value = null
+  }
+}
+
+// --- AI Critique V1 helpers ----------------------------------------
+// We assemble the section-scoped request payload here so the panel
+// component stays a dumb renderer. The payload includes only what the
+// student already sees on screen for this section, plus the same
+// upstream cross-chapter references the workspace already shows. No
+// auth tokens, no Firebase config, no other deliverables.
+function sectionHasAiInput(s: TemplateStudioSection): boolean {
+  const p = persistedSection(s)
+  if (!p) return false
+  if ((p.sourceNotes ?? '').trim()) return true
+  if ((p.draftText ?? '').trim()) return true
+  if ((p.finalText ?? '').trim()) return true
+  if ((p.evidenceLinks?.length ?? 0) > 0) return true
+  if ((p.structuredEvidence?.length ?? 0) > 0) return true
+  if ((p.marketBuilderEntries?.length ?? 0) > 0) return true
+  return false
+}
+
+function shouldShowAiCritique(s: TemplateStudioSection): boolean {
+  if (!aiCritiqueChapterEligible.value) return false
+  if (!s.marketBuilder?.enabled) return false
+  return sectionHasAiInput(s)
+}
+
+function sectionRequirementsForAi(
+  s: TemplateStudioSection
+): AiCritiqueRequirementInput[] {
+  // Linked-requirement ids on the section's structured-evidence and
+  // market-builder entries are the most direct signal that a
+  // requirement is in scope. Fall back to the requirements whose
+  // playbookChapter matches the section so we still surface relevant
+  // requirements for sections that haven't linked entries yet.
+  const persisted = persistedSection(s)
+  const linkedIds = new Set<string>()
+  for (const e of persisted?.structuredEvidence ?? []) {
+    if (e.requirementId) linkedIds.add(e.requirementId)
+  }
+  for (const m of persisted?.marketBuilderEntries ?? []) {
+    if (m.linkedRequirementId) linkedIds.add(m.linkedRequirementId)
+  }
+  const studioReqs = props.studio.requirements
+  const picked = studioReqs.filter((r) => linkedIds.has(r.id))
+  // Cap the request payload — too many requirement descriptions push
+  // the prompt size up without much critique signal. The endpoint
+  // also caps at 30 as a hard backstop.
+  const list = picked.length > 0 ? picked : studioReqs.slice(0, 12)
+  return list.map((r) => ({
+    id: r.id,
+    label: r.label,
+    description: r.description,
+    requiredForApproval: r.requiredForApproval === true
+  }))
+}
+
+function buildAiRequest(s: TemplateStudioSection): MarketEvidenceCritiqueRequest {
+  const persisted = persistedSection(s)
+  const evidenceLinks = (persisted?.evidenceLinks ?? []).map((l) => ({
+    label: l.label,
+    url: l.url,
+    type: l.type as string,
+    requirementId: l.requirementId ?? null
+  }))
+  const structuredEvidence = (persisted?.structuredEvidence ?? []).map((e) => ({
+    claim: e.claim,
+    evidence: e.evidence,
+    source: e.source,
+    assumption: e.assumption ?? null,
+    calculation: e.calculation ?? null,
+    confidence: e.confidence ?? null,
+    risk: e.risk ?? null,
+    nextValidation: e.nextValidation ?? null
+  }))
+  const marketBuilderEntries = persisted?.marketBuilderEntries ?? []
+
+  // Cross-chapter context only travels with chapters that already
+  // surface that context on screen. Ch 7 is self-contained.
+  const upstreamCh7MarketEntries =
+    isChapter8.value || isChapter11.value
+      ? ch7MarketEntries.value
+      : undefined
+  const upstreamCh8Context = isChapter11.value
+    ? {
+        finalSectionIds: ch8FinalSections.value.map((row) => row.sectionId),
+        revenueScenariosExcerpt: ch8RevenueScenariosExcerpt.value
+      }
+    : undefined
+
+  return {
+    deliverableId: props.deliverable.id,
+    deliverableTitle: props.deliverable.title,
+    chapterTitle: props.studio.title,
+    sectionId: s.id,
+    sectionTitle: s.title,
+    sectionLesson: s.lesson,
+    requirements: sectionRequirementsForAi(s),
+    sourceNotes: persisted?.sourceNotes ?? '',
+    draftText: persisted?.draftText ?? '',
+    finalText: persisted?.finalText ?? '',
+    evidenceLinks,
+    structuredEvidence,
+    marketBuilderEntries,
+    upstreamCh7MarketEntries,
+    upstreamCh8Context
   }
 }
 
@@ -1962,6 +2082,21 @@ watch(
             </div>
           </div>
         </section>
+
+        <!-- AI Critique V1 — read-only coach panel for the Market
+             Evidence Suite. Visible only when:
+               (a) the chapter is one of the three market-evidence
+                   chapters (Ch 7 / 8 / 11),
+               (b) the section opted into Market Builder, and
+               (c) the section has at least some student-authored
+                   input (source notes / draft / final / evidence /
+                   structured evidence / market builder entries).
+             The panel never writes back to the document, never
+             auto-runs, and renders only after a user click. -->
+        <MarketEvidenceCritiquePanel
+          v-if="shouldShowAiCritique(s)"
+          :request="buildAiRequest(s)"
+        />
       </li>
     </ol>
 
