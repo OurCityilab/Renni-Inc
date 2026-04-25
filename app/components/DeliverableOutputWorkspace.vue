@@ -357,12 +357,27 @@ watch(
         Build the {{ studio.title }}
       </h2>
       <p class="text-sm text-neutral-600">
-        Write your own source notes first. Future AI help should respond to your
-        thinking, not replace it. The <strong>draft response</strong> is your
-        working answer; <strong>final Playbook text</strong> is the polished
-        version that can roll into the Playbook.
+        This is where your team writes the actual deliverable, section by
+        section. Source notes capture your thinking, the draft response is
+        your working answer, and the final Playbook text is what will roll
+        into the Brand &amp; Operations Playbook.
       </p>
     </header>
+
+    <!-- How to use this workspace — short orientation so students know
+         which field to use when. Soft guidance, not a process gate. -->
+    <section class="rounded-md border border-phoenix-100 bg-phoenix-50/60 p-3">
+      <p class="text-xs font-semibold uppercase tracking-wide text-phoenix-800">
+        How to use this workspace
+      </p>
+      <ol class="mt-1 list-decimal space-y-0.5 pl-5 text-xs text-neutral-700">
+        <li>Read the section title and any guidance from your chief.</li>
+        <li><strong>Source notes:</strong> capture your team's own thinking, decisions, and evidence in your own words.</li>
+        <li><strong>Draft response:</strong> turn those notes into a working answer for the section. It can be rough.</li>
+        <li><strong>Final Playbook text:</strong> polish the draft so it reads like part of the final Playbook.</li>
+        <li>Add <strong>evidence links</strong> (Docs, Slides, folders, images) that back up what you wrote, then save.</li>
+      </ol>
+    </section>
 
     <p v-if="lockMessage" class="rounded-md border border-neutral-200 bg-neutral-50 p-2 text-xs text-neutral-700">
       {{ lockMessage }}
@@ -371,19 +386,23 @@ watch(
       Couldn't initialize the output workspace: {{ provisioningError }}
     </p>
 
-    <!-- Readiness summary (non-blocking; submit gate stays requirement-coverage). -->
+    <!-- Readiness summary (soft signal only; submit gate stays requirement-coverage). -->
     <section class="rounded-md border border-neutral-200 bg-white p-3">
       <p class="text-sm font-medium text-neutral-900">
-        Output readiness:
+        Output readiness signal:
         {{ readiness.withFinal }} of {{ readiness.total }} sections have final Playbook text.
+      </p>
+      <p class="mt-1 text-xs text-neutral-500">
+        This is a soft signal to help you see how complete the artifact feels —
+        it does <strong>not</strong> block submitting for review.
       </p>
       <p v-if="readiness.missingFinal" class="mt-1 text-xs text-neutral-600">
         {{ readiness.missingFinal }}
         {{ readiness.missingFinal === 1 ? 'section still needs' : 'sections still need' }}
-        final text before this deliverable will feel complete.
+        final Playbook text before this artifact reads as finished.
       </p>
       <p v-else class="mt-1 text-xs text-emerald-700">
-        Every section has final text. Nice.
+        Every section has final Playbook text. Nice.
       </p>
       <dl class="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-neutral-600 sm:grid-cols-4">
         <div><dt class="inline">Source notes</dt><dd class="inline"> · {{ readiness.withSourceNotes }}/{{ readiness.total }}</dd></div>
@@ -417,40 +436,58 @@ watch(
           </p>
         </header>
 
-        <div class="space-y-2">
-          <label class="block text-xs font-medium text-neutral-800">
-            Source notes
-            <textarea
-              v-model="drafts[s.id].sourceNotes"
-              rows="3"
-              :disabled="!editingEnabled"
-              class="mt-1 w-full rounded border border-neutral-300 p-2 text-sm disabled:bg-neutral-50"
-              placeholder="Your team's own thinking: what did you decide, why, what evidence supports it?"
-              @input="markDirty(s)"
-            />
-          </label>
-          <label class="block text-xs font-medium text-neutral-800">
-            Draft response
-            <textarea
-              v-model="drafts[s.id].draftText"
-              rows="4"
-              :disabled="!editingEnabled"
-              class="mt-1 w-full rounded border border-neutral-300 p-2 text-sm disabled:bg-neutral-50"
-              placeholder="Your working answer for this section. Iterate here."
-              @input="markDirty(s)"
-            />
-          </label>
-          <label class="block text-xs font-medium text-neutral-800">
-            Final Playbook text
-            <textarea
-              v-model="drafts[s.id].finalText"
-              rows="5"
-              :disabled="!editingEnabled"
-              class="mt-1 w-full rounded border border-neutral-300 p-2 text-sm disabled:bg-neutral-50"
-              placeholder="The polished version that will roll into the Playbook."
-              @input="markDirty(s)"
-            />
-          </label>
+        <div class="space-y-3">
+          <div>
+            <label class="block text-xs font-medium text-neutral-800">
+              Source notes
+              <textarea
+                v-model="drafts[s.id].sourceNotes"
+                rows="3"
+                :disabled="!editingEnabled"
+                class="mt-1 w-full rounded border border-neutral-300 p-2 text-sm disabled:bg-neutral-50"
+                placeholder="What did your team decide, why, and what evidence backs it up?"
+                @input="markDirty(s)"
+              />
+            </label>
+            <p class="mt-1 text-xs text-neutral-500">
+              Start here. Capture your team's own thinking, decisions, evidence,
+              and questions in your own words.
+            </p>
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-neutral-800">
+              Draft response
+              <textarea
+                v-model="drafts[s.id].draftText"
+                rows="4"
+                :disabled="!editingEnabled"
+                class="mt-1 w-full rounded border border-neutral-300 p-2 text-sm disabled:bg-neutral-50"
+                placeholder="A working answer for this section — turn your source notes into sentences."
+                @input="markDirty(s)"
+              />
+            </label>
+            <p class="mt-1 text-xs text-neutral-500">
+              Use this as the working version. It can be rough while your team
+              is still improving the section.
+            </p>
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-neutral-800">
+              Final Playbook text
+              <textarea
+                v-model="drafts[s.id].finalText"
+                rows="5"
+                :disabled="!editingEnabled"
+                class="mt-1 w-full rounded border border-neutral-300 p-2 text-sm disabled:bg-neutral-50"
+                placeholder="The polished version that should read like part of the final Playbook."
+                @input="markDirty(s)"
+              />
+            </label>
+            <p class="mt-1 text-xs text-neutral-500">
+              This is the polished version that should read like part of the
+              final Brand &amp; Operations Playbook.
+            </p>
+          </div>
 
           <div class="flex flex-wrap items-center justify-between gap-2">
             <label
@@ -490,6 +527,10 @@ watch(
               {{ persistedSection(s)?.evidenceLinks?.length ?? 0 }} linked
             </span>
           </header>
+          <p class="text-xs text-neutral-500">
+            Attach Google Docs, Slides, folders, images, or other proof that
+            supports this section.
+          </p>
           <ul
             v-if="persistedSection(s) && (persistedSection(s)!.evidenceLinks?.length ?? 0) > 0"
             class="space-y-1 text-sm"
@@ -585,15 +626,17 @@ watch(
       </li>
     </ol>
 
-    <!-- Final preview — read-only roll-up of every section's final text. -->
+    <!-- Playbook-ready preview — read-only roll-up of every section's final text. -->
     <section class="card space-y-3">
       <header>
         <p class="text-xs uppercase tracking-wide text-neutral-500">
-          Final preview
+          Playbook-ready preview
         </p>
         <h3 class="font-medium text-neutral-900">{{ studio.title }}</h3>
         <p class="text-xs text-neutral-600">
-          Read-only roll-up. This is the Playbook-ready version of the deliverable.
+          Read-only roll-up of the final Playbook text from each section above.
+          This is what your team is preparing for the Brand &amp; Operations
+          Playbook.
         </p>
       </header>
       <ol class="space-y-3">

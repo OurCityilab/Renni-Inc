@@ -393,12 +393,17 @@ async function saveNotes() {
                 Read-only in this status
               </span>
             </header>
+            <p class="mt-1 text-xs text-neutral-500">
+              Short context for the approver about this submission — questions,
+              caveats, or what changed since last review. The actual deliverable
+              content goes in the Output workspace above, not here.
+            </p>
             <textarea
               v-model="notesDraft"
               :disabled="!canEditNotes"
               rows="3"
               class="mt-2 w-full rounded border border-neutral-300 p-2 text-sm disabled:bg-neutral-50"
-              placeholder="Working notes — visible to the approver."
+              placeholder="e.g. Updated the audience section after CMO feedback. Open question on pricing."
             />
             <div v-if="canEditNotes" class="mt-2 flex justify-end">
               <button class="btn-primary" :disabled="savingNotes" @click="saveNotes">
