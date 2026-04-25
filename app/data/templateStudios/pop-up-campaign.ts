@@ -1,17 +1,96 @@
 import type { TemplateStudio } from '~/types/templateStudio'
 
 export const popUpCampaign: TemplateStudio = {
-  title: 'TechTown Pop-Up Campaign + Readiness',
+  title: 'Marketing and Campaign Playbook',
   purpose:
-    'Plan how Renni Inc. and House Phoenix drive attention, foot traffic, and sales to the TechTown pop-up — and how the next cohort can run a campaign like it again.',
+    'Capture what Renni Inc. actually knows about its customers, then plan how Renni Inc. and House Phoenix drive attention, foot traffic, and sales to the TechTown pop-up. Document both halves so the next cohort can run a campaign like it again.',
   learningObjective:
-    'Connect audience, signage, content, and timing into a campaign a customer actually sees, and document it so the Playbook can teach the pattern.',
+    'Use real customer insights (or honestly labeled assumptions) to drive marketing decisions, then translate insights into audience, signage, content, and timing the customer actually sees.',
   whyItMatters:
-    'The brand story matters, the pricing math matters, the ops SOP matters — but if nobody walks to the table, none of it moves. Marketing\'s job is to turn attention into arrivals.',
+    "A pop-up that ignores customers gets ignored back. The brand story matters, the pricing math matters, the ops SOP matters — but if nobody walks to the table, none of it moves. Marketing's job is to turn what we know about customers into arrivals.",
   finalOutput:
-    'A campaign plan with audience touchpoints, signage, content calendar, and a simple way to measure which channel drove arrivals on pop-up day.',
+    'A marketing chapter that names primary customer groups and the evidence behind them, the messaging angles those insights drive, the TechTown audience touchpoints and content calendar, the way the team will measure which channel drove arrivals, and the feedback plan that closes the loop for next cohort.',
   connectedOutcome: 'TechTown pop-up',
   sections: [
+    {
+      id: 'target-customers',
+      title: 'Target customers',
+      lesson:
+        'Define the customer groups the pop-up and Phoenix Nest pitch are actually trying to reach. Real groups beat demographic placeholders — "Renaissance students who buy a beanie because it represents their school" is a real group.',
+      studentPrompts: [
+        'Name 2–3 specific customer groups.',
+        'For each one, write a one-line description of who they are.',
+        'Mark which groups matter most for TechTown vs. Phoenix Nest.'
+      ],
+      requiredInputs: ['Named customer groups', 'TechTown vs. Phoenix Nest split'],
+      completionCriteria: [
+        'At least two named groups.',
+        'Each group has a one-line description grounded in reality.'
+      ]
+    },
+    {
+      id: 'customer-problems-and-desires',
+      title: 'Customer problems and desires',
+      lesson:
+        'A problem is what the customer is trying to fix. A desire is what they are trying to feel. Both shape what the team should make and how the team should sell.',
+      studentPrompts: [
+        'For each customer group, what problem does Renni Inc. or House Phoenix help solve?',
+        'For each customer group, what do they want to feel by buying or wearing the product?',
+        'Use customer language, not company language.'
+      ],
+      completionCriteria: [
+        'Each customer group has at least one problem and one desire named.',
+        'Language sounds like a customer, not a marketer.'
+      ]
+    },
+    {
+      id: 'insight-evidence',
+      title: 'Evidence behind the insights',
+      lesson:
+        'Every insight needs a source. Sources can be conversations, observations, surveys, sales conversations, or assumptions — but assumptions must be labeled as assumptions.',
+      studentPrompts: [
+        'For each problem or desire, name the source: feedback, observation, survey, sales conversation, or assumption.',
+        'Quote real customers if you have notes — quotes are stronger than paraphrases.',
+        'Mark anything that is still an assumption so it can be tested later.'
+      ],
+      requiredInputs: ['Source per insight', 'Assumption flag where applicable'],
+      completionCriteria: [
+        'Every insight has a labeled source.',
+        'Assumptions are clearly marked, not disguised as facts.'
+      ]
+    },
+    {
+      id: 'feedback-plan',
+      title: 'Feedback plan',
+      lesson:
+        'Feedback is what makes the next cohort better than this one. Plan how the team will collect feedback at the pop-up, after the pop-up, and after the Phoenix Nest pitch.',
+      studentPrompts: [
+        'How will the team collect customer feedback at the booth (paper, link, conversation)?',
+        'What two questions will the team ask every customer?',
+        'How will the feedback be stored and reviewed?'
+      ],
+      requiredInputs: ['Feedback method', 'Two-question script', 'Storage plan'],
+      completionCriteria: [
+        'Feedback collection method is named.',
+        'A two-question script is written.',
+        'Storage plan is named (Workbench, sheet, doc).'
+      ]
+    },
+    {
+      id: 'implications-for-launch',
+      title: 'Implications for launch',
+      lesson:
+        'Close the insights half of the chapter with the "so what." Tie insights to specific decisions the team is making for TechTown and the Phoenix Nest pitch. The campaign half below should follow from these.',
+      studentPrompts: [
+        'List 3–5 launch decisions the team made because of these insights.',
+        'For each decision, name the insight that drove it.',
+        'Name 2 risks or unknowns that could change the plan.'
+      ],
+      completionCriteria: [
+        'Three to five insight-driven decisions are listed with traceability.',
+        'At least two risks or unknowns are named.'
+      ]
+    },
     {
       id: 'audience',
       title: 'Who are we trying to reach?',
@@ -73,6 +152,87 @@ export const popUpCampaign: TemplateStudio = {
   ],
   requirements: [
     {
+      id: 'insights-primary-customers',
+      label: 'Defines primary customer groups',
+      description:
+        'At least two specific customer groups are named with a one-line description each.',
+      requiredForApproval: true,
+      department: 'strategy-growth',
+      playbookChapter: 10,
+      suggestedTaskTitle: 'Draft customer segments and insights',
+      definitionOfDone:
+        'CSGO drafts named customer groups with TechTown vs. Phoenix Nest emphasis.'
+    },
+    {
+      id: 'insights-customer-needs',
+      label: 'Explains what customers want or need',
+      description:
+        'Each customer group has at least one problem and one desire named in customer language.',
+      requiredForApproval: true,
+      department: 'strategy-growth',
+      playbookChapter: 10,
+      definitionOfDone:
+        'Problems and desires are written in plain customer-facing language.'
+    },
+    {
+      id: 'insights-evidence-labeled',
+      label: 'Includes labeled evidence behind every insight',
+      description:
+        'Every insight is tied to a source: feedback, observation, survey, sales conversation, or labeled assumption.',
+      requiredForApproval: true,
+      department: 'strategy-growth',
+      playbookChapter: 10,
+      definitionOfDone:
+        'No insight in the chapter is presented without a source label.'
+    },
+    {
+      id: 'insights-to-messaging',
+      label: 'Connects insights to marketing messages',
+      description:
+        '2–3 messaging angles, each traceable to a customer group and an insight.',
+      requiredForApproval: true,
+      department: 'marketing',
+      playbookChapter: 10,
+      suggestedTaskTitle: 'Translate insights into messaging angles',
+      definitionOfDone:
+        'CMO drafts angles that fit brand voice and trace to insights.'
+    },
+    {
+      id: 'insights-feedback-plan',
+      label: 'Includes a plan for collecting more feedback',
+      description:
+        'Feedback method, two-question script, and storage plan are all named.',
+      requiredForApproval: true,
+      department: 'strategy-growth',
+      playbookChapter: 10,
+      suggestedTaskTitle: 'Create feedback collection plan',
+      definitionOfDone:
+        'CSGO writes the feedback plan and confirms with the COO at-booth ops.'
+    },
+    {
+      id: 'insights-launch-implications',
+      label: 'Insights tied to launch implications',
+      description:
+        'Chapter names 3–5 launch decisions traceable back to insights.',
+      requiredForApproval: true,
+      department: 'executive',
+      playbookChapter: 10,
+      suggestedTaskTitle: 'Review launch implications',
+      definitionOfDone:
+        'Co-CEO confirms the launch implications align with the campaign plan and Phoenix Nest pitch.'
+    },
+    {
+      id: 'insights-risks-or-unknowns',
+      label: 'Names at least two marketing risks or unknowns',
+      description:
+        'Two or more honest risks or unknowns that could change the marketing plan.',
+      requiredForApproval: true,
+      department: 'strategy-growth',
+      playbookChapter: 10,
+      definitionOfDone:
+        'Two or more risks named with a one-line implication each.'
+    },
+    {
       id: 'campaign-audience-map',
       label: 'Audience + channels map',
       description:
@@ -115,6 +275,53 @@ export const popUpCampaign: TemplateStudio = {
   ],
   suggestedTasks: [
     {
+      title: 'Draft customer segments and insights',
+      department: 'strategy-growth',
+      ownerRole: 'csgo',
+      requirementId: 'insights-primary-customers',
+      definitionOfDone:
+        'CSGO drafts customer groups, problems, desires, and labels evidence sources.',
+      dueOffsetDays: 3
+    },
+    {
+      title: 'Translate insights into messaging angles',
+      department: 'marketing',
+      ownerRole: 'cmo',
+      requirementId: 'insights-to-messaging',
+      dependency: 'insights-primary-customers',
+      definitionOfDone:
+        'CMO drafts 2–3 angles that fit brand voice and trace back to insights.',
+      dueOffsetDays: 5
+    },
+    {
+      title: 'Connect channels and touchpoints',
+      department: 'marketing',
+      ownerRole: 'cmo',
+      requirementId: 'campaign-audience-map',
+      dependency: 'insights-to-messaging',
+      definitionOfDone:
+        'TechTown touchpoints mapped with leading angles assigned per touchpoint.',
+      dueOffsetDays: 6
+    },
+    {
+      title: 'Create feedback collection plan',
+      department: 'strategy-growth',
+      ownerRole: 'csgo',
+      requirementId: 'insights-feedback-plan',
+      definitionOfDone:
+        'Feedback plan written; two-question script confirmed with COO and CMO.',
+      dueOffsetDays: 5
+    },
+    {
+      title: 'Review launch implications',
+      department: 'executive',
+      ownerRole: 'coceo',
+      requirementId: 'insights-launch-implications',
+      definitionOfDone:
+        'Co-CEO confirms launch implications align with the pricing, ops, and pitch chapters.',
+      dueOffsetDays: 7
+    },
+    {
       title: 'Map audience + channels from brand story',
       department: 'marketing',
       ownerRole: 'cmo',
@@ -148,6 +355,41 @@ export const popUpCampaign: TemplateStudio = {
     }
   ],
   requiredEvidence: [
+    {
+      id: 'insights-feedback-notes',
+      label: 'Customer feedback notes or survey link',
+      description:
+        'Notes from real customer feedback, or a survey link if available.',
+      required: false
+    },
+    {
+      id: 'insights-observation-notes',
+      label: 'Observation notes',
+      description:
+        'Notes from watching real customers at past pop-ups, the school store, or comparable events.',
+      required: false
+    },
+    {
+      id: 'insights-marketing-content',
+      label: 'Marketing content examples',
+      description:
+        'Drafts of social posts, signage, booth scripts that show the angles in action.',
+      required: false
+    },
+    {
+      id: 'insights-techtown-channel-plan',
+      label: 'TechTown outreach / channel plan',
+      description:
+        'Plan or schedule for pre-event and at-event marketing.',
+      required: true
+    },
+    {
+      id: 'insights-phoenix-nest-assumptions',
+      label: 'Phoenix Nest pitch assumptions',
+      description:
+        'Notes on what the team is assuming about Phoenix Nest buyers and the carry pitch.',
+      required: false
+    },
     {
       id: 'calendar-doc',
       label: 'Touchpoint calendar',

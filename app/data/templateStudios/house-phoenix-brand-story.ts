@@ -1,7 +1,7 @@
 import type { TemplateStudio } from '~/types/templateStudio'
 
 export const housePhoenixBrandStory: TemplateStudio = {
-  title: 'House Phoenix Brand Story',
+  title: 'House Phoenix Brand Book',
   purpose:
     "Define House Phoenix so that anyone — a customer at the pop-up, a retail buyer, or the next cohort — understands what the brand stands for, who it's for, and why it exists.",
   learningObjective:

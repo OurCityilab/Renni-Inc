@@ -1,15 +1,15 @@
 import type { TemplateStudio } from '~/types/templateStudio'
 
 export const pricingBreakEven: TemplateStudio = {
-  title: 'Pricing + Break-Even Summary',
+  title: 'Finance and Revenue Model',
   purpose:
-    'Decide what to charge for each pop-up product and prove the math works — how many units the team needs to sell to cover costs and hit a revenue goal.',
+    'Build the full Renni Inc. finance picture for the launch — pricing and break-even per product, revenue scenarios, donation scenarios, the KPIs the team is tracking, and the post-event recap structure.',
   learningObjective:
-    'Read a unit-economics model well enough to explain it to a customer, a co-CEO, or a retail buyer without notes.',
+    'Read and explain a finance model end-to-end: unit economics, revenue scenarios, donation flow, KPIs, and what to recap after the pop-up closes.',
   whyItMatters:
-    "If pricing is wrong, the pop-up either loses money or leaves money on the table. Phoenix Nest buyers read the margin before they read the brand story. The Playbook's Finance chapter is where next cohort learns whether this one shipped real economics.",
+    "If pricing is wrong, the pop-up either loses money or leaves money on the table. If the revenue scenarios don't exist, nobody knows what to celebrate or what to fix. Phoenix Nest buyers read the margin before they read the brand story. The Finance chapter is where the next cohort learns whether this cohort shipped real economics.",
   finalOutput:
-    'A per-product sale price, unit cost, planned quantity, projected revenue, projected gross profit, and break-even unit count — matching what /pricing shows and what /revenue will reconcile against.',
+    'A per-product pricing and break-even view that matches /pricing, plus revenue scenarios (low / target / stretch), a donation scenario plan, a short list of finance KPIs, and a post-event recap template the team will fill in after TechTown.',
   connectedOutcome: 'TechTown pop-up',
   sections: [
     {
@@ -72,6 +72,75 @@ export const pricingBreakEven: TemplateStudio = {
         'Break-even units calculated per product on /pricing.',
         'A risk response is written for any product whose break-even is close to planned quantity.'
       ]
+    },
+    {
+      id: 'revenue-scenarios',
+      title: 'Revenue scenarios — low / target / stretch',
+      lesson:
+        'A single revenue number is a guess. Three scenarios — low, target, and stretch — let the team prepare for the best and the worst without sounding overconfident.',
+      example:
+        'Target: $1,800 (target conversion at planned inventory). Low: $1,100 (half-conversion / weather). Stretch: $2,400 (sellout on at least one product).',
+      studentPrompts: [
+        'Build a low / target / stretch revenue scenario from /pricing inputs.',
+        'For each scenario, name the assumption that drives it — foot traffic, conversion rate, sellout pattern.',
+        'Note which scenario the operations and marketing chapters are planned against.'
+      ],
+      requiredInputs: ['Three revenue scenarios', 'Driving assumption per scenario'],
+      completionCriteria: [
+        'Three scenarios are listed with traceable assumptions.',
+        'Plan-of-record scenario is named.'
+      ]
+    },
+    {
+      id: 'donation-scenarios',
+      title: 'Donation scenarios',
+      lesson:
+        'Donations are a separate revenue stream with their own scenario logic — donor count, average gift, and how the team prompts a donation at the table without making customers feel pressured.',
+      studentPrompts: [
+        'Estimate donor count and average gift for low / target / stretch.',
+        'Describe how donations are prompted at the table (sign, ask, donation card).',
+        'Note how donations are recorded in the Command Center vs. Square — donations should never be reported as product revenue.'
+      ],
+      requiredInputs: [
+        'Donor count assumptions',
+        'Average gift assumption',
+        'Prompt method',
+        'Recording method'
+      ],
+      completionCriteria: [
+        'Donation scenarios are written with clear assumptions.',
+        'Recording rule keeps donations and product sales separate.'
+      ]
+    },
+    {
+      id: 'key-financial-kpis',
+      title: 'Key financial KPIs',
+      lesson:
+        'Pick the small set of KPIs the team will actually watch — gross revenue, gross profit, donation total, sell-through rate per product, average transaction. Two or three is plenty; eight is noise.',
+      studentPrompts: [
+        'List the 3–5 KPIs the team will track during and after the pop-up.',
+        'For each KPI, name where it lives (/pricing, /revenue, donation tracker).',
+        'Set a target value per KPI tied to the target revenue scenario.'
+      ],
+      completionCriteria: [
+        'Three to five KPIs named with locations and targets.',
+        'KPIs match what the next cohort can actually pull from existing tools.'
+      ]
+    },
+    {
+      id: 'post-event-recap',
+      title: 'Post-event recap structure',
+      lesson:
+        'A post-event recap is the one chance to compare scenario to actuals while memory is fresh. Write the structure now so on Sunday after the pop-up, the team just fills it in.',
+      studentPrompts: [
+        'List the recap sections: actual vs. scenario revenue, donation total, top sellers, slow movers, what to change next time.',
+        'Name the owner (CFO) and the deadline (within 7 days of the pop-up).',
+        'Note where the recap lives — Decision Log appendix or its own doc.'
+      ],
+      completionCriteria: [
+        'Recap section list, owner, and deadline are named.',
+        'Recap location is identified so the next cohort can find it.'
+      ]
     }
   ],
   requirements: [
@@ -117,6 +186,87 @@ export const pricingBreakEven: TemplateStudio = {
       requiredForApproval: false,
       department: 'finance',
       playbookChapter: 8
+    },
+    {
+      id: 'finance-unit-costs-complete',
+      label: 'Unit costs complete on /pricing',
+      description:
+        'Every product has an entry on /pricing with current vendor-quoted unit cost.',
+      requiredForApproval: true,
+      department: 'finance',
+      playbookChapter: 8,
+      suggestedTaskTitle: 'Confirm unit costs and sale prices',
+      definitionOfDone:
+        'CFO confirms /pricing reflects current quotes for every product.'
+    },
+    {
+      id: 'finance-sale-prices-listed',
+      label: 'Sale prices listed and defended',
+      description:
+        'Each product has a sale price with a one-line rationale a customer or buyer would accept.',
+      requiredForApproval: true,
+      department: 'finance',
+      playbookChapter: 8,
+      definitionOfDone:
+        'Sale prices match /pricing and the team can defend each price out loud.'
+    },
+    {
+      id: 'finance-break-even-explained',
+      label: 'Break-even explained per product',
+      description:
+        'Every product has its break-even unit count and a risk response if margin is thin.',
+      requiredForApproval: true,
+      department: 'finance',
+      playbookChapter: 8,
+      definitionOfDone:
+        'Break-even values match /pricing and risk responses are written where needed.'
+    },
+    {
+      id: 'finance-revenue-scenarios',
+      label: 'Low / target / stretch revenue scenarios written',
+      description:
+        'Three revenue scenarios with traceable assumptions and a named plan-of-record.',
+      requiredForApproval: true,
+      department: 'finance',
+      playbookChapter: 8,
+      suggestedTaskTitle: 'Build revenue scenarios',
+      definitionOfDone:
+        'Scenarios are written and the plan-of-record is named for ops/marketing.'
+    },
+    {
+      id: 'finance-donation-scenarios',
+      label: 'Donation scenarios written and recording rule documented',
+      description:
+        'Donor count, average gift, prompt method, and recording rule keep donations separate from product sales.',
+      requiredForApproval: true,
+      department: 'finance',
+      playbookChapter: 8,
+      suggestedTaskTitle: 'Define donation scenario assumptions',
+      definitionOfDone:
+        'CFO + Co-CEO confirm donation flow and reporting separation.'
+    },
+    {
+      id: 'finance-kpis-defined',
+      label: 'Finance KPIs defined with targets and locations',
+      description:
+        '3–5 KPIs the team will actually watch, each with a target value and the tool/page where it lives.',
+      requiredForApproval: true,
+      department: 'finance',
+      playbookChapter: 8,
+      suggestedTaskTitle: 'Define key finance KPIs',
+      definitionOfDone:
+        'KPI list is short, named, and pullable from current tools.'
+    },
+    {
+      id: 'finance-post-event-recap-plan',
+      label: 'Post-event recap structure written',
+      description:
+        'Recap section list, owner, deadline, and storage location are documented so the recap can be filled in within 7 days of the pop-up.',
+      requiredForApproval: true,
+      department: 'finance',
+      playbookChapter: 8,
+      definitionOfDone:
+        'Recap template exists and is reviewed by Co-CEO.'
     }
   ],
   suggestedTasks: [
@@ -147,6 +297,60 @@ export const pricingBreakEven: TemplateStudio = {
       definitionOfDone:
         'Foot-traffic assumption written, conversion rate cited, total matches planned quantities.',
       dueOffsetDays: 6
+    },
+    {
+      title: 'Confirm unit costs and sale prices',
+      department: 'finance',
+      ownerRole: 'cfo',
+      requirementId: 'finance-unit-costs-complete',
+      definitionOfDone:
+        'CFO confirms /pricing reflects current vendor quotes and defended sale prices.',
+      dueOffsetDays: 6
+    },
+    {
+      title: 'Build revenue scenarios',
+      department: 'finance',
+      ownerRole: 'cfo',
+      requirementId: 'finance-revenue-scenarios',
+      dependency: 'pricing-scenarios-live',
+      definitionOfDone:
+        'Low / target / stretch scenarios written with assumptions and a named plan-of-record.',
+      dueOffsetDays: 8
+    },
+    {
+      title: 'Define donation scenario assumptions',
+      department: 'finance',
+      ownerRole: 'cfo',
+      requirementId: 'finance-donation-scenarios',
+      definitionOfDone:
+        'CFO and Co-CEO agree on donor count, average gift, prompt method, and the recording separation rule.',
+      dueOffsetDays: 8
+    },
+    {
+      title: 'Define key finance KPIs',
+      department: 'finance',
+      ownerRole: 'cfo',
+      requirementId: 'finance-kpis-defined',
+      definitionOfDone:
+        '3–5 KPIs documented with targets and the tool/page where each one lives.',
+      dueOffsetDays: 9
+    },
+    {
+      title: 'Confirm inventory assumptions used in finance model',
+      department: 'operations',
+      ownerRole: 'coo',
+      definitionOfDone:
+        'COO confirms the inventory quantities feeding /pricing and the revenue scenarios.',
+      dueOffsetDays: 7
+    },
+    {
+      title: 'Final finance and revenue model review',
+      department: 'executive',
+      ownerRole: 'coceo',
+      requirementId: 'finance-post-event-recap-plan',
+      definitionOfDone:
+        'Co-CEO and admin review the finance chapter end-to-end before submission.',
+      dueOffsetDays: 10
     }
   ],
   requiredEvidence: [
@@ -161,6 +365,27 @@ export const pricingBreakEven: TemplateStudio = {
       label: 'Screenshot of /pricing page',
       description: 'Confirms the live scenarios match this summary.',
       required: false
+    },
+    {
+      id: 'finance-revenue-tracker',
+      label: 'Revenue / donation tracker reference',
+      description:
+        'Link to /revenue or the donation tracker so scenarios can be reconciled to actuals.',
+      required: true
+    },
+    {
+      id: 'finance-inventory-assumptions',
+      label: 'Inventory quantity assumptions',
+      description:
+        'Per-product inventory quantities the finance model assumes, confirmed by COO.',
+      required: true
+    },
+    {
+      id: 'finance-post-event-recap-template',
+      label: 'Post-event recap notes or template',
+      description:
+        'Template the team will fill in within 7 days of the pop-up, with section headers ready.',
+      required: true
     }
   ],
   aiGuidance: {
