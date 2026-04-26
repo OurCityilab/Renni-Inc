@@ -18,13 +18,15 @@
 //     workspace handles that on first edit)
 import { computed } from 'vue'
 import { useDeliverableOutputs } from '~/composables/useDeliverableOutputs'
-import type { Deliverable } from '~/types/models'
+import type { Deliverable, Task } from '~/types/models'
 import type { TemplateStudio, TemplateStudioSection } from '~/types/templateStudio'
+import type { RequirementCoverageSummary } from '~/utils/requirementCoverage'
 import {
   summarizeChapterProgress,
   type SectionProgress
 } from '~/utils/deliverableOutputProgress'
 import DeliverablePlaybookPreview from '~/components/DeliverablePlaybookPreview.vue'
+import CSuiteAdvisorCard from '~/components/CSuiteAdvisorCard.vue'
 
 const props = defineProps<{
   deliverable: Deliverable
@@ -33,6 +35,13 @@ const props = defineProps<{
   // canEdit to color the empty-state copy on cards (e.g. "Start by
   // adding…" vs "No output has been started for this section yet.").
   canEdit: boolean
+  // C-Suite Advisor V1 inputs. Threaded through from the chapter
+  // page so the hub doesn't refetch tasks / requirement coverage.
+  // Optional + defaulted so legacy callers (none today, but rollback
+  // shape) keep working.
+  relatedTasks?: Task[]
+  relatedTasksLoading?: boolean
+  requirementCoverage?: RequirementCoverageSummary | null
 }>()
 
 const outputs = useDeliverableOutputs()
@@ -124,6 +133,18 @@ function fmtWhen(iso?: string | null): string {
         {{ likelyOwner }}.
       </p>
     </header>
+
+    <!-- C-Suite Advisor V1 — deterministic operating signals.
+         Read-only / display-only. Never persists, never creates
+         tasks, never approves or submits. -->
+    <CSuiteAdvisorCard
+      :deliverable="deliverable"
+      :studio="studio"
+      :tasks="relatedTasks ?? []"
+      :output="output"
+      :requirement-coverage="requirementCoverage ?? null"
+      :loading="(loading || relatedTasksLoading) === true"
+    />
 
     <!-- Compact chapter progress (display-only). Submit gate lives
          elsewhere; these chips never affect submit eligibility or

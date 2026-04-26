@@ -251,6 +251,9 @@ async function saveNotes() {
             :deliverable="deliverable"
             :studio="studio"
             :can-edit="canEditOutput"
+            :related-tasks="relatedTasks"
+            :related-tasks-loading="relatedTasksLoading"
+            :requirement-coverage="requirementCoverage"
           />
 
           <ApprovalActions
@@ -326,6 +329,9 @@ async function saveNotes() {
             :deliverable="deliverable"
             :studio="studio"
             :can-edit="canEditOutput"
+            :related-tasks="relatedTasks"
+            :related-tasks-loading="relatedTasksLoading"
+            :requirement-coverage="requirementCoverage"
           />
 
           <!-- What this deliverable needs -->
