@@ -55,6 +55,7 @@ env:
     value: renni-command-center
     availability:
       - RUNTIME
+
   # AI Critique V1 — Anthropic Messages API. The key is stored as a
   # Secret Manager secret named NUXT_AI_CRITIQUE_API_KEY and only
   # exposed to the running server (no BUILD availability, no public
