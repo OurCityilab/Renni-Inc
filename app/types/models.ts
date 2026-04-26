@@ -780,6 +780,22 @@ export type PricingStrategyConfidence = 'low' | 'medium' | 'high' | ''
 // without them keep rendering.
 export type PricingStrategyCompRelevance = 'low' | 'medium' | 'high' | ''
 
+// V1.2 — provenance metadata for a comp row. Pure provenance; never
+// changes save behavior or feeds the submit gate. Default for legacy
+// rows is 'manual' (or just absent — both render the same).
+export type PricingStrategyCompExtractionMethod =
+  | 'manual'
+  | 'pasted_text'
+  | 'url_metadata'
+  | 'ai_suggested'
+  | ''
+
+export type PricingStrategyCompExtractionConfidence =
+  | 'low'
+  | 'medium'
+  | 'high'
+  | ''
+
 export interface PricingStrategyComparable {
   id: string
   name: string
@@ -797,6 +813,13 @@ export interface PricingStrategyComparable {
   relevance?: PricingStrategyCompRelevance
   proves?: string
   doesNotProve?: string
+  // V1.2 — provenance for rows created via the Comp Source Assistant.
+  // Optional and additive; legacy rows render unchanged. Display-only;
+  // does not affect submit or readiness.
+  extractionMethod?: PricingStrategyCompExtractionMethod
+  extractionConfidence?: PricingStrategyCompExtractionConfidence
+  reviewedByStudent?: boolean
+  reviewedAt?: IsoTimestamp | null
 }
 
 export interface PricingStrategyPriceTest {

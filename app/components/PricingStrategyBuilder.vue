@@ -51,6 +51,11 @@ import {
   type MarginBand,
   type SegmentBand
 } from '~/utils/pricingStrategyMath'
+import {
+  extractCompSource,
+  type ExtractedCompSourceSuggestion,
+  type ExtractedPriceCandidate
+} from '~/utils/compSourceExtraction'
 
 const props = defineProps<{
   deliverableId: string
@@ -234,6 +239,116 @@ function addComparable() {
 function removeComparable(id: string) {
   form.comparablePrices = (form.comparablePrices ?? []).filter((c) => c.id !== id)
   markDirty()
+}
+
+// --- comp source assistant (V1.2) -----------------------------------
+// Pasted-text only. Pure deterministic extraction — never fetches a
+// URL, never calls AI, never auto-saves. The student reviews the
+// suggestion card and either accepts (creates a comp row), edits
+// (creates an editable comp row), or dismisses (clears the
+// suggestion). The existing "Save pricing strategy" button remains
+// the only Firestore write path.
+const compAssistantPaste = ref('')
+const compSuggestion = ref<ExtractedCompSourceSuggestion | null>(null)
+const selectedPriceIdx = ref<number | -1>(-1)
+const compAssistantError = ref<string | null>(null)
+
+function runCompSuggestion() {
+  compAssistantError.value = null
+  try {
+    const result = extractCompSource({ pastedText: compAssistantPaste.value })
+    compSuggestion.value = result
+    // Default selection: first price candidate, or "no price" when
+    // none found / when there are multiple (force the student to
+    // pick).
+    if (result.priceCandidates.length === 1) {
+      selectedPriceIdx.value = 0
+    } else {
+      selectedPriceIdx.value = -1
+    }
+  } catch (e) {
+    compAssistantError.value = e instanceof Error ? e.message : String(e)
+    compSuggestion.value = null
+  }
+}
+
+function clearPastedText() {
+  compAssistantPaste.value = ''
+  compSuggestion.value = null
+  selectedPriceIdx.value = -1
+  compAssistantError.value = null
+}
+
+function dismissCompSuggestion() {
+  compSuggestion.value = null
+  selectedPriceIdx.value = -1
+}
+
+// Build a draft comp row from the current suggestion + selected price.
+// Internal — used by both "Use suggestion" and "Edit before adding"
+// since they create the same shape; "Edit before adding" just keeps
+// the suggestion banner cleared so the student can immediately type.
+function buildSuggestionRow(): PricingStrategyComparable | null {
+  const s = compSuggestion.value
+  if (!s) return null
+  const idx = selectedPriceIdx.value
+  const picked: ExtractedPriceCandidate | null =
+    idx >= 0 && idx < s.priceCandidates.length ? s.priceCandidates[idx] : null
+  return {
+    id: genId(),
+    name: s.name ?? '',
+    price: picked?.value ?? null,
+    source: '',
+    notes: '',
+    alignment: '',
+    url: s.url ?? '',
+    sourceName: s.sourceName ?? '',
+    sourceDate: s.sourceDate ?? '',
+    productType: s.productType ?? '',
+    qualityTier: s.qualityTier ?? '',
+    relevance: '',
+    proves: '',
+    doesNotProve: '',
+    extractionMethod: 'pasted_text',
+    extractionConfidence: s.extractionConfidence,
+    reviewedByStudent: false,
+    reviewedAt: null
+  }
+}
+
+function useCompSuggestion() {
+  const row = buildSuggestionRow()
+  if (!row) return
+  // "Use suggestion" implies the student has read the card and is
+  // accepting the values. We set reviewedByStudent + reviewedAt so
+  // the row reflects student approval. The student can still edit
+  // the row inline before clicking the existing Save button.
+  row.reviewedByStudent = true
+  row.reviewedAt = new Date().toISOString()
+  if (!form.comparablePrices) form.comparablePrices = []
+  form.comparablePrices.push(row)
+  markDirty()
+  // Clear the assistant so the next paste starts fresh; keep the
+  // pasted text in the textarea so the student can adjust + re-run
+  // if they want.
+  compSuggestion.value = null
+  selectedPriceIdx.value = -1
+}
+
+function editSuggestionBeforeAdding() {
+  const row = buildSuggestionRow()
+  if (!row) return
+  // Different from "Use" — review hasn't happened yet, the student
+  // is going to look at every field and edit before saving. Leave
+  // reviewedByStudent false so the row's chip reads "Suggested from
+  // pasted text" without the "Student reviewed" badge until the
+  // student touches a field. (We don't track per-field touches in
+  // V1.2; the chip simply reflects whichever entry path was used.)
+  if (!form.comparablePrices) form.comparablePrices = []
+  form.comparablePrices.push(row)
+  markDirty()
+  compSuggestion.value = null
+  selectedPriceIdx.value = -1
 }
 
 // --- price tests ---------------------------------------------------
@@ -987,6 +1102,182 @@ async function copyScaffold() {
         </ul>
       </div>
 
+      <!-- Comp Source Assistant (V1.2) — pasted-text only.
+           Student-driven: the assistant suggests, the student
+           reviews, only "Use suggestion" or "Edit before adding"
+           creates a comparable row. The existing Save Pricing
+           Strategy button remains the only Firestore write path.
+           Hidden entirely when editingEnabled is false so review
+           state can't trigger network-adjacent input. -->
+      <details
+        v-if="editingEnabled"
+        class="space-y-2 rounded-md border border-violet-200 bg-violet-50/40 p-2"
+      >
+        <summary class="cursor-pointer text-xs font-semibold text-violet-900">
+          Suggest from pasted product text
+        </summary>
+        <div class="mt-2 space-y-2">
+          <p class="text-xs text-neutral-700">
+            Paste text copied from a product page. The system will suggest
+            fields for a comparable product, but you must review before saving.
+          </p>
+          <ul class="ml-4 list-disc text-[11px] text-neutral-600">
+            <li>Suggestions are a starting point. Check the product page before using this as evidence.</li>
+            <li>This does not prove demand.</li>
+            <li>Do not rely on sale prices or variant prices without checking the page.</li>
+            <li>Student must verify before saving.</li>
+          </ul>
+          <textarea
+            v-model="compAssistantPaste"
+            rows="5"
+            class="w-full rounded border border-neutral-300 p-1.5 text-sm"
+            placeholder="Paste product page text here — name, price, store. The assistant never fetches the page; it only reads what you paste."
+          />
+          <div class="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              class="btn-primary text-xs"
+              :disabled="!compAssistantPaste.trim().length"
+              @click="runCompSuggestion"
+            >Suggest fields</button>
+            <button
+              type="button"
+              class="rounded border border-neutral-300 bg-white px-2 py-1 text-xs text-neutral-700 hover:bg-neutral-50"
+              :disabled="!compAssistantPaste.length && !compSuggestion"
+              @click="clearPastedText"
+            >Clear pasted text</button>
+            <span class="text-[11px] italic text-neutral-500">
+              No URL fetching. No AI. No auto-save.
+            </span>
+          </div>
+          <p v-if="compAssistantError" class="text-xs text-rose-700">{{ compAssistantError }}</p>
+
+          <!-- Draft suggestion card. -->
+          <section
+            v-if="compSuggestion"
+            class="space-y-2 rounded-md border border-violet-300 bg-white p-2 text-xs"
+          >
+            <header class="flex flex-wrap items-baseline justify-between gap-2">
+              <h6 class="font-semibold text-violet-900">Draft suggestion</h6>
+              <span class="rounded-full border border-violet-300 bg-violet-50 px-2 py-0.5 text-[10px] uppercase tracking-wide text-violet-800">
+                Confidence · {{ compSuggestion.extractionConfidence }}
+              </span>
+            </header>
+            <dl class="space-y-1 text-neutral-800">
+              <div>
+                <dt class="font-medium text-neutral-600">Name</dt>
+                <dd>{{ compSuggestion.name || '— not detected —' }}</dd>
+              </div>
+              <div>
+                <dt class="font-medium text-neutral-600">Source / store</dt>
+                <dd>{{ compSuggestion.sourceName || '— not detected —' }}</dd>
+              </div>
+              <div v-if="compSuggestion.url">
+                <dt class="font-medium text-neutral-600">Detected URL</dt>
+                <dd class="break-all">
+                  <a
+                    :href="safeCompUrl(compSuggestion.url) ?? undefined"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="text-phoenix-700 hover:underline"
+                  >{{ compSuggestion.url }}</a>
+                </dd>
+              </div>
+              <div v-if="compSuggestion.sourceDate">
+                <dt class="font-medium text-neutral-600">Source date</dt>
+                <dd>{{ compSuggestion.sourceDate }}</dd>
+              </div>
+              <div v-if="compSuggestion.productType">
+                <dt class="font-medium text-neutral-600">Product type</dt>
+                <dd>{{ compSuggestion.productType }}</dd>
+              </div>
+              <div v-if="compSuggestion.qualityTier">
+                <dt class="font-medium text-neutral-600">Quality tier</dt>
+                <dd>{{ compSuggestion.qualityTier }}</dd>
+              </div>
+            </dl>
+
+            <!-- Price candidates — radio when more than one, single
+                 chip when exactly one, "no price" notice when none. -->
+            <div class="space-y-1">
+              <p class="font-medium text-neutral-700">Price candidates</p>
+              <p
+                v-if="compSuggestion.priceCandidates.length === 0"
+                class="italic text-neutral-500"
+              >No price detected. Enter the price manually after checking the page.</p>
+              <ul v-else class="space-y-1">
+                <li
+                  v-for="(p, i) in compSuggestion.priceCandidates"
+                  :key="`pc-${i}`"
+                  class="flex flex-wrap items-baseline gap-2"
+                >
+                  <label class="inline-flex items-center gap-1 cursor-pointer">
+                    <input
+                      type="radio"
+                      :name="`comp-price-${sectionId}`"
+                      :value="i"
+                      :checked="selectedPriceIdx === i"
+                      @change="selectedPriceIdx = i"
+                    />
+                    <span class="font-medium text-neutral-900">{{ p.raw }}</span>
+                    <span class="text-neutral-600">→ ${{ formatMoney(p.value) }}</span>
+                  </label>
+                  <span
+                    class="rounded border px-1.5 py-0.5 text-[10px] uppercase tracking-wide"
+                    :class="p.confidence === 'high'
+                      ? 'border-emerald-300 bg-emerald-50 text-emerald-800'
+                      : p.confidence === 'medium'
+                        ? 'border-amber-200 bg-amber-50 text-amber-800'
+                        : 'border-rose-300 bg-rose-50 text-rose-800'"
+                  >{{ p.confidence }}</span>
+                  <span v-if="p.reason" class="text-[11px] text-neutral-600">{{ p.reason }}</span>
+                </li>
+                <li class="flex items-center gap-1">
+                  <label class="inline-flex items-center gap-1 cursor-pointer">
+                    <input
+                      type="radio"
+                      :name="`comp-price-${sectionId}`"
+                      :value="-1"
+                      :checked="selectedPriceIdx === -1"
+                      @change="selectedPriceIdx = -1"
+                    />
+                    <span class="text-neutral-700">No price / I'll enter manually</span>
+                  </label>
+                </li>
+              </ul>
+            </div>
+
+            <!-- Warnings — always shown, even when extraction
+                 confidence is high. The team should never treat
+                 the assistant's output as authoritative. -->
+            <ul
+              v-if="compSuggestion.warnings.length > 0"
+              class="ml-4 list-disc space-y-0.5 text-amber-800"
+            >
+              <li v-for="(w, i) in compSuggestion.warnings" :key="`w-${i}`">{{ w }}</li>
+            </ul>
+
+            <div class="flex flex-wrap gap-2">
+              <button
+                type="button"
+                class="btn-primary text-xs"
+                @click="useCompSuggestion"
+              >Use suggestion</button>
+              <button
+                type="button"
+                class="rounded border border-neutral-300 bg-white px-2 py-1 text-xs text-neutral-700 hover:bg-neutral-50"
+                @click="editSuggestionBeforeAdding"
+              >Edit before adding</button>
+              <button
+                type="button"
+                class="rounded border border-neutral-300 bg-white px-2 py-1 text-xs text-rose-700 hover:bg-rose-50"
+                @click="dismissCompSuggestion"
+              >Dismiss</button>
+            </div>
+          </section>
+        </div>
+      </details>
+
       <!-- Comparables -->
       <div class="space-y-2">
         <header class="flex items-center justify-between">
@@ -1015,6 +1306,29 @@ async function copyScaffold() {
             :key="c.id"
             class="space-y-2 rounded-md border border-neutral-200 bg-neutral-50 p-2"
           >
+            <!-- V1.2 — provenance chips for rows created via the
+                 Comp Source Assistant. Manual rows render no chip
+                 here (the absence of a chip is the manual signal). -->
+            <ul
+              v-if="c.extractionMethod === 'pasted_text'"
+              class="flex flex-wrap gap-1.5 text-[11px]"
+            >
+              <li class="rounded-full border border-violet-300 bg-violet-50 px-2 py-0.5 uppercase tracking-wide text-violet-800">
+                Suggested from pasted text
+              </li>
+              <li
+                v-if="c.extractionConfidence"
+                class="rounded-full border border-neutral-300 bg-white px-2 py-0.5 uppercase tracking-wide text-neutral-700"
+              >Confidence · {{ c.extractionConfidence }}</li>
+              <li
+                v-if="c.reviewedByStudent"
+                class="rounded-full border border-emerald-300 bg-emerald-50 px-2 py-0.5 uppercase tracking-wide text-emerald-800"
+              >Student reviewed</li>
+              <li
+                v-else
+                class="rounded-full border border-amber-300 bg-amber-50 px-2 py-0.5 uppercase tracking-wide text-amber-800"
+              >Awaiting review</li>
+            </ul>
             <div class="grid gap-2 sm:grid-cols-2">
               <label class="text-xs">
                 <span class="font-medium text-neutral-700">Name</span>
