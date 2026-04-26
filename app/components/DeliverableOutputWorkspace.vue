@@ -40,6 +40,16 @@ import MarketEvidenceReferencePanel, {
 } from '~/components/MarketEvidenceReferencePanel.vue'
 import MarketEvidenceCritiquePanel from '~/components/MarketEvidenceCritiquePanel.vue'
 import MarketFitBuilder from '~/components/MarketFitBuilder.vue'
+import MarketFitReferencePanel, {
+  type ReferencedMarketFitRow
+} from '~/components/MarketFitReferencePanel.vue'
+import {
+  buildDemandSnapshot,
+  buildDemandToRevenueNarrative,
+  buildPhoenixNestCarrySummary,
+  type DemandSnapshot,
+  type PhoenixNestCarrySummary
+} from '~/utils/marketFitNarrative'
 import type {
   AiCritiqueRequirementInput,
   MarketEvidenceCritiqueRequest
@@ -124,6 +134,62 @@ const ch7MarketEntries = computed<ReferencedMarketEntry[]>(() => {
   }
   return rows
 })
+
+// Cross-chapter Market Fit reference rows. A section is considered
+// "has Market Fit content" only when there's something worth reading
+// — at least one segment, comparable, evidence request, a named
+// product, or a positioning sentence. Otherwise an empty fit doc
+// would render as a noisy empty card.
+function flattenMarketFitFromOutput(
+  output: DeliverableOutput | null,
+  sourceLabel: string
+): ReferencedMarketFitRow[] {
+  if (!output) return []
+  const rows: ReferencedMarketFitRow[] = []
+  for (const section of Object.values(output.sections ?? {})) {
+    const fit = section?.marketFit
+    if (!fit) continue
+    const hasContent =
+      (fit.segments?.length ?? 0) > 0 ||
+      (fit.comparables?.length ?? 0) > 0 ||
+      (fit.evidenceRequests?.length ?? 0) > 0 ||
+      Boolean(fit.productFacts?.productName?.trim()) ||
+      Boolean(fit.recommendation?.positioningSummary?.trim())
+    if (!hasContent) continue
+    rows.push({
+      sourceLabel,
+      sectionId: section.sectionId,
+      sectionTitle: section.sectionTitleSnapshot || section.sectionId,
+      fit
+    })
+  }
+  return rows
+}
+
+const ch7MarketFitRows = computed<ReferencedMarketFitRow[]>(() =>
+  flattenMarketFitFromOutput(ch7Output.value, 'Chapter 7')
+)
+const ch8MarketFitRows = computed<ReferencedMarketFitRow[]>(() =>
+  flattenMarketFitFromOutput(ch8Output.value, 'Chapter 8')
+)
+// Concatenated source rows for Ch 11 — Ch 7 product/demand thinking
+// plus any Ch 8 revenue-side fit work. Order preserved (Ch 7 first)
+// so the carry pitch reads in the upstream → downstream sequence.
+const ch11MarketFitRows = computed<ReferencedMarketFitRow[]>(() => [
+  ...ch7MarketFitRows.value,
+  ...ch8MarketFitRows.value
+])
+
+// Pre-compute carry summaries per row so the template doesn't call
+// the (deterministic but non-trivial) helper twice on each render.
+const ch11CarrySummaries = computed<
+  Array<{ row: ReferencedMarketFitRow; summary: PhoenixNestCarrySummary }>
+>(() =>
+  ch11MarketFitRows.value.map((row) => ({
+    row,
+    summary: buildPhoenixNestCarrySummary(row.fit)
+  }))
+)
 
 // Chapter 8 → Chapter 11 finalText status, used by the Ch 11 reference
 // panel only. We surface section titles where finalText exists (so a
@@ -1255,6 +1321,56 @@ watch(
       />
     </section>
 
+    <!-- Chapter 8 Market Fit cross-section panel.
+         Surfaces the segment / scenario thinking from Chapter 7's
+         Market Fit Builder plus a deterministic demand-to-revenue
+         narrative per section. Read-only — no editing affordance, no
+         writes, no AI. The narrative explicitly names the boundary
+         between demand-side estimates and the CFO pricing/break-even
+         engine. Visible only on Chapter 8 and only when there's at
+         least one populated Chapter 7 fit row. -->
+    <section
+      v-if="isChapter8 && ch7MarketFitRows.length > 0"
+      class="card space-y-3 border-violet-200 bg-violet-50/40"
+    >
+      <header class="space-y-0.5">
+        <p class="text-xs uppercase tracking-wide text-neutral-500">
+          Cross-chapter reference
+        </p>
+        <h3 class="font-medium text-neutral-900">
+          Demand model from Chapter 7 (Market Fit)
+        </h3>
+        <p class="text-xs text-neutral-600">
+          Use these Chapter 7 segment and scenario decisions when writing
+          revenue scenarios here. Demand scenarios estimate possible buyers
+          and revenue. Pricing/break-even still controls cost, margin, and
+          break-even decisions.
+        </p>
+      </header>
+      <MarketFitReferencePanel
+        :rows="ch7MarketFitRows"
+        :loading="ch7Loading"
+        empty-message="No Chapter 7 Market Fit data has been saved yet."
+      />
+      <div class="space-y-2">
+        <p class="text-xs font-semibold uppercase tracking-wide text-neutral-600">
+          Demand-to-revenue narrative
+        </p>
+        <div
+          v-for="row in ch7MarketFitRows"
+          :key="`mfit-narrative-${row.sectionId}`"
+          class="rounded-md border border-neutral-200 bg-white p-2 text-xs"
+        >
+          <p class="font-medium text-neutral-700">
+            From Chapter 7 · {{ row.sectionTitle }}
+          </p>
+          <p class="mt-1 whitespace-pre-wrap text-neutral-800">
+            {{ buildDemandToRevenueNarrative(row.fit) }}
+          </p>
+        </div>
+      </div>
+    </section>
+
     <!-- Chapter 11 retail-carry evidence reference panel.
          Combines Chapter 7 demand entries with a Chapter 8 finalText
          status block so a Phoenix Nest pitch author can see which
@@ -1326,6 +1442,61 @@ watch(
             {{ ch8RevenueScenariosExcerpt }}
           </p>
         </div>
+      </div>
+    </section>
+
+    <!-- Chapter 11 Phoenix Nest carry-readiness panel.
+         Surfaces every Chapter 7 / Chapter 8 Market Fit row alongside
+         a deterministic carry-readiness call (validate first / limited
+         carry / awareness or test / stronger pitch / no clear signal).
+         Each call is advisory: the headline + bulleted reasoning lets
+         the pitch author read both the recommendation and why. Read-
+         only — no writes, no AI involvement, no final decision. -->
+    <section
+      v-if="isChapter11 && ch11MarketFitRows.length > 0"
+      class="card space-y-3 border-violet-200 bg-violet-50/40"
+    >
+      <header class="space-y-0.5">
+        <p class="text-xs uppercase tracking-wide text-neutral-500">
+          Cross-chapter reference
+        </p>
+        <h3 class="font-medium text-neutral-900">
+          Phoenix Nest carry readiness from Market Fit
+        </h3>
+        <p class="text-xs text-neutral-600">
+          Use this advisory readiness summary to shape — but not decide —
+          the carry pitch. The Co-CEO and Phoenix Nest stakeholders still
+          own the final call.
+        </p>
+      </header>
+      <MarketFitReferencePanel
+        :rows="ch11MarketFitRows"
+        :loading="ch7Loading || ch8Loading"
+        empty-message="No Market Fit data from Chapters 7 or 8 has been saved yet."
+      />
+      <div class="space-y-2">
+        <p class="text-xs font-semibold uppercase tracking-wide text-neutral-600">
+          Carry-readiness signal per source row
+        </p>
+        <article
+          v-for="row in ch11CarrySummaries"
+          :key="`mfit-carry-${row.row.sectionId}`"
+          class="rounded-md border border-neutral-200 bg-white p-2 text-xs"
+        >
+          <p class="text-neutral-500">
+            From {{ row.row.sourceLabel }} · {{ row.row.sectionTitle }}
+          </p>
+          <p class="mt-1 font-medium text-neutral-900">{{ row.summary.headline }}</p>
+          <ul
+            v-if="row.summary.reasoning.length"
+            class="mt-1 list-disc space-y-0.5 pl-5 text-neutral-700"
+          >
+            <li
+              v-for="(line, i) in row.summary.reasoning"
+              :key="`mfit-carry-reason-${row.row.sectionId}-${i}`"
+            >{{ line }}</li>
+          </ul>
+        </article>
       </div>
     </section>
 
@@ -2491,6 +2662,40 @@ watch(
               <span class="font-medium text-neutral-600">Next validation:</span>
               {{ persistedMarketFit(s)!.recommendation!.recommendedNextValidation }}
             </p>
+            <!-- Compact demand snapshot — only renders when the
+                 student has selected a segment and entered scenario
+                 percentages. Same numbers the editor and the
+                 cross-chapter panels use, kept short for the
+                 Playbook-ready preview. -->
+            <template v-if="buildDemandSnapshot(persistedMarketFit(s))">
+              <p class="text-neutral-700">
+                <span class="font-medium text-neutral-600">Selected segment:</span>
+                {{ buildDemandSnapshot(persistedMarketFit(s))!.segmentName }}
+              </p>
+              <p
+                v-if="buildDemandSnapshot(persistedMarketFit(s))!.baseBuyers != null
+                      || buildDemandSnapshot(persistedMarketFit(s))!.baseRevenue != null"
+                class="text-neutral-700"
+              >
+                <span class="font-medium text-neutral-600">Base scenario:</span>
+                {{ fmtNumber(buildDemandSnapshot(persistedMarketFit(s))!.baseBuyers) }} buyers ·
+                {{ fmtCurrency(buildDemandSnapshot(persistedMarketFit(s))!.baseRevenue) }} revenue
+              </p>
+              <p
+                v-if="buildDemandSnapshot(persistedMarketFit(s))!.tradeoff"
+                class="text-neutral-700"
+              >
+                <span class="font-medium text-neutral-600">Key tradeoff:</span>
+                {{ buildDemandSnapshot(persistedMarketFit(s))!.tradeoff }}
+              </p>
+              <p
+                v-if="buildDemandSnapshot(persistedMarketFit(s))!.validationStep"
+                class="text-neutral-700"
+              >
+                <span class="font-medium text-neutral-600">Validation step:</span>
+                {{ buildDemandSnapshot(persistedMarketFit(s))!.validationStep }}
+              </p>
+            </template>
           </div>
         </li>
       </ol>
