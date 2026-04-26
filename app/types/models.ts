@@ -459,6 +459,91 @@ export interface MarketFitProductFacts {
   notes?: string
 }
 
+// PRIZM-inspired segment enum dimensions (V1 Universal Segment
+// Framework). PRIZM is a third-party segmentation system; we use the
+// vocabulary as inspiration only — Renni Command Center never imports
+// licensed PRIZM data, never integrates Claritas APIs, and never
+// claims any segment template is an official Claritas segment.
+//
+// All enums end with `'unknown'` (and `''`) so legacy segments that
+// don't carry the new structured fields still render and save without
+// the form forcing a value.
+export type SegmentLifeStage =
+  | 'teen'
+  | 'college-age'
+  | 'young-adult'
+  | 'parent-guardian'
+  | 'established-adult'
+  | 'empty-nester'
+  | 'retiree'
+  | 'mixed'
+  | ''
+
+export type SegmentIncomeBracket =
+  | 'under-35k'
+  | '35k-60k'
+  | '60k-100k'
+  | '100k-150k'
+  | '150k-plus'
+  | 'unknown'
+  | ''
+
+export type SegmentGeography =
+  | 'school-community'
+  | 'detroit'
+  | 'inner-ring-suburb'
+  | 'outer-metro'
+  | 'out-of-town-supporter'
+  | 'online'
+  | 'event-visitor'
+  | 'unknown'
+  | ''
+
+export type SegmentUrbanicity =
+  | 'urban'
+  | 'inner-ring-suburban'
+  | 'suburban'
+  | 'small-town-rural'
+  | 'mixed'
+  | 'unknown'
+  | ''
+
+export type SegmentSpendingPower =
+  | 'constrained'
+  | 'moderate'
+  | 'comfortable'
+  | 'premium-discretionary'
+  | 'unknown'
+  | ''
+
+export type SegmentBuyingBehavior =
+  | 'impulse'
+  | 'planned'
+  | 'preorder'
+  | 'gift'
+  | 'collector'
+  | 'value-shopper'
+  | 'supporter'
+  | 'repeat-everyday'
+  | 'unknown'
+  | ''
+
+export type SegmentEvidenceConfidence = 'low' | 'medium' | 'high' | ''
+
+export type SegmentExternalReferenceSystem =
+  | 'PRIZM-inspired'
+  | 'ACS/Census'
+  | 'Other'
+  | ''
+
+export interface SegmentExternalReference {
+  system?: SegmentExternalReferenceSystem
+  segmentName?: string
+  geography?: string
+  sourceUrl?: string
+  notes?: string
+}
+
 // Customer profile fields layered on top of a segment. Renaissance
 // students can add a profile name (e.g. "Civic Premium Buyer") plus
 // the supporting context — age, income context, geography, motivation
@@ -467,6 +552,15 @@ export interface MarketFitProductFacts {
 // nested object intentionally avoids any "primary profile" boolean;
 // the team argues fit through the existing segment signals + the
 // product positioning summary.
+//
+// V1.x Universal Segment Framework added the PRIZM-inspired
+// structured fields below the original free-text fields. The
+// free-text fields stay so old saved profiles render unchanged AND
+// so the team can add narrative annotation alongside the structured
+// enums. priceSensitivity (MarketFitSignal) and validationStep
+// already cover what the new framework would have called
+// SegmentPriceSensitivity / validationStep — we reuse them rather
+// than create duplicate fields.
 export interface MarketFitCustomerProfile {
   profileName?: string
   ageRange?: string
@@ -481,6 +575,23 @@ export interface MarketFitCustomerProfile {
   evidenceNeeded?: string
   risk?: string
   validationStep?: string
+  // V1 PRIZM-inspired structured fields. Additive only — every legacy
+  // saved profile still renders without these set.
+  relationshipRole?: string
+  lifeStage?: SegmentLifeStage
+  incomeBracket?: SegmentIncomeBracket
+  geography?: SegmentGeography
+  urbanicity?: SegmentUrbanicity
+  spendingPower?: SegmentSpendingPower
+  buyingBehavior?: SegmentBuyingBehavior
+  lifestyleValues?: string
+  motivations?: string
+  likelyObjections?: string
+  channelFit?: string
+  productUseCase?: string
+  evidenceSources?: string
+  evidenceConfidence?: SegmentEvidenceConfidence
+  externalReference?: SegmentExternalReference
 }
 
 export interface MarketFitSegment {

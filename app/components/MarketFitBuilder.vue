@@ -37,8 +37,20 @@ import type {
   MarketFitSegment,
   MarketFitSegmentRole,
   MarketFitSegmentType,
-  MarketFitSignal
+  MarketFitSignal,
+  SegmentBuyingBehavior,
+  SegmentEvidenceConfidence,
+  SegmentExternalReferenceSystem,
+  SegmentGeography,
+  SegmentIncomeBracket,
+  SegmentLifeStage,
+  SegmentSpendingPower,
+  SegmentUrbanicity
 } from '~/types/models'
+import {
+  CUSTOMER_SEGMENT_TEMPLATES,
+  findCustomerSegmentTemplate
+} from '~/data/customerSegmentProfiles'
 import {
   fmtCurrency,
   fmtNumber
@@ -204,8 +216,135 @@ function blankCustomerProfile(): MarketFitCustomerProfile {
     likelyChannel: '',
     evidenceNeeded: '',
     risk: '',
-    validationStep: ''
+    validationStep: '',
+    // V1 Universal Segment Framework structured fields. All blank by
+    // default — applying a PRIZM-inspired template fills them in;
+    // students can edit any field after.
+    relationshipRole: '',
+    lifeStage: '',
+    incomeBracket: '',
+    geography: '',
+    urbanicity: '',
+    spendingPower: '',
+    buyingBehavior: '',
+    lifestyleValues: '',
+    motivations: '',
+    likelyObjections: '',
+    channelFit: '',
+    productUseCase: '',
+    evidenceSources: '',
+    evidenceConfidence: '',
+    externalReference: {
+      system: '',
+      segmentName: '',
+      geography: '',
+      sourceUrl: '',
+      notes: ''
+    }
   }
+}
+
+// Enum dropdown options. Each list starts with '' so the "— Not set —"
+// option is selectable and represents legacy / unset state.
+const LIFE_STAGE_OPTIONS: Array<{ value: SegmentLifeStage; label: string }> = [
+  { value: '', label: '— Not set —' },
+  { value: 'teen', label: 'Teen' },
+  { value: 'college-age', label: 'College-age' },
+  { value: 'young-adult', label: 'Young adult' },
+  { value: 'parent-guardian', label: 'Parent / guardian' },
+  { value: 'established-adult', label: 'Established adult' },
+  { value: 'empty-nester', label: 'Empty-nester' },
+  { value: 'retiree', label: 'Retiree' },
+  { value: 'mixed', label: 'Mixed' }
+]
+const INCOME_BRACKET_OPTIONS: Array<{ value: SegmentIncomeBracket; label: string }> = [
+  { value: '', label: '— Not set —' },
+  { value: 'under-35k', label: 'Under $35k' },
+  { value: '35k-60k', label: '$35k–$60k' },
+  { value: '60k-100k', label: '$60k–$100k' },
+  { value: '100k-150k', label: '$100k–$150k' },
+  { value: '150k-plus', label: '$150k+' },
+  { value: 'unknown', label: 'Unknown' }
+]
+const GEOGRAPHY_OPTIONS: Array<{ value: SegmentGeography; label: string }> = [
+  { value: '', label: '— Not set —' },
+  { value: 'school-community', label: 'School community' },
+  { value: 'detroit', label: 'Detroit' },
+  { value: 'inner-ring-suburb', label: 'Inner-ring suburb' },
+  { value: 'outer-metro', label: 'Outer metro' },
+  { value: 'out-of-town-supporter', label: 'Out-of-town supporter' },
+  { value: 'online', label: 'Online' },
+  { value: 'event-visitor', label: 'Event visitor' },
+  { value: 'unknown', label: 'Unknown' }
+]
+const URBANICITY_OPTIONS: Array<{ value: SegmentUrbanicity; label: string }> = [
+  { value: '', label: '— Not set —' },
+  { value: 'urban', label: 'Urban' },
+  { value: 'inner-ring-suburban', label: 'Inner-ring suburban' },
+  { value: 'suburban', label: 'Suburban' },
+  { value: 'small-town-rural', label: 'Small-town / rural' },
+  { value: 'mixed', label: 'Mixed' },
+  { value: 'unknown', label: 'Unknown' }
+]
+const SPENDING_POWER_OPTIONS: Array<{ value: SegmentSpendingPower; label: string }> = [
+  { value: '', label: '— Not set —' },
+  { value: 'constrained', label: 'Constrained' },
+  { value: 'moderate', label: 'Moderate' },
+  { value: 'comfortable', label: 'Comfortable' },
+  { value: 'premium-discretionary', label: 'Premium-discretionary' },
+  { value: 'unknown', label: 'Unknown' }
+]
+const BUYING_BEHAVIOR_OPTIONS: Array<{ value: SegmentBuyingBehavior; label: string }> = [
+  { value: '', label: '— Not set —' },
+  { value: 'impulse', label: 'Impulse' },
+  { value: 'planned', label: 'Planned' },
+  { value: 'preorder', label: 'Preorder' },
+  { value: 'gift', label: 'Gift' },
+  { value: 'collector', label: 'Collector' },
+  { value: 'value-shopper', label: 'Value shopper' },
+  { value: 'supporter', label: 'Supporter' },
+  { value: 'repeat-everyday', label: 'Repeat / everyday' },
+  { value: 'unknown', label: 'Unknown' }
+]
+const SEGMENT_EVIDENCE_OPTIONS: Array<{ value: SegmentEvidenceConfidence; label: string }> = [
+  { value: '', label: '— Not set —' },
+  { value: 'low', label: 'Low — assumptions only' },
+  { value: 'medium', label: 'Medium — some evidence' },
+  { value: 'high', label: 'High — preorders / direct evidence' }
+]
+const EXTERNAL_REFERENCE_SYSTEMS: Array<{ value: SegmentExternalReferenceSystem; label: string }> = [
+  { value: '', label: '— Not set —' },
+  { value: 'PRIZM-inspired', label: 'PRIZM-inspired' },
+  { value: 'ACS/Census', label: 'ACS / Census' },
+  { value: 'Other', label: 'Other' }
+]
+
+// Per-segment local state for the Segment Composer template picker.
+// Keyed by segment id so each segment's pending template selection
+// stays separate. Reactive so the Apply button enables/disables as
+// the dropdown changes. Not persisted — this only drives the UI
+// step of "pick a template, click Apply, the structured fields fill
+// in." Once applied, the structured fields live on the segment
+// profile and saved via the existing whole-form save.
+const composerTemplateChoice = ref<Record<string, string>>({})
+
+function applyCompositionTemplate(segId: string) {
+  const choice = composerTemplateChoice.value[segId]
+  const tpl = findCustomerSegmentTemplate(choice)
+  if (!tpl) return
+  const seg = form.segments.find((s) => s.id === segId)
+  if (!seg || !seg.profile) return
+  // Merge into existing profile so the team doesn't lose narrative
+  // notes (e.g. profileName, free-text values, validationStep) they
+  // typed before applying. Structured enums + structured prose
+  // (motivations / likelyObjections / channelFit / productUseCase /
+  // evidenceConfidence) overwrite previous values from the template;
+  // free-text legacy fields stay untouched.
+  Object.assign(seg.profile, tpl.profile)
+  // Reset the dropdown so re-applying the same template requires a
+  // deliberate re-pick.
+  composerTemplateChoice.value[segId] = ''
+  markDirty()
 }
 
 function blankSegment(seedType: MarketFitSegmentType = 'custom'): MarketFitSegment {
@@ -1304,13 +1443,423 @@ async function save() {
                (age, income, geography, motivation, etc.). Inline,
                not collapsed, so the full positioning argument reads
                in one scroll. -->
-          <fieldset class="mt-2 space-y-1 rounded-md border border-violet-200 bg-violet-50/40 p-2">
+          <fieldset class="mt-2 space-y-2 rounded-md border border-violet-200 bg-violet-50/40 p-2">
             <legend class="text-xs font-semibold uppercase tracking-wide text-neutral-600">
               Customer profile
             </legend>
             <p class="text-xs text-neutral-600">
-              Profile names are examples — students can pick from the list or type a custom one. Do not auto-assign a profile as a fact.
+              These are PRIZM-inspired segmentation dimensions. They help you
+              think like a real brand operator, but they are not official
+              Claritas PRIZM data.
             </p>
+
+            <!-- ============================================================
+                 Segment Composer (V1 Universal Segment Framework)
+                 PRIZM-inspired template picker + structured fields. The
+                 composer never writes to Firestore — applying a template
+                 just fills the segment's profile fields locally; the
+                 existing whole-form Save button persists everything.
+                 ============================================================ -->
+
+            <!-- A. Template picker -->
+            <div class="space-y-1 rounded-md border border-violet-300 bg-white p-2">
+              <p class="text-xs font-semibold text-violet-900">
+                Choose a PRIZM-inspired segment template
+              </p>
+              <p class="text-[11px] text-neutral-600">
+                Templates fill the structured fields below as a starting
+                point. PRIZM-inspired only — these are not official
+                Claritas PRIZM segments. Edit any field after applying.
+              </p>
+              <div class="flex flex-wrap items-center gap-2">
+                <select
+                  v-model="composerTemplateChoice[seg.id]"
+                  :disabled="!editingEnabled"
+                  class="rounded border border-neutral-300 p-1.5 text-xs disabled:bg-neutral-100"
+                >
+                  <option value="">— Pick a template —</option>
+                  <option
+                    v-for="t in CUSTOMER_SEGMENT_TEMPLATES"
+                    :key="t.id"
+                    :value="t.id"
+                  >{{ t.name }}</option>
+                </select>
+                <button
+                  v-if="editingEnabled"
+                  type="button"
+                  class="btn-primary text-xs"
+                  :disabled="!composerTemplateChoice[seg.id]"
+                  @click="applyCompositionTemplate(seg.id)"
+                >Apply template</button>
+              </div>
+              <p
+                v-if="composerTemplateChoice[seg.id] && findCustomerSegmentTemplate(composerTemplateChoice[seg.id])"
+                class="text-[11px] italic text-neutral-600"
+              >
+                {{ findCustomerSegmentTemplate(composerTemplateChoice[seg.id])!.signature }}
+              </p>
+            </div>
+
+            <!-- B. Build your own — Who are they? -->
+            <details class="rounded-md border border-violet-200 bg-white p-2" open>
+              <summary class="cursor-pointer text-xs font-semibold text-violet-900">
+                Who are they?
+              </summary>
+              <div class="mt-2 grid gap-2 sm:grid-cols-2">
+                <label class="block text-xs font-medium text-neutral-800">
+                  Relationship role
+                  <input
+                    v-model="seg.profile!.relationshipRole"
+                    type="text"
+                    :disabled="!editingEnabled"
+                    class="mt-1 w-full rounded border border-neutral-300 p-2 text-sm disabled:bg-neutral-100"
+                    placeholder="parent, alumnus, civic premium buyer, gift buyer…"
+                    @input="markDirty"
+                  />
+                </label>
+                <label class="block text-xs font-medium text-neutral-800">
+                  Life stage
+                  <select
+                    v-model="seg.profile!.lifeStage"
+                    :disabled="!editingEnabled"
+                    class="mt-1 w-full rounded border border-neutral-300 p-2 text-sm disabled:bg-neutral-100"
+                    @change="markDirty"
+                  >
+                    <option v-for="o in LIFE_STAGE_OPTIONS" :key="o.value" :value="o.value">
+                      {{ o.label }}
+                    </option>
+                  </select>
+                </label>
+                <label class="block text-xs font-medium text-neutral-800">
+                  Geography
+                  <select
+                    v-model="seg.profile!.geography"
+                    :disabled="!editingEnabled"
+                    class="mt-1 w-full rounded border border-neutral-300 p-2 text-sm disabled:bg-neutral-100"
+                    @change="markDirty"
+                  >
+                    <option v-for="o in GEOGRAPHY_OPTIONS" :key="o.value" :value="o.value">
+                      {{ o.label }}
+                    </option>
+                  </select>
+                </label>
+                <label class="block text-xs font-medium text-neutral-800">
+                  Urbanicity
+                  <select
+                    v-model="seg.profile!.urbanicity"
+                    :disabled="!editingEnabled"
+                    class="mt-1 w-full rounded border border-neutral-300 p-2 text-sm disabled:bg-neutral-100"
+                    @change="markDirty"
+                  >
+                    <option v-for="o in URBANICITY_OPTIONS" :key="o.value" :value="o.value">
+                      {{ o.label }}
+                    </option>
+                  </select>
+                </label>
+                <label class="block text-xs font-medium text-neutral-800">
+                  Income bracket
+                  <select
+                    v-model="seg.profile!.incomeBracket"
+                    :disabled="!editingEnabled"
+                    class="mt-1 w-full rounded border border-neutral-300 p-2 text-sm disabled:bg-neutral-100"
+                    @change="markDirty"
+                  >
+                    <option v-for="o in INCOME_BRACKET_OPTIONS" :key="o.value" :value="o.value">
+                      {{ o.label }}
+                    </option>
+                  </select>
+                </label>
+                <label class="block text-xs font-medium text-neutral-800">
+                  Spending power
+                  <select
+                    v-model="seg.profile!.spendingPower"
+                    :disabled="!editingEnabled"
+                    class="mt-1 w-full rounded border border-neutral-300 p-2 text-sm disabled:bg-neutral-100"
+                    @change="markDirty"
+                  >
+                    <option v-for="o in SPENDING_POWER_OPTIONS" :key="o.value" :value="o.value">
+                      {{ o.label }}
+                    </option>
+                  </select>
+                </label>
+              </div>
+            </details>
+
+            <!-- C. Build your own — Why would they buy? -->
+            <details class="rounded-md border border-violet-200 bg-white p-2">
+              <summary class="cursor-pointer text-xs font-semibold text-violet-900">
+                Why would they buy?
+              </summary>
+              <div class="mt-2 grid gap-2 sm:grid-cols-2">
+                <label class="block text-xs font-medium text-neutral-800">
+                  Buying behavior
+                  <select
+                    v-model="seg.profile!.buyingBehavior"
+                    :disabled="!editingEnabled"
+                    class="mt-1 w-full rounded border border-neutral-300 p-2 text-sm disabled:bg-neutral-100"
+                    @change="markDirty"
+                  >
+                    <option v-for="o in BUYING_BEHAVIOR_OPTIONS" :key="o.value" :value="o.value">
+                      {{ o.label }}
+                    </option>
+                  </select>
+                </label>
+                <label class="block text-xs font-medium text-neutral-800">
+                  Lifestyle / values
+                  <input
+                    v-model="seg.profile!.lifestyleValues"
+                    type="text"
+                    :disabled="!editingEnabled"
+                    class="mt-1 w-full rounded border border-neutral-300 p-2 text-sm disabled:bg-neutral-100"
+                    placeholder="Detroit pride, school connection, gifting, fashion-forward…"
+                    @input="markDirty"
+                  />
+                </label>
+                <label class="block text-xs font-medium text-neutral-800 sm:col-span-2">
+                  Motivations
+                  <textarea
+                    v-model="seg.profile!.motivations"
+                    rows="2"
+                    :disabled="!editingEnabled"
+                    class="mt-1 w-full rounded border border-neutral-300 p-2 text-sm disabled:bg-neutral-100"
+                    placeholder="Why would they buy this product? What's the story they would tell?"
+                    @input="markDirty"
+                  />
+                </label>
+                <label class="block text-xs font-medium text-neutral-800 sm:col-span-2">
+                  Product use case
+                  <input
+                    v-model="seg.profile!.productUseCase"
+                    type="text"
+                    :disabled="!editingEnabled"
+                    class="mt-1 w-full rounded border border-neutral-300 p-2 text-sm disabled:bg-neutral-100"
+                    placeholder="What is the product for them? (everyday wear, gift, event purchase, awareness…)"
+                    @input="markDirty"
+                  />
+                </label>
+                <label class="block text-xs font-medium text-neutral-800 sm:col-span-2">
+                  Channel fit
+                  <input
+                    v-model="seg.profile!.channelFit"
+                    type="text"
+                    :disabled="!editingEnabled"
+                    class="mt-1 w-full rounded border border-neutral-300 p-2 text-sm disabled:bg-neutral-100"
+                    placeholder="Where would they encounter this — TechTown, Phoenix Nest, school events, online?"
+                    @input="markDirty"
+                  />
+                </label>
+              </div>
+            </details>
+
+            <!-- D. Build your own — What must we prove? -->
+            <details class="rounded-md border border-violet-200 bg-white p-2">
+              <summary class="cursor-pointer text-xs font-semibold text-violet-900">
+                What must we prove?
+              </summary>
+              <div class="mt-2 grid gap-2 sm:grid-cols-2">
+                <label class="block text-xs font-medium text-neutral-800">
+                  Price sensitivity
+                  <select
+                    v-model="seg.profile!.priceSensitivity"
+                    :disabled="!editingEnabled"
+                    class="mt-1 w-full rounded border border-neutral-300 p-2 text-sm disabled:bg-neutral-100"
+                    @change="markDirty"
+                  >
+                    <option v-for="o in SIGNAL_OPTIONS" :key="o" :value="o">
+                      {{ o === '' ? '— Not set —' : o }}
+                    </option>
+                  </select>
+                </label>
+                <label class="block text-xs font-medium text-neutral-800">
+                  Evidence confidence
+                  <select
+                    v-model="seg.profile!.evidenceConfidence"
+                    :disabled="!editingEnabled"
+                    class="mt-1 w-full rounded border border-neutral-300 p-2 text-sm disabled:bg-neutral-100"
+                    @change="markDirty"
+                  >
+                    <option v-for="o in SEGMENT_EVIDENCE_OPTIONS" :key="o.value" :value="o.value">
+                      {{ o.label }}
+                    </option>
+                  </select>
+                </label>
+                <label class="block text-xs font-medium text-neutral-800 sm:col-span-2">
+                  Likely objections
+                  <textarea
+                    v-model="seg.profile!.likelyObjections"
+                    rows="2"
+                    :disabled="!editingEnabled"
+                    class="mt-1 w-full rounded border border-neutral-300 p-2 text-sm disabled:bg-neutral-100"
+                    placeholder="What would make this segment hesitate or reject the price?"
+                    @input="markDirty"
+                  />
+                </label>
+                <label class="block text-xs font-medium text-neutral-800 sm:col-span-2">
+                  Evidence sources
+                  <input
+                    v-model="seg.profile!.evidenceSources"
+                    type="text"
+                    :disabled="!editingEnabled"
+                    class="mt-1 w-full rounded border border-neutral-300 p-2 text-sm disabled:bg-neutral-100"
+                    placeholder="Which interviews, surveys, ACS data, retail observations would support this?"
+                    @input="markDirty"
+                  />
+                </label>
+                <label class="block text-xs font-medium text-neutral-800 sm:col-span-2">
+                  Validation step
+                  <input
+                    v-model="seg.profile!.validationStep"
+                    type="text"
+                    :disabled="!editingEnabled"
+                    class="mt-1 w-full rounded border border-neutral-300 p-2 text-sm disabled:bg-neutral-100"
+                    placeholder="What test or interview round would confirm or break this segment fit?"
+                    @input="markDirty"
+                  />
+                </label>
+              </div>
+              <!-- Optional external reference. Keeps it compact. -->
+              <details class="mt-2 rounded-md border border-neutral-200 bg-neutral-50 p-2 text-xs">
+                <summary class="cursor-pointer font-medium text-neutral-700">
+                  Optional external reference
+                </summary>
+                <div class="mt-2 grid gap-2 sm:grid-cols-2">
+                  <label class="block font-medium text-neutral-800">
+                    System
+                    <select
+                      v-model="seg.profile!.externalReference!.system"
+                      :disabled="!editingEnabled"
+                      class="mt-1 w-full rounded border border-neutral-300 p-1.5 disabled:bg-neutral-100"
+                      @change="markDirty"
+                    >
+                      <option v-for="o in EXTERNAL_REFERENCE_SYSTEMS" :key="o.value" :value="o.value">
+                        {{ o.label }}
+                      </option>
+                    </select>
+                  </label>
+                  <label class="block font-medium text-neutral-800">
+                    Segment name
+                    <input
+                      v-model="seg.profile!.externalReference!.segmentName"
+                      type="text"
+                      :disabled="!editingEnabled"
+                      class="mt-1 w-full rounded border border-neutral-300 p-1.5 disabled:bg-neutral-100"
+                      placeholder="e.g. Young Digerati (PRIZM-inspired only)"
+                      @input="markDirty"
+                    />
+                  </label>
+                  <label class="block font-medium text-neutral-800">
+                    Geography
+                    <input
+                      v-model="seg.profile!.externalReference!.geography"
+                      type="text"
+                      :disabled="!editingEnabled"
+                      class="mt-1 w-full rounded border border-neutral-300 p-1.5 disabled:bg-neutral-100"
+                      placeholder="ZIP, metro, neighborhood…"
+                      @input="markDirty"
+                    />
+                  </label>
+                  <label class="block font-medium text-neutral-800">
+                    Source URL
+                    <input
+                      v-model="seg.profile!.externalReference!.sourceUrl"
+                      type="url"
+                      :disabled="!editingEnabled"
+                      class="mt-1 w-full rounded border border-neutral-300 p-1.5 disabled:bg-neutral-100"
+                      placeholder="https://… (display only — never fetched)"
+                      @input="markDirty"
+                    />
+                  </label>
+                  <label class="block font-medium text-neutral-800 sm:col-span-2">
+                    Notes
+                    <textarea
+                      v-model="seg.profile!.externalReference!.notes"
+                      rows="2"
+                      :disabled="!editingEnabled"
+                      class="mt-1 w-full rounded border border-neutral-300 p-1.5 disabled:bg-neutral-100"
+                      placeholder="Notes about why this external reference applies."
+                      @input="markDirty"
+                    />
+                  </label>
+                </div>
+              </details>
+            </details>
+
+            <!-- E. Segment card preview (compact, deterministic) -->
+            <div class="rounded-md border border-violet-300 bg-white p-2 text-xs">
+              <p class="font-semibold uppercase tracking-wide text-neutral-500">
+                Segment card preview
+              </p>
+              <ul class="mt-1 flex flex-wrap gap-1.5 text-[11px]">
+                <li
+                  v-if="seg.profile?.relationshipRole?.trim()"
+                  class="rounded-full border border-violet-300 bg-violet-50 px-2 py-0.5 uppercase tracking-wide text-violet-800"
+                >{{ seg.profile.relationshipRole }}</li>
+                <li
+                  v-if="seg.profile?.lifeStage"
+                  class="rounded-full border border-neutral-300 bg-neutral-50 px-2 py-0.5 uppercase tracking-wide text-neutral-700"
+                >{{ seg.profile.lifeStage }}</li>
+                <li
+                  v-if="seg.profile?.incomeBracket"
+                  class="rounded-full border border-neutral-300 bg-neutral-50 px-2 py-0.5 uppercase tracking-wide text-neutral-700"
+                >Income · {{ seg.profile.incomeBracket }}</li>
+                <li
+                  v-if="seg.profile?.geography"
+                  class="rounded-full border border-neutral-300 bg-neutral-50 px-2 py-0.5 uppercase tracking-wide text-neutral-700"
+                >{{ seg.profile.geography }}<span v-if="seg.profile?.urbanicity"> · {{ seg.profile.urbanicity }}</span></li>
+                <li
+                  v-if="seg.profile?.spendingPower"
+                  class="rounded-full border border-neutral-300 bg-neutral-50 px-2 py-0.5 uppercase tracking-wide text-neutral-700"
+                >Spending · {{ seg.profile.spendingPower }}</li>
+                <li
+                  v-if="seg.profile?.priceSensitivity"
+                  :class="[
+                    'rounded-full border px-2 py-0.5 uppercase tracking-wide',
+                    seg.profile.priceSensitivity === 'high' ? 'border-rose-300 bg-rose-50 text-rose-800'
+                      : seg.profile.priceSensitivity === 'medium' ? 'border-amber-300 bg-amber-50 text-amber-800'
+                      : 'border-emerald-300 bg-emerald-50 text-emerald-800'
+                  ]"
+                >Price sensitivity · {{ seg.profile.priceSensitivity }}</li>
+                <li
+                  v-if="seg.profile?.buyingBehavior"
+                  class="rounded-full border border-neutral-300 bg-neutral-50 px-2 py-0.5 uppercase tracking-wide text-neutral-700"
+                >{{ seg.profile.buyingBehavior }}</li>
+                <li
+                  v-if="seg.profile?.evidenceConfidence"
+                  :class="[
+                    'rounded-full border px-2 py-0.5 uppercase tracking-wide',
+                    seg.profile.evidenceConfidence === 'high' ? 'border-emerald-300 bg-emerald-50 text-emerald-800'
+                      : seg.profile.evidenceConfidence === 'medium' ? 'border-amber-200 bg-amber-50 text-amber-800'
+                      : 'border-amber-300 bg-amber-50 text-amber-800'
+                  ]"
+                >Evidence · {{ seg.profile.evidenceConfidence }}</li>
+              </ul>
+              <p v-if="seg.profile?.motivations?.trim()" class="mt-1 text-neutral-700">
+                <span class="font-medium text-neutral-600">Motivations:</span>
+                {{ seg.profile.motivations }}
+              </p>
+              <p v-if="seg.profile?.likelyObjections?.trim()" class="text-neutral-700">
+                <span class="font-medium text-neutral-600">Likely objection:</span>
+                {{ seg.profile.likelyObjections }}
+              </p>
+              <p v-if="seg.profile?.validationStep?.trim()" class="text-neutral-700">
+                <span class="font-medium text-neutral-600">Validation step:</span>
+                {{ seg.profile.validationStep }}
+              </p>
+            </div>
+
+            <!-- F. Legacy free-text fields. Kept under a folded
+                 <details> so the composer leads but old saved
+                 profiles still render every value the team
+                 previously wrote. -->
+            <details class="rounded-md border border-neutral-200 bg-white p-2">
+              <summary class="cursor-pointer text-xs font-medium text-neutral-700">
+                Legacy free-text profile fields (still saved)
+              </summary>
+              <p class="mt-1 text-[11px] text-neutral-500">
+                These existed before the PRIZM-inspired composer. Keep them
+                if they carry useful narrative; otherwise the structured
+                fields above replace them.
+              </p>
             <div class="grid gap-2 sm:grid-cols-2">
               <label class="block text-xs font-medium text-neutral-800">
                 Profile name
@@ -1459,6 +2008,7 @@ async function save() {
                 />
               </label>
             </div>
+            </details>
           </fieldset>
         </li>
       </ul>

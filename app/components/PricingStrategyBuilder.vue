@@ -35,6 +35,7 @@ import type {
 import {
   analyzeComps,
   buildPricingAnalysis,
+  buildSegmentProfileAdvisory,
   computeDerived,
   formatMoney,
   formatPct,
@@ -378,6 +379,20 @@ const priceTests = computed(() => summarizePriceTests(form))
 // analysis. Both pure derivations from the form; no AI, no API calls.
 const compAnalysis = computed(() => analyzeComps(form))
 const pricingAnalysis = computed(() => buildPricingAnalysis(form))
+
+// V1 Universal Segment Framework — surface structured Ch. 7 segment
+// profile context as an advisory only. We pick the first populated
+// profile from the upstream Market Fit segments. This component
+// never writes back to Ch. 7; the advisory is rendered next to the
+// existing free-text segment chip.
+const ch7SegmentAdvisory = computed(() => {
+  const segs = props.ch7MarketFit?.segments ?? []
+  for (const s of segs) {
+    const a = buildSegmentProfileAdvisory(s.profile ?? null)
+    if (a) return { advisory: a, segmentName: s.name }
+  }
+  return null
+})
 
 // Chip colors for each interpretation band. Tailwind classes only —
 // no inline styles. Mirrors the BrandFit/MarketFit chip vocabulary.
@@ -1622,6 +1637,38 @@ async function copyScaffold() {
           This is guidance for the team's pricing recommendation, not a
           final approval. The /pricing page remains the operational source
           of truth.
+        </p>
+      </section>
+
+      <!-- V1 Universal Segment Framework — advisory-only structured
+           segment context from Ch. 7. Never writes back to Ch. 7.
+           Rendered only when a Ch. 7 Market Fit profile carries
+           structured fields. -->
+      <section
+        v-if="ch7SegmentAdvisory"
+        class="space-y-1 rounded-md border border-violet-200 bg-violet-50/40 p-2 text-xs"
+      >
+        <header class="flex flex-wrap items-baseline justify-between gap-2">
+          <h5 class="text-xs font-semibold text-violet-900">
+            Chapter 7 segment context
+          </h5>
+          <span
+            class="rounded-full border px-2 py-0.5 text-[10px] uppercase tracking-wide"
+            :class="ch7SegmentAdvisory.advisory.priceStretchRisk
+              ? 'border-rose-300 bg-rose-50 text-rose-800'
+              : 'border-emerald-300 bg-emerald-50 text-emerald-800'"
+          >{{ ch7SegmentAdvisory.advisory.priceStretchRisk ? 'Stretch risk' : 'Plausible' }}</span>
+        </header>
+        <p class="text-neutral-800">
+          <span class="font-medium text-neutral-700">Segment:</span>
+          {{ ch7SegmentAdvisory.segmentName }} · {{ ch7SegmentAdvisory.advisory.summary }}
+        </p>
+        <ul class="ml-4 list-disc space-y-0.5 text-neutral-800">
+          <li v-for="(line, i) in ch7SegmentAdvisory.advisory.lines" :key="`seg-adv-${i}`">{{ line }}</li>
+        </ul>
+        <p class="italic text-violet-900">
+          Read-only — Ch. 8 never writes back to Ch. 7. Edit the segment
+          in the Chapter 7 Market Fit section to update this advisory.
         </p>
       </section>
 

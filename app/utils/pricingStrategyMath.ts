@@ -18,6 +18,7 @@
 // powers both math and display without double-rounding.
 
 import type {
+  MarketFitCustomerProfile,
   PricingStrategyBuilder,
   PricingStrategyComparable,
   PricingStrategyPriceTest
@@ -471,6 +472,154 @@ export function interpretSegment(
     detail:
       'Segment is a free-form name. Argue the buyer with comparable purchases, willingness to pay, and a validation plan.'
   }
+}
+
+// ---------- structured Ch. 7 segment context (V1 PRIZM-inspired) ----------
+//
+// Read-only / advisory only — Ch. 8 reads structured Market Fit
+// segment profile data and translates it into deterministic risk
+// language. Never writes back to Ch. 7. Returns null if no
+// structured data is set on the profile so the caller can hide
+// the section gracefully.
+
+export interface SegmentProfileAdvisory {
+  // Compact one-line tag like "Civic Premium Buyer · premium-discretionary
+  // · Detroit"; safe to render as a chip subtitle.
+  summary: string
+  // Bulleted advisory lines. Deterministic; one per signal we can
+  // read. The caller renders each line separately so the analysis
+  // panel reads as a list, not a wall of prose.
+  lines: string[]
+  // True when the structured fields imply the price could be a
+  // significant stretch for this segment — used by the analysis
+  // panel to color the chip.
+  priceStretchRisk: boolean
+}
+
+function isProfilePopulated(p: MarketFitCustomerProfile | null | undefined): boolean {
+  if (!p) return false
+  return Boolean(
+    p.relationshipRole?.trim() ||
+      p.lifeStage ||
+      p.incomeBracket ||
+      p.geography ||
+      p.urbanicity ||
+      p.spendingPower ||
+      p.priceSensitivity ||
+      p.buyingBehavior ||
+      p.motivations?.trim() ||
+      p.likelyObjections?.trim() ||
+      p.channelFit?.trim() ||
+      p.productUseCase?.trim() ||
+      p.evidenceSources?.trim() ||
+      p.evidenceConfidence ||
+      p.profileName?.trim()
+  )
+}
+
+export function buildSegmentProfileAdvisory(
+  profile: MarketFitCustomerProfile | null | undefined
+): SegmentProfileAdvisory | null {
+  if (!isProfilePopulated(profile)) return null
+  const p = profile!
+
+  // ---- summary ----
+  const summaryParts: string[] = []
+  if (p.profileName?.trim()) summaryParts.push(p.profileName.trim())
+  else if (p.relationshipRole?.trim()) summaryParts.push(p.relationshipRole.trim())
+  if (p.spendingPower && p.spendingPower !== 'unknown') {
+    summaryParts.push(p.spendingPower)
+  }
+  if (p.geography && p.geography !== 'unknown') {
+    summaryParts.push(p.geography)
+  }
+  const summary = summaryParts.length > 0
+    ? summaryParts.join(' · ')
+    : (p.relationshipRole?.trim() || 'Segment')
+
+  // ---- advisory lines ----
+  const lines: string[] = []
+  let priceStretchRisk = false
+
+  if (p.priceSensitivity === 'high') {
+    lines.push(
+      'At this price, this segment is risky unless the purchase is a gift, limited drop, or mission-support purchase.'
+    )
+    priceStretchRisk = true
+  } else if (p.priceSensitivity === 'medium') {
+    lines.push(
+      'Moderate price sensitivity — the price has to clear an objection or two before this segment commits.'
+    )
+  } else if (p.priceSensitivity === 'low') {
+    lines.push(
+      'Low price sensitivity — this segment will consider the price if quality, scarcity, and story land.'
+    )
+  }
+
+  if (p.spendingPower === 'premium-discretionary') {
+    lines.push(
+      'Premium-discretionary spending power — this segment is more likely to consider the price if quality, scarcity, and story are credible.'
+    )
+  } else if (p.spendingPower === 'comfortable') {
+    lines.push(
+      'Comfortable spending power — premium pricing is plausible with clear quality and story.'
+    )
+  } else if (p.spendingPower === 'constrained' || p.incomeBracket === 'under-35k') {
+    lines.push(
+      'Treat this segment as awareness or validation before assuming conversion at premium price points.'
+    )
+    priceStretchRisk = true
+  }
+
+  if (p.buyingBehavior === 'gift') {
+    lines.push(
+      'Gift purchase behavior — packaging, story, and occasion matter more for this segment than everyday utility.'
+    )
+  } else if (p.buyingBehavior === 'collector') {
+    lines.push(
+      'Collector behavior — limited runs, year markers, and lineage cues raise willingness to pay.'
+    )
+  } else if (p.buyingBehavior === 'impulse') {
+    lines.push(
+      'Impulse behavior — display, energy, and a tight pitch carry conversion. Without those, the price is the friction.'
+    )
+  } else if (p.buyingBehavior === 'value-shopper') {
+    lines.push(
+      'Value-shopper behavior — this segment compares hard against lower-priced alternatives. Story alone is not enough.'
+    )
+    priceStretchRisk = true
+  } else if (p.buyingBehavior === 'preorder') {
+    lines.push(
+      'Preorder behavior — strong evidence path: a small preorder round at this price is the cleanest validation step.'
+    )
+  } else if (p.buyingBehavior === 'supporter') {
+    lines.push(
+      'Supporter behavior — purchase carries mission weight; price defensibility comes from where the proceeds go.'
+    )
+  }
+
+  if (p.evidenceConfidence === 'low' || (!p.evidenceConfidence && isProfilePopulated(p))) {
+    lines.push(
+      'Segment fit is still mostly an assumption. Validate with interviews, survey responses, or preorders.'
+    )
+  } else if (p.evidenceConfidence === 'medium') {
+    lines.push(
+      'Some evidence supports this segment fit. Tighten with a small preorder or interview round before locking the price in.'
+    )
+  } else if (p.evidenceConfidence === 'high') {
+    lines.push(
+      'Strong evidence supports this segment fit. Document sources and watch for drift as the market changes.'
+    )
+  }
+
+  if (p.likelyObjections?.trim()) {
+    lines.push(`Likely objection to address: ${p.likelyObjections.trim()}`)
+  }
+  if (p.motivations?.trim() && lines.length < 6) {
+    lines.push(`Why they buy: ${p.motivations.trim()}`)
+  }
+
+  return { summary, lines, priceStretchRisk }
 }
 
 // ---------- comp evidence band (V1.1) ----------
