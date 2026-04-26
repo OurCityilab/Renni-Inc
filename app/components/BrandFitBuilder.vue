@@ -987,14 +987,16 @@ async function save() {
       </div>
     </fieldset>
 
-    <!-- Reference brands -->
-    <fieldset class="space-y-2 rounded-md border border-neutral-200 bg-white p-2">
-      <legend class="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-neutral-600">
+    <!-- Reference brands. Collapsible by default — secondary surface
+         per the UX compression brief. Summary keeps the title + status
+         badge always visible so students know where to expand to. -->
+    <details class="space-y-2 rounded-md border border-neutral-200 bg-white p-2">
+      <summary class="flex cursor-pointer items-center gap-2 text-xs font-semibold uppercase tracking-wide text-neutral-600">
         Reference brand board
         <span :class="statusBadgeClass(sectionStatus.references)">
           {{ STATUS_LABELS[sectionStatus.references] }}
         </span>
-      </legend>
+      </summary>
       <p class="rounded-md border border-amber-200 bg-amber-50 p-2 text-xs text-neutral-800">
         Use references to learn signals, not to copy. Name what you are learning and what you will avoid copying.
       </p>
@@ -1132,7 +1134,7 @@ async function save() {
           </p>
         </li>
       </ul>
-    </fieldset>
+    </details>
 
     <!-- Audience perception -->
     <fieldset class="space-y-2 rounded-md border border-neutral-200 bg-white p-2">
@@ -1253,14 +1255,14 @@ async function save() {
       </div>
     </fieldset>
 
-    <!-- Production checks -->
-    <fieldset class="space-y-2 rounded-md border border-neutral-200 bg-white p-2">
-      <legend class="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-neutral-600">
+    <!-- Production checks. Collapsible by default. -->
+    <details class="space-y-2 rounded-md border border-neutral-200 bg-white p-2">
+      <summary class="flex cursor-pointer items-center gap-2 text-xs font-semibold uppercase tracking-wide text-neutral-600">
         Production and accessibility checks
         <span :class="statusBadgeClass(sectionStatus.production)">
           {{ STATUS_LABELS[sectionStatus.production] }}
         </span>
-      </legend>
+      </summary>
       <p class="text-xs text-neutral-600">
         A logo that works on screen may fail on fabric, packaging, or signage. Thin lines, tiny text, low contrast, and too many colors can weaken production quality.
       </p>
@@ -1336,16 +1338,16 @@ async function save() {
           </div>
         </li>
       </ul>
-    </fieldset>
+    </details>
 
-    <!-- Validation plan -->
-    <fieldset class="space-y-2 rounded-md border border-neutral-200 bg-white p-2">
-      <legend class="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-neutral-600">
+    <!-- Validation plan. Collapsible by default. -->
+    <details class="space-y-2 rounded-md border border-neutral-200 bg-white p-2">
+      <summary class="flex cursor-pointer items-center gap-2 text-xs font-semibold uppercase tracking-wide text-neutral-600">
         Validation plan
         <span :class="statusBadgeClass(sectionStatus.validation)">
           {{ STATUS_LABELS[sectionStatus.validation] }}
         </span>
-      </legend>
+      </summary>
       <ul class="list-disc space-y-0.5 pl-5 text-xs text-neutral-700">
         <li>Show 3 logo options to 15 students and 5 adults.</li>
         <li>Ask which feels most premium.</li>
@@ -1432,7 +1434,7 @@ async function save() {
           />
         </label>
       </div>
-    </fieldset>
+    </details>
 
     <!-- Student-to-professional language translator. Read-only
          reference table — students can scan the column and copy the

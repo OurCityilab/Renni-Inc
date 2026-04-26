@@ -41,6 +41,7 @@ import MarketEvidenceReferencePanel, {
 } from '~/components/MarketEvidenceReferencePanel.vue'
 import MarketEvidenceCritiquePanel from '~/components/MarketEvidenceCritiquePanel.vue'
 import SectionGuidanceSummary from '~/components/SectionGuidanceSummary.vue'
+import PlaybookWritingScaffold from '~/components/PlaybookWritingScaffold.vue'
 import MarketFitBuilder from '~/components/MarketFitBuilder.vue'
 import MarketFitReferencePanel, {
   type ReferencedMarketFitRow
@@ -1610,6 +1611,17 @@ watch(
         <SectionGuidanceSummary
           :section="s"
           :section-index="i + 1"
+        />
+
+        <!-- Display-only writing scaffolds: suggested workflow, likely
+             owner cue, chapter-aware sentence starters, and the final
+             Playbook text checklist. Nothing here saves, calls AI, or
+             changes status. The cue appears above the inputs so
+             students see the recommended sequence (notes → builder →
+             draft → final → save) before they start writing. -->
+        <PlaybookWritingScaffold
+          :deliverable-id="deliverable.id"
+          :section="s"
         />
 
         <div class="space-y-3">

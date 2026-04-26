@@ -1464,11 +1464,13 @@ async function save() {
       </ul>
     </fieldset>
 
-    <!-- Comparables -->
-    <fieldset class="space-y-2 rounded-md border border-neutral-200 bg-white p-2">
-      <legend class="text-xs font-semibold uppercase tracking-wide text-neutral-600">
+    <!-- Comparables. Collapsible by default — secondary surface per
+         the UX compression brief. Summary stays always-visible so
+         students know where to expand to. -->
+    <details class="space-y-2 rounded-md border border-neutral-200 bg-white p-2">
+      <summary class="cursor-pointer text-xs font-semibold uppercase tracking-wide text-neutral-600">
         Comparable products
-      </legend>
+      </summary>
       <p class="text-xs text-neutral-600">
         Comparable products help you defend price, quality, style, and target customer. Compare against products that are similar in price, quality, story, or buyer — not just products with the same category name.
       </p>
@@ -1653,13 +1655,13 @@ async function save() {
           </fieldset>
         </li>
       </ul>
-    </fieldset>
+    </details>
 
-    <!-- Evidence requests -->
-    <fieldset class="space-y-2 rounded-md border border-neutral-200 bg-white p-2">
-      <legend class="text-xs font-semibold uppercase tracking-wide text-neutral-600">
+    <!-- Evidence requests. Collapsible by default. -->
+    <details class="space-y-2 rounded-md border border-neutral-200 bg-white p-2">
+      <summary class="cursor-pointer text-xs font-semibold uppercase tracking-wide text-neutral-600">
         What evidence do we need next?
-      </legend>
+      </summary>
       <p class="text-xs text-neutral-600">
         The coach can suggest evidence to look for. The team still has to go find it.
       </p>
@@ -1828,13 +1830,13 @@ async function save() {
           </fieldset>
         </li>
       </ul>
-    </fieldset>
+    </details>
 
-    <!-- Scenario assumptions -->
-    <fieldset class="space-y-2 rounded-md border border-neutral-200 bg-white p-2">
-      <legend class="text-xs font-semibold uppercase tracking-wide text-neutral-600">
+    <!-- Scenario assumptions. Collapsible by default. -->
+    <details class="space-y-2 rounded-md border border-neutral-200 bg-white p-2">
+      <summary class="cursor-pointer text-xs font-semibold uppercase tracking-wide text-neutral-600">
         Demand scenario for one segment
-      </legend>
+      </summary>
       <p class="text-xs text-neutral-600">
         Pick one segment, then split the assumption into conservative / base / ambitious. This is a demand-side estimate — it does not overwrite the CFO pricing or break-even engine.
       </p>
@@ -1951,7 +1953,7 @@ async function save() {
           </tbody>
         </table>
       </div>
-    </fieldset>
+    </details>
 
     <!-- Recommendation summary -->
     <fieldset class="space-y-2 rounded-md border border-neutral-200 bg-white p-2">
