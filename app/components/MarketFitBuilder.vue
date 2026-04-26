@@ -24,6 +24,9 @@ import { useDeliverableOutputs } from '~/composables/useDeliverableOutputs'
 import type {
   MarketFitBuilder,
   MarketFitComparable,
+  MarketFitCompAlignment,
+  MarketFitCompTypeFlags,
+  MarketFitCustomerProfile,
   MarketFitEvidenceRequest,
   MarketFitEvidenceSourceType,
   MarketFitEvidenceStatus,
@@ -40,6 +43,12 @@ import {
   fmtCurrency,
   fmtNumber
 } from '~/utils/marketBuilderMath'
+import {
+  buildCompFeedback,
+  detectSourceGap,
+  findStrongestCompType,
+  hasAffordabilityVsDemandRisk
+} from '~/utils/marketFitNarrative'
 
 const props = defineProps<{
   deliverableId: string
@@ -88,15 +97,65 @@ const QUALITY_LEVELS: Array<{ value: MarketFitQualityLevel; label: string }> = [
 const SIGNAL_OPTIONS: MarketFitSignal[] = ['', 'low', 'medium', 'high']
 
 const SOURCE_TYPE_LABELS: Record<MarketFitEvidenceSourceType, string> = {
-  survey: 'Survey',
-  interview: 'Interview',
+  survey: 'Survey (legacy)',
+  student_survey: 'Student survey',
+  interview: 'Interview (legacy)',
+  parent_adult_interview: 'Parent / adult interview',
+  alumni_staff_interview: 'Alumni / staff interview',
   census_acs: 'Census / ACS',
-  school_data: 'School data',
-  comparable_products: 'Comparable products',
+  school_data: 'School data (legacy)',
+  school_enrollment_data: 'School-provided enrollment data',
+  comparable_products: 'Comparable product research',
   retail_observation: 'Retail observation',
-  stakeholder_feedback: 'Stakeholder feedback',
+  stakeholder_feedback: 'Stakeholder feedback (legacy)',
+  phoenix_nest_stakeholder: 'Phoenix Nest stakeholder feedback',
+  techtown_popup_feedback: 'TechTown pop-up feedback',
+  preorder_test: 'Preorder / expression-of-interest test',
   custom: 'Custom'
 }
+
+// Comp-type checkboxes drive the deterministic feedback line. Order
+// matches the helper's preference order so the checkboxes read like a
+// reasoning ladder.
+const COMP_TYPE_FIELDS: Array<{
+  key: keyof MarketFitCompTypeFlags
+  label: string
+}> = [
+  { key: 'product', label: 'Product / category' },
+  { key: 'price', label: 'Price' },
+  { key: 'quality', label: 'Quality' },
+  { key: 'story', label: 'Story / production' },
+  { key: 'customer', label: 'Target customer' },
+  { key: 'channel', label: 'Channel' },
+  { key: 'style', label: 'Style / design' },
+  { key: 'localMade', label: 'Local-made' }
+]
+
+const COMP_ALIGNMENT_OPTIONS: Array<{
+  value: MarketFitCompAlignment
+  label: string
+}> = [
+  { value: '', label: '— Not set —' },
+  { value: 'strong', label: 'Strong alignment' },
+  { value: 'partial', label: 'Partial alignment' },
+  { value: 'weak', label: 'Weak alignment' },
+  { value: 'unsure', label: 'Not sure' }
+]
+
+// Example profile names — surfaced via a <datalist> so students can
+// pick or type. The team is never forced into a profile; the field
+// stays free-text.
+const PROFILE_NAME_EXAMPLES = [
+  'School Spirit Buyer',
+  'Proud Parent Supporter',
+  'Alumni Legacy Buyer',
+  'Civic Premium Buyer',
+  'Local Craft Buyer',
+  'Gift Buyer',
+  'Premium Casualwear Buyer',
+  'Impulse Campus Buyer',
+  'Mission Supporter / Donor'
+]
 
 const EVIDENCE_STATUS_LABELS: Record<MarketFitEvidenceStatus, string> = {
   needed: 'Needed',
@@ -131,6 +190,24 @@ function blankProductFacts(): MarketFitProductFacts {
   }
 }
 
+function blankCustomerProfile(): MarketFitCustomerProfile {
+  return {
+    profileName: '',
+    ageRange: '',
+    incomeRange: '',
+    geographyContext: '',
+    urbanSuburbanContext: '',
+    lifestyleContext: '',
+    motivation: '',
+    priceSensitivity: '',
+    values: '',
+    likelyChannel: '',
+    evidenceNeeded: '',
+    risk: '',
+    validationStep: ''
+  }
+}
+
 function blankSegment(seedType: MarketFitSegmentType = 'custom'): MarketFitSegment {
   return {
     id: genId(),
@@ -151,7 +228,21 @@ function blankSegment(seedType: MarketFitSegmentType = 'custom'): MarketFitSegme
     evidenceSource: '',
     risk: '',
     nextValidationStep: '',
-    roleInStrategy: ''
+    roleInStrategy: '',
+    profile: blankCustomerProfile()
+  }
+}
+
+function blankCompTypeFlags(): MarketFitCompTypeFlags {
+  return {
+    product: false,
+    price: false,
+    quality: false,
+    story: false,
+    customer: false,
+    channel: false,
+    style: false,
+    localMade: false
   }
 }
 
@@ -167,7 +258,9 @@ function blankComparable(): MarketFitComparable {
     similarity: '',
     difference: '',
     lessonForRenni: '',
-    source: ''
+    source: '',
+    compTypes: blankCompTypeFlags(),
+    compAlignment: ''
   }
 }
 
@@ -179,7 +272,11 @@ function blankEvidenceRequest(): MarketFitEvidenceRequest {
     suggestedSourceType: 'custom',
     assignedToRole: '',
     status: 'needed',
-    notes: ''
+    notes: '',
+    questionAnswered: '',
+    whenToUse: '',
+    whatToRecord: '',
+    claimConnection: ''
   }
 }
 
@@ -217,12 +314,21 @@ interface Form {
 }
 
 function cloneFromInitial(src: MarketFitBuilder | null): Form {
+  // Deep-merge the new nested objects (profile on segments, compTypes
+  // on comparables) so a saved doc that predates the positioning pass
+  // still picks up every editor field. The shallow spread that worked
+  // before this pass would strip blank defaults.
   return {
     productFacts: { ...blankProductFacts(), ...(src?.productFacts ?? {}) },
-    segments: (src?.segments ?? []).map((s) => ({ ...blankSegment(), ...s })),
+    segments: (src?.segments ?? []).map((s) => ({
+      ...blankSegment(),
+      ...s,
+      profile: { ...blankCustomerProfile(), ...(s.profile ?? {}) }
+    })),
     comparables: (src?.comparables ?? []).map((c) => ({
       ...blankComparable(),
-      ...c
+      ...c,
+      compTypes: { ...blankCompTypeFlags(), ...(c.compTypes ?? {}) }
     })),
     evidenceRequests: (src?.evidenceRequests ?? []).map((e) => ({
       ...blankEvidenceRequest(),
@@ -312,50 +418,165 @@ function removeComparable(id: string) {
   markDirty()
 }
 
+// Seeded evidence requests, paired with the Source Coach prompt
+// prefills so a one-click add doesn't drop students at a blank form.
+// The prefills come straight from docs/builder-engines/07 — the
+// content is curriculum-shipped, not generated.
 const SEEDED_EVIDENCE_SUGGESTIONS: Array<{
   question: string
   whyItMatters: string
   suggestedSourceType: MarketFitEvidenceSourceType
+  questionAnswered: string
+  whenToUse: string
+  whatToRecord: string
+  claimConnection: string
 }> = [
   {
     question: 'Survey students on willingness to pay at the proposed price.',
     whyItMatters:
       'Tells you whether the school market is a buying market or only a reachable market.',
-    suggestedSourceType: 'survey'
+    suggestedSourceType: 'student_survey',
+    questionAnswered:
+      'What students like, would wear, might buy, or would recommend.',
+    whenToUse:
+      'When students may be buyers, awareness audience, or validators.',
+    whatToRecord:
+      'Sample size, question wording, answer counts, date, and key comments.',
+    claimConnection:
+      'Supports student interest, design preference, price tolerance, awareness potential.'
   },
   {
-    question: 'Interview parents or staff about premium school-linked apparel.',
+    question: 'Interview parents or adult buyers about premium school-linked apparel.',
     whyItMatters:
       'Captures whether adults will pay more for the brand story than students will.',
-    suggestedSourceType: 'interview'
+    suggestedSourceType: 'parent_adult_interview',
+    questionAnswered:
+      'Whether adults would buy, gift, donate, or support the product.',
+    whenToUse:
+      'When the price is higher than normal student spending or the product is giftable.',
+    whatToRecord:
+      'Interviewee type, age range, price reaction, motivation, objections, quote notes.',
+    claimConnection:
+      'Supports adult willingness to pay, gift logic, supporter logic, and price fit.'
+  },
+  {
+    question: 'Interview alumni or staff about school connection, legacy, and willingness to support.',
+    whyItMatters:
+      'Tests whether school-pride or institutional support extends to a buying decision.',
+    suggestedSourceType: 'alumni_staff_interview',
+    questionAnswered:
+      'Whether school connection, legacy, or mission increases willingness to buy.',
+    whenToUse:
+      'When the product depends on school pride, nostalgia, or institutional support.',
+    whatToRecord:
+      'Relationship to school, reaction to story, price reaction, channel preference, objections.',
+    claimConnection:
+      'Supports alumni/staff fit and school-identity positioning.'
   },
   {
     question:
-      'Find Census/ACS income data for the selected geography and age group.',
+      'Find Census/ACS income, age, and geography data for the targeted profile.',
     whyItMatters:
-      'Sets a baseline for purchasing power outside Renaissance.',
-    suggestedSourceType: 'census_acs'
+      'Sets affordability context outside Renaissance. Income data does not prove demand on its own.',
+    suggestedSourceType: 'census_acs',
+    questionAnswered:
+      'Affordability context for a geography and age group.',
+    whenToUse:
+      'When the team needs spending-power context for adult buyers or local supporters.',
+    whatToRecord:
+      'Geography, year, income bracket, age group, source link/name, and what the number proves.',
+    claimConnection:
+      'Supports affordability context, NOT demand. Pair with surveys, interviews, or preorder tests.'
   },
   {
     question:
-      'Find three comparable sweatshirts at a similar quality or price point.',
+      'Pull school-provided enrollment data (counts, grade bands).',
     whyItMatters:
-      'Defends the price against real shelves the buyer will compare against.',
-    suggestedSourceType: 'comparable_products'
+      'Sets the size of the reachable school audience.',
+    suggestedSourceType: 'school_enrollment_data',
+    questionAnswered:
+      'Size of the reachable school audience.',
+    whenToUse:
+      'When the team is modeling school awareness, school launch, or student buyer potential.',
+    whatToRecord:
+      'Enrollment count, grade bands, source name, date, and any limits.',
+    claimConnection:
+      'Supports reachable audience inside the school.'
   },
   {
     question:
-      'Ask Phoenix Nest stakeholders about margin, shelf space, and turnover.',
+      'Find three comparable products at similar quality, price, or production story.',
     whyItMatters:
-      'Tells you whether retail carry is realistic at the proposed price.',
-    suggestedSourceType: 'stakeholder_feedback'
+      'Defends price and positioning against real shelves a buyer would compare against.',
+    suggestedSourceType: 'comparable_products',
+    questionAnswered:
+      'Price, quality, positioning, channel, and category expectations.',
+    whenToUse:
+      'When the team needs outside context before defending price or positioning.',
+    whatToRecord:
+      'Brand/product, price, product specs, channel, target customer, source link/name, and why it is similar or different.',
+    claimConnection:
+      'Supports price defensibility, category behavior, and positioning.'
   },
   {
     question:
-      'Observe TechTown shopper interest or collect feedback during the pop-up.',
+      'Observe similar products in real retail settings.',
     whyItMatters:
-      'Validates assumptions about the broader Detroit-adjacent buyer.',
-    suggestedSourceType: 'retail_observation'
+      'Tests packaging, display, and price expectations against the buyer’s actual environment.',
+    suggestedSourceType: 'retail_observation',
+    questionAnswered:
+      'What similar products look like in real retail settings.',
+    whenToUse:
+      'When preparing for Phoenix Nest, TechTown, or display decisions.',
+    whatToRecord:
+      'Store or booth, product type, price, packaging, display, customer behavior, and date.',
+    claimConnection:
+      'Supports retail readiness, packaging, display, and price expectations.'
+  },
+  {
+    question:
+      'Ask Phoenix Nest stakeholders about margin, shelf space, turnover, and required changes.',
+    whyItMatters:
+      'Tells you whether retail carry is realistic at the proposed price and story.',
+    suggestedSourceType: 'phoenix_nest_stakeholder',
+    questionAnswered:
+      'Whether the product and story fit retail carry.',
+    whenToUse:
+      'When writing the Phoenix Nest carry pitch.',
+    whatToRecord:
+      'Stakeholder name/role, feedback, objections, required changes, and next step.',
+    claimConnection:
+      'Supports retail-carry fit and pitch readiness.'
+  },
+  {
+    question:
+      'Collect TechTown pop-up feedback from real shoppers on demand and message clarity.',
+    whyItMatters:
+      'Validates launch-day demand assumptions and customer language.',
+    suggestedSourceType: 'techtown_popup_feedback',
+    questionAnswered:
+      'What real shoppers notice, ask, buy, or reject.',
+    whenToUse:
+      'When testing launch demand and customer language.',
+    whatToRecord:
+      'Shopper comments, questions, conversion, objections, and product interest.',
+    claimConnection:
+      'Supports pop-up demand, message clarity, and buyer profile.'
+  },
+  {
+    question:
+      'Run a preorder or expression-of-interest test at the proposed price.',
+    whyItMatters:
+      'Replaces opinion with action — whether people will commit before full production.',
+    suggestedSourceType: 'preorder_test',
+    questionAnswered:
+      'Whether people will take an action before full production.',
+    whenToUse:
+      'When inventory risk is high or price is uncertain.',
+    whatToRecord:
+      'Number of signups, price shown, audience, channel, date range, and follow-through.',
+    claimConnection:
+      'Supports demand confidence and inventory planning.'
   }
 ]
 
@@ -373,7 +594,11 @@ function addSeededEvidenceRequest(idx: number) {
     ...blankEvidenceRequest(),
     question: seed.question,
     whyItMatters: seed.whyItMatters,
-    suggestedSourceType: seed.suggestedSourceType
+    suggestedSourceType: seed.suggestedSourceType,
+    questionAnswered: seed.questionAnswered,
+    whenToUse: seed.whenToUse,
+    whatToRecord: seed.whatToRecord,
+    claimConnection: seed.claimConnection
   })
   markDirty()
 }
@@ -548,6 +773,21 @@ const tradeoffLines = computed<string[]>(() => {
   return Array.from(new Set(lines)).slice(0, 4)
 })
 
+// Cast the editable form into a MarketFitBuilder shape for the
+// shared narrative helpers. The form is already a superset; this just
+// strips the type fence so the helpers can read segments /
+// comparables / evidenceRequests directly.
+function asFitForUtil(): MarketFitBuilder {
+  return {
+    productFacts: form.productFacts,
+    segments: form.segments,
+    comparables: form.comparables,
+    evidenceRequests: form.evidenceRequests,
+    scenarioAssumptions: form.scenarioAssumptions,
+    recommendation: form.recommendation
+  }
+}
+
 const generatedSummary = computed<string>(() => {
   const top = topSegment.value
   if (!top || top.score === 0) {
@@ -560,7 +800,40 @@ const generatedSummary = computed<string>(() => {
   const lead = `Strongest combined fit for ${productName}${priceText}: ${
     top.segment.name || 'an unnamed segment'
   } (price fit ${top.priceFit}/3, story fit ${top.storyFit}/3, reach ${top.reachability}/3, willingness ${top.willingness}/3, evidence ${top.evidence}/3).`
-  return [lead, ...tradeoffLines.value].join(' ')
+
+  // Profile, comp type, source gap, and affordability mentions —
+  // surfaces the Product Positioning Intelligence layer in one
+  // sentence each so the summary reads as a positioning argument and
+  // not just a fit-score.
+  const profileName = top.segment.profile?.profileName?.trim()
+  const profileText = profileName ? ` Strongest profile: ${profileName}.` : ''
+
+  const compSummary = findStrongestCompType(form.comparables)
+  const compText = compSummary
+    ? ` Strongest comp type: ${compSummary.label.toLowerCase()} (${compSummary.strongCount} strong of ${compSummary.totalCount}).`
+    : ''
+
+  const gap = detectSourceGap(form.evidenceRequests)
+  const gapText = gap.noRequestsAtAll
+    ? ' Source gap: no evidence requests logged yet — add at least one before treating this as proof.'
+    : gap.hasGap
+      ? ` Source gap: ${gap.openRequests.length} evidence request${gap.openRequests.length === 1 ? '' : 's'} still open.`
+      : ''
+
+  const affordability = hasAffordabilityVsDemandRisk(asFitForUtil())
+    ? ' Income data can support affordability, but the team still needs interviews, surveys, or preorders before making inventory decisions.'
+    : ''
+
+  return [
+    lead,
+    profileText,
+    compText,
+    gapText,
+    affordability,
+    ...tradeoffLines.value.map((l) => ` ${l}`)
+  ]
+    .filter(Boolean)
+    .join('')
 })
 
 // --- save -----------------------------------------------------------
@@ -760,6 +1033,18 @@ async function save() {
       <p class="text-xs text-neutral-600">
         Add the segments worth comparing. No segment is primary by default — argue the case in the rating cells.
       </p>
+      <!-- Profile coaching copy. Renaissance students often default to
+           "students are the customer" because it's the easiest audience
+           to picture; the helpers push back. -->
+      <p class="rounded-md border border-amber-200 bg-amber-50 p-2 text-xs text-neutral-800">
+        Do not confuse who likes or wears a product with who the brand is built to target. A student may wear a premium brand, but the brand may still be targeting adults with higher income, different shopping habits, or a different lifestyle.
+      </p>
+      <p class="text-xs text-neutral-600">
+        Profiles help you describe the buyer clearly enough to research them. Name the likely age, income context, geography, motivation, channel, and evidence needed.
+      </p>
+      <datalist id="market-fit-profile-name-options">
+        <option v-for="opt in PROFILE_NAME_EXAMPLES" :key="opt" :value="opt" />
+      </datalist>
       <div v-if="editingEnabled" class="flex flex-wrap gap-1.5">
         <button
           v-for="(label, type) in SEGMENT_TYPE_LABELS"
@@ -958,6 +1243,168 @@ async function save() {
               @input="markDirty"
             />
           </label>
+
+          <!-- Customer profile sub-block. Optional layer that lets the
+               team describe the segment well enough to research them
+               (age, income, geography, motivation, etc.). Inline,
+               not collapsed, so the full positioning argument reads
+               in one scroll. -->
+          <fieldset class="mt-2 space-y-1 rounded-md border border-violet-200 bg-violet-50/40 p-2">
+            <legend class="text-xs font-semibold uppercase tracking-wide text-neutral-600">
+              Customer profile
+            </legend>
+            <p class="text-xs text-neutral-600">
+              Profile names are examples — students can pick from the list or type a custom one. Do not auto-assign a profile as a fact.
+            </p>
+            <div class="grid gap-2 sm:grid-cols-2">
+              <label class="block text-xs font-medium text-neutral-800">
+                Profile name
+                <input
+                  v-model="seg.profile!.profileName"
+                  type="text"
+                  list="market-fit-profile-name-options"
+                  :disabled="!editingEnabled"
+                  class="mt-1 w-full rounded border border-neutral-300 p-2 text-sm disabled:bg-neutral-100"
+                  placeholder="Civic Premium Buyer, Proud Parent Supporter, Gift Buyer…"
+                  @input="markDirty"
+                />
+              </label>
+              <label class="block text-xs font-medium text-neutral-800">
+                Age range
+                <input
+                  v-model="seg.profile!.ageRange"
+                  type="text"
+                  :disabled="!editingEnabled"
+                  class="mt-1 w-full rounded border border-neutral-300 p-2 text-sm disabled:bg-neutral-100"
+                  placeholder="e.g. 35–60"
+                  @input="markDirty"
+                />
+              </label>
+              <label class="block text-xs font-medium text-neutral-800">
+                Income range / context
+                <input
+                  v-model="seg.profile!.incomeRange"
+                  type="text"
+                  :disabled="!editingEnabled"
+                  class="mt-1 w-full rounded border border-neutral-300 p-2 text-sm disabled:bg-neutral-100"
+                  placeholder="ACS bracket or qualitative note"
+                  @input="markDirty"
+                />
+              </label>
+              <label class="block text-xs font-medium text-neutral-800">
+                Geography
+                <input
+                  v-model="seg.profile!.geographyContext"
+                  type="text"
+                  :disabled="!editingEnabled"
+                  class="mt-1 w-full rounded border border-neutral-300 p-2 text-sm disabled:bg-neutral-100"
+                  placeholder="Detroit metro, Renaissance neighborhood, etc."
+                  @input="markDirty"
+                />
+              </label>
+              <label class="block text-xs font-medium text-neutral-800">
+                Urban / suburban context
+                <input
+                  v-model="seg.profile!.urbanSuburbanContext"
+                  type="text"
+                  :disabled="!editingEnabled"
+                  class="mt-1 w-full rounded border border-neutral-300 p-2 text-sm disabled:bg-neutral-100"
+                  placeholder="Urban professional, suburban family, etc."
+                  @input="markDirty"
+                />
+              </label>
+              <label class="block text-xs font-medium text-neutral-800">
+                Lifestyle context
+                <input
+                  v-model="seg.profile!.lifestyleContext"
+                  type="text"
+                  :disabled="!editingEnabled"
+                  class="mt-1 w-full rounded border border-neutral-300 p-2 text-sm disabled:bg-neutral-100"
+                  placeholder="What kind of life does this buyer live?"
+                  @input="markDirty"
+                />
+              </label>
+              <label class="block text-xs font-medium text-neutral-800 sm:col-span-2">
+                Motivation
+                <textarea
+                  v-model="seg.profile!.motivation"
+                  rows="2"
+                  :disabled="!editingEnabled"
+                  class="mt-1 w-full rounded border border-neutral-300 p-2 text-sm disabled:bg-neutral-100"
+                  placeholder="Why would they buy this product?"
+                  @input="markDirty"
+                />
+              </label>
+              <label class="block text-xs font-medium text-neutral-800">
+                Price sensitivity
+                <select
+                  v-model="seg.profile!.priceSensitivity"
+                  :disabled="!editingEnabled"
+                  class="mt-1 w-full rounded border border-neutral-300 p-2 text-sm disabled:bg-neutral-100"
+                  @change="markDirty"
+                >
+                  <option v-for="o in SIGNAL_OPTIONS" :key="o" :value="o">
+                    {{ o === '' ? '— Not set —' : o }}
+                  </option>
+                </select>
+              </label>
+              <label class="block text-xs font-medium text-neutral-800">
+                Likely channel
+                <input
+                  v-model="seg.profile!.likelyChannel"
+                  type="text"
+                  :disabled="!editingEnabled"
+                  class="mt-1 w-full rounded border border-neutral-300 p-2 text-sm disabled:bg-neutral-100"
+                  placeholder="Phoenix Nest, online drop, pop-up, gift event"
+                  @input="markDirty"
+                />
+              </label>
+              <label class="block text-xs font-medium text-neutral-800 sm:col-span-2">
+                Values
+                <input
+                  v-model="seg.profile!.values"
+                  type="text"
+                  :disabled="!editingEnabled"
+                  class="mt-1 w-full rounded border border-neutral-300 p-2 text-sm disabled:bg-neutral-100"
+                  placeholder="What does this buyer care about? (Detroit pride, school connection, gifting, premium goods…)"
+                  @input="markDirty"
+                />
+              </label>
+              <label class="block text-xs font-medium text-neutral-800 sm:col-span-2">
+                Evidence needed
+                <input
+                  v-model="seg.profile!.evidenceNeeded"
+                  type="text"
+                  :disabled="!editingEnabled"
+                  class="mt-1 w-full rounded border border-neutral-300 p-2 text-sm disabled:bg-neutral-100"
+                  placeholder="What sources would prove this profile fits?"
+                  @input="markDirty"
+                />
+              </label>
+              <label class="block text-xs font-medium text-neutral-800">
+                Profile risk
+                <input
+                  v-model="seg.profile!.risk"
+                  type="text"
+                  :disabled="!editingEnabled"
+                  class="mt-1 w-full rounded border border-neutral-300 p-2 text-sm disabled:bg-neutral-100"
+                  placeholder="What could make this profile wrong?"
+                  @input="markDirty"
+                />
+              </label>
+              <label class="block text-xs font-medium text-neutral-800">
+                Profile validation step
+                <input
+                  v-model="seg.profile!.validationStep"
+                  type="text"
+                  :disabled="!editingEnabled"
+                  class="mt-1 w-full rounded border border-neutral-300 p-2 text-sm disabled:bg-neutral-100"
+                  placeholder="What test would confirm or break the profile?"
+                  @input="markDirty"
+                />
+              </label>
+            </div>
+          </fieldset>
         </li>
       </ul>
     </fieldset>
@@ -969,6 +1416,9 @@ async function save() {
       </legend>
       <p class="text-xs text-neutral-600">
         Comparable products help you defend price, quality, style, and target customer. Compare against products that are similar in price, quality, story, or buyer — not just products with the same category name.
+      </p>
+      <p class="rounded-md border border-amber-200 bg-amber-50 p-2 text-xs text-neutral-800">
+        A sweatshirt is not automatically a good comp just because it is a sweatshirt. A strong comp may match price, quality, story, customer, channel, or style.
       </p>
       <button
         v-if="editingEnabled"
@@ -1099,6 +1549,53 @@ async function save() {
               />
             </label>
           </div>
+
+          <!-- Comp alignment metadata: what dimensions match + how
+               strongly. Drives the deterministic feedback line right
+               below the checkboxes. -->
+          <fieldset class="mt-2 space-y-1 rounded-md border border-violet-200 bg-violet-50/40 p-2">
+            <legend class="text-xs font-semibold uppercase tracking-wide text-neutral-600">
+              Comp alignment
+            </legend>
+            <p class="text-xs text-neutral-600">
+              Which dimensions does this comp actually align on?
+            </p>
+            <div class="grid gap-1 sm:grid-cols-2">
+              <label
+                v-for="t in COMP_TYPE_FIELDS"
+                :key="t.key"
+                class="flex items-center gap-1 text-xs text-neutral-700"
+              >
+                <input
+                  type="checkbox"
+                  :checked="c.compTypes?.[t.key] === true"
+                  :disabled="!editingEnabled"
+                  @change="(event) => { if (!c.compTypes) c.compTypes = {}; c.compTypes[t.key] = (event.target as HTMLInputElement).checked; markDirty() }"
+                />
+                {{ t.label }}
+              </label>
+            </div>
+            <label class="mt-1 block text-xs font-medium text-neutral-800">
+              Overall alignment
+              <select
+                v-model="c.compAlignment"
+                :disabled="!editingEnabled"
+                class="mt-1 w-full rounded border border-neutral-300 p-2 text-sm disabled:bg-neutral-100"
+                @change="markDirty"
+              >
+                <option v-for="o in COMP_ALIGNMENT_OPTIONS" :key="o.value" :value="o.value">
+                  {{ o.label }}
+                </option>
+              </select>
+            </label>
+            <p
+              v-if="buildCompFeedback(c)"
+              class="rounded-md border border-neutral-200 bg-white p-2 text-xs text-neutral-800"
+            >
+              <span class="font-medium text-neutral-600">Coach feedback:</span>
+              {{ buildCompFeedback(c)?.message }}
+            </p>
+          </fieldset>
         </li>
       </ul>
     </fieldset>
@@ -1110,6 +1607,25 @@ async function save() {
       </legend>
       <p class="text-xs text-neutral-600">
         The coach can suggest evidence to look for. The team still has to go find it.
+      </p>
+      <!-- Quantification guidance — distinguishes total / reachable /
+           interested / likely buyers and reminds students that income
+           data supports affordability, not demand. -->
+      <p class="rounded-md border border-neutral-200 bg-white p-2 text-xs text-neutral-800">
+        <span class="font-medium text-neutral-600">Quantification path:</span>
+        Total market is everyone who could theoretically fit the profile. Reachable market is who you can actually reach. Interested market is who may care. Likely buyers are the people who may actually purchase at this price.
+      </p>
+      <p class="rounded-md border border-neutral-200 bg-white p-2 text-xs text-neutral-800">
+        Income data supports affordability context, not demand. Pair income data with surveys, interviews, preorders, or observed behavior.
+      </p>
+      <!-- Affordability vs demand red flag — visible whenever the
+           builder detects income/profile context without willingness or
+           evidence support. Soft warning, not a save block. -->
+      <p
+        v-if="hasAffordabilityVsDemandRisk(asFitForUtil())"
+        class="rounded-md border border-amber-200 bg-amber-50 p-2 text-xs text-neutral-800"
+      >
+        Someone being able to afford the product does not prove they want it. Someone wearing similar products does not prove they are the target customer. Use sources to test both affordability and willingness to buy.
       </p>
       <div v-if="editingEnabled" class="flex flex-wrap gap-1.5">
         <button
@@ -1206,6 +1722,55 @@ async function save() {
               @input="markDirty"
             />
           </label>
+
+          <!-- Source Coach prompts. Auto-seeded when the request is
+               added from the suggestion list; always editable so the
+               team can sharpen the wording for their actual context. -->
+          <fieldset class="mt-2 space-y-1 rounded-md border border-violet-200 bg-violet-50/40 p-2">
+            <legend class="text-xs font-semibold uppercase tracking-wide text-neutral-600">
+              Source Coach
+            </legend>
+            <label class="block text-xs font-medium text-neutral-800">
+              What question does this source answer?
+              <textarea
+                v-model="r.questionAnswered"
+                rows="2"
+                :disabled="!editingEnabled"
+                class="mt-1 w-full rounded border border-neutral-300 p-2 text-sm disabled:bg-neutral-100"
+                @input="markDirty"
+              />
+            </label>
+            <label class="block text-xs font-medium text-neutral-800">
+              When to use it
+              <textarea
+                v-model="r.whenToUse"
+                rows="2"
+                :disabled="!editingEnabled"
+                class="mt-1 w-full rounded border border-neutral-300 p-2 text-sm disabled:bg-neutral-100"
+                @input="markDirty"
+              />
+            </label>
+            <label class="block text-xs font-medium text-neutral-800">
+              What students should record
+              <textarea
+                v-model="r.whatToRecord"
+                rows="2"
+                :disabled="!editingEnabled"
+                class="mt-1 w-full rounded border border-neutral-300 p-2 text-sm disabled:bg-neutral-100"
+                @input="markDirty"
+              />
+            </label>
+            <label class="block text-xs font-medium text-neutral-800">
+              How it supports or weakens the claim
+              <textarea
+                v-model="r.claimConnection"
+                rows="2"
+                :disabled="!editingEnabled"
+                class="mt-1 w-full rounded border border-neutral-300 p-2 text-sm disabled:bg-neutral-100"
+                @input="markDirty"
+              />
+            </label>
+          </fieldset>
         </li>
       </ul>
     </fieldset>

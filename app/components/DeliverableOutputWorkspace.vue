@@ -47,6 +47,7 @@ import {
   buildDemandSnapshot,
   buildDemandToRevenueNarrative,
   buildPhoenixNestCarrySummary,
+  findStrongestCompType,
   type DemandSnapshot,
   type PhoenixNestCarrySummary
 } from '~/utils/marketFitNarrative'
@@ -1088,6 +1089,37 @@ function synthesizeMarketBuilderFromFit(
             seg
           )
         ]
+    // Bake the Customer Profile into the synthesized customer
+    // assumption — gives the AI critique a clean "Profile: X. Why: Y"
+    // line without changing the request schema. Same for the
+    // strongest comp type which we fold into the value-based factor
+    // so the model sees what the team is comparing against.
+    const profileName = seg.profile?.profileName?.trim() || ''
+    const customerAssumptionParts: string[] = []
+    if (profileName) {
+      customerAssumptionParts.push(`Profile: ${profileName}.`)
+    }
+    if (seg.whyItMightFit?.trim()) {
+      customerAssumptionParts.push(seg.whyItMightFit.trim())
+    }
+    if (seg.profile?.motivation?.trim()) {
+      customerAssumptionParts.push(`Motivation: ${seg.profile.motivation.trim()}.`)
+    }
+    const customerAssumption =
+      customerAssumptionParts.join(' ').trim() || undefined
+
+    const compSummary = findStrongestCompType(fit.comparables)
+    const valueBasedParts: string[] = []
+    if (product.madeInStory?.trim()) {
+      valueBasedParts.push(product.madeInStory.trim())
+    }
+    if (compSummary) {
+      valueBasedParts.push(
+        `Strongest comp type: ${compSummary.label.toLowerCase()} (${compSummary.strongCount} strong of ${compSummary.totalCount}).`
+      )
+    }
+    const valueBasedFactor = valueBasedParts.join(' ').trim() || undefined
+
     return {
       id: `mfb-${seg.id}`,
       productName: `${productNamePrefix} · ${seg.name || 'segment'}`,
@@ -1096,8 +1128,8 @@ function synthesizeMarketBuilderFromFit(
       secondaryMarket: seg.roleInStrategy
         ? `Role in strategy: ${seg.roleInStrategy.replace(/_/g, ' ')}`
         : undefined,
-      customerAssumption: seg.whyItMightFit?.trim() || undefined,
-      valueBasedFactor: product.madeInStory?.trim() || undefined,
+      customerAssumption,
+      valueBasedFactor,
       schoolMarketSize: null,
       broaderMarketSize: null,
       evidenceSource: seg.evidenceSource?.trim() || undefined,
@@ -2673,6 +2705,20 @@ watch(
                 {{ buildDemandSnapshot(persistedMarketFit(s))!.segmentName }}
               </p>
               <p
+                v-if="buildDemandSnapshot(persistedMarketFit(s))!.targetProfile"
+                class="text-neutral-700"
+              >
+                <span class="font-medium text-neutral-600">Target profile:</span>
+                {{ buildDemandSnapshot(persistedMarketFit(s))!.targetProfile }}
+              </p>
+              <p
+                v-if="buildDemandSnapshot(persistedMarketFit(s))!.profileLogic"
+                class="text-neutral-700"
+              >
+                <span class="font-medium text-neutral-600">Profile logic:</span>
+                {{ buildDemandSnapshot(persistedMarketFit(s))!.profileLogic }}
+              </p>
+              <p
                 v-if="buildDemandSnapshot(persistedMarketFit(s))!.baseBuyers != null
                       || buildDemandSnapshot(persistedMarketFit(s))!.baseRevenue != null"
                 class="text-neutral-700"
@@ -2680,6 +2726,20 @@ watch(
                 <span class="font-medium text-neutral-600">Base scenario:</span>
                 {{ fmtNumber(buildDemandSnapshot(persistedMarketFit(s))!.baseBuyers) }} buyers ·
                 {{ fmtCurrency(buildDemandSnapshot(persistedMarketFit(s))!.baseRevenue) }} revenue
+              </p>
+              <p
+                v-if="buildDemandSnapshot(persistedMarketFit(s))!.strongestCompType"
+                class="text-neutral-700"
+              >
+                <span class="font-medium text-neutral-600">Strongest comp type:</span>
+                {{ buildDemandSnapshot(persistedMarketFit(s))!.strongestCompType }}
+              </p>
+              <p
+                v-if="buildDemandSnapshot(persistedMarketFit(s))!.sourceGap"
+                class="text-neutral-700"
+              >
+                <span class="font-medium text-neutral-600">Source gap:</span>
+                {{ buildDemandSnapshot(persistedMarketFit(s))!.sourceGap }}
               </p>
               <p
                 v-if="buildDemandSnapshot(persistedMarketFit(s))!.tradeoff"

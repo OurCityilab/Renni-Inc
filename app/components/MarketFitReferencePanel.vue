@@ -11,6 +11,8 @@ import {
   fmtNumber
 } from '~/utils/marketBuilderMath'
 import {
+  detectSourceGap,
+  findStrongestCompType,
   selectedSegment,
   selectedSegmentRows
 } from '~/utils/marketFitNarrative'
@@ -65,9 +67,29 @@ defineProps<{
               class="ml-1 text-neutral-500"
             >· role: {{ selectedSegment(row.fit)!.roleInStrategy!.replace(/_/g, ' ') }}</span>
           </div>
+          <div v-if="selectedSegment(row.fit)?.profile?.profileName?.trim()">
+            <dt class="inline font-medium text-neutral-600">Target profile:</dt>
+            {{ selectedSegment(row.fit)!.profile!.profileName }}
+          </div>
           <div v-if="selectedSegment(row.fit)?.reachableAudience != null">
             <dt class="inline font-medium text-neutral-600">Reachable audience:</dt>
             {{ fmtNumber(selectedSegment(row.fit)!.reachableAudience ?? null) }}
+          </div>
+          <div v-if="findStrongestCompType(row.fit.comparables)">
+            <dt class="inline font-medium text-neutral-600">Strongest comp type:</dt>
+            {{ findStrongestCompType(row.fit.comparables)!.label.toLowerCase() }}
+            ({{ findStrongestCompType(row.fit.comparables)!.strongCount }} strong of
+            {{ findStrongestCompType(row.fit.comparables)!.totalCount }})
+          </div>
+          <div v-if="detectSourceGap(row.fit.evidenceRequests).hasGap">
+            <dt class="inline font-medium text-neutral-600">Source gap:</dt>
+            <template v-if="detectSourceGap(row.fit.evidenceRequests).noRequestsAtAll">
+              no evidence requests logged yet
+            </template>
+            <template v-else>
+              {{ detectSourceGap(row.fit.evidenceRequests).openRequests.length }}
+              open
+            </template>
           </div>
         </dl>
         <table

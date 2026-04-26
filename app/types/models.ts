@@ -417,14 +417,27 @@ export type MarketFitSegmentRole =
   | 'validation_market'
   | ''
 
+// Source categories used by the Source Coach. Existing legacy values
+// ('survey', 'interview', 'school_data', 'stakeholder_feedback') stay
+// in the union so any pre-positioning-pass entries still resolve;
+// students authoring new requests pick from the more specific
+// student_survey / parent_adult_interview / school_enrollment_data /
+// phoenix_nest_stakeholder labels surfaced by the editor.
 export type MarketFitEvidenceSourceType =
   | 'survey'
+  | 'student_survey'
   | 'interview'
+  | 'parent_adult_interview'
+  | 'alumni_staff_interview'
   | 'census_acs'
   | 'school_data'
+  | 'school_enrollment_data'
   | 'comparable_products'
   | 'retail_observation'
   | 'stakeholder_feedback'
+  | 'phoenix_nest_stakeholder'
+  | 'techtown_popup_feedback'
+  | 'preorder_test'
   | 'custom'
 
 export type MarketFitEvidenceStatus =
@@ -446,6 +459,30 @@ export interface MarketFitProductFacts {
   notes?: string
 }
 
+// Customer profile fields layered on top of a segment. Renaissance
+// students can add a profile name (e.g. "Civic Premium Buyer") plus
+// the supporting context — age, income context, geography, motivation
+// — that turns a raw segment into something researchable. All
+// optional so old segments without a profile still render. The
+// nested object intentionally avoids any "primary profile" boolean;
+// the team argues fit through the existing segment signals + the
+// product positioning summary.
+export interface MarketFitCustomerProfile {
+  profileName?: string
+  ageRange?: string
+  incomeRange?: string
+  geographyContext?: string
+  urbanSuburbanContext?: string
+  lifestyleContext?: string
+  motivation?: string
+  priceSensitivity?: MarketFitSignal
+  values?: string
+  likelyChannel?: string
+  evidenceNeeded?: string
+  risk?: string
+  validationStep?: string
+}
+
 export interface MarketFitSegment {
   id: string
   name: string
@@ -463,7 +500,27 @@ export interface MarketFitSegment {
   risk?: string
   nextValidationStep?: string
   roleInStrategy?: MarketFitSegmentRole
+  // Optional Customer Profile add-on. Old segments without it render
+  // exactly as before; new authoring surfaces an inline editor.
+  profile?: MarketFitCustomerProfile
 }
+
+// Why a comparable matters. A sweatshirt isn't automatically a
+// useful comp because it's a sweatshirt — students mark which
+// dimensions actually align so the deterministic feedback engine
+// can describe what the comp proves and what it does not.
+export interface MarketFitCompTypeFlags {
+  product?: boolean
+  price?: boolean
+  quality?: boolean
+  story?: boolean
+  customer?: boolean
+  channel?: boolean
+  style?: boolean
+  localMade?: boolean
+}
+
+export type MarketFitCompAlignment = 'strong' | 'partial' | 'weak' | 'unsure' | ''
 
 export interface MarketFitComparable {
   id: string
@@ -477,6 +534,9 @@ export interface MarketFitComparable {
   difference?: string
   lessonForRenni?: string
   source?: string
+  // Comp alignment metadata — drives the deterministic feedback line.
+  compTypes?: MarketFitCompTypeFlags
+  compAlignment?: MarketFitCompAlignment
 }
 
 export interface MarketFitEvidenceRequest {
@@ -487,6 +547,12 @@ export interface MarketFitEvidenceRequest {
   assignedToRole?: string
   status?: MarketFitEvidenceStatus
   notes?: string
+  // Source Coach prompts — optional textareas the editor seeds when a
+  // source category is picked. Stay free-text so students can edit.
+  questionAnswered?: string
+  whenToUse?: string
+  whatToRecord?: string
+  claimConnection?: string
 }
 
 export interface MarketFitScenarioAssumptions {
