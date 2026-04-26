@@ -240,10 +240,13 @@ async function saveNotes() {
             :related-tasks-loading="relatedTasksLoading"
             :can-assign="canAssignForDeliverable"
           />
-          <!-- Output workspace: where students actually produce the artifact.
-               Mounted right after Template Studio guidance on draft so the
-               authoring surface follows the teaching surface. -->
-          <DeliverableOutputWorkspace
+          <!-- Chapter hub: section cards + chapter progress + Playbook
+               preview. Per-section editing happens on the dedicated
+               section workspace at /deliverables/[id]/sections/[sectionId].
+               If this hub has issues, the rollback path is to swap the
+               mount back to <DeliverableOutputWorkspace>; the legacy
+               component file is intact for that purpose. -->
+          <DeliverableChapterHub
             v-if="studio && deliverable.status === 'draft'"
             :deliverable="deliverable"
             :studio="studio"
@@ -313,10 +316,12 @@ async function saveNotes() {
             :related-tasks-loading="relatedTasksLoading"
             :can-assign="canAssignForDeliverable"
           />
-          <!-- Output workspace for in_review / needs_revision / approved.
-               Workspace renders read-only or editable depending on status
-               and the viewer's permission. -->
-          <DeliverableOutputWorkspace
+          <!-- Chapter hub for in_review / needs_revision / approved.
+               Same component as draft mode; the section workspace
+               handles the read-only state via the existing canEdit
+               and deliverable.status gates inside the legacy
+               workspace. -->
+          <DeliverableChapterHub
             v-if="studio && deliverable.status !== 'draft'"
             :deliverable="deliverable"
             :studio="studio"

@@ -69,11 +69,35 @@ const props = defineProps<{
   studio: TemplateStudio
   // Page-level permission check (admin / Co-CEO / COO / owner / dept chief).
   canEdit: boolean
+  // When set, render only the matching section's editor and hide the
+  // chapter-wide affordances (orientation card, readiness summary,
+  // section navigation, Playbook-ready preview). The chapter hub
+  // surfaces those separately. Default mode (undefined) is unchanged
+  // — every existing caller gets the legacy chapter-wide layout, so
+  // a rollback can swap the page back without touching this prop.
+  sectionFilterId?: string
 }>()
 
 const auth = useAuthStore()
 const outputs = useDeliverableOutputs()
 const { data: output, loading } = outputs.watchOutput(() => props.deliverable.id)
+
+// In section-filter mode the chapter hub renders the orientation,
+// readiness, navigation, and preview; the workspace only renders the
+// per-section editor + cross-chapter reference panels (which stay
+// useful while editing). Default = false preserves legacy behavior.
+const sectionMode = computed(() => Boolean(props.sectionFilterId))
+const visibleSections = computed(() => {
+  if (!props.sectionFilterId) return props.studio.sections
+  return props.studio.sections.filter((s) => s.id === props.sectionFilterId)
+})
+// Section header always shows the section's original 1-based index in
+// the studio, even in filter mode (so a section that was originally
+// #4 in the studio still reads "Section 4" on the section page).
+function originalSectionIndex(sectionId: string): number {
+  const idx = props.studio.sections.findIndex((s) => s.id === sectionId)
+  return idx >= 0 ? idx + 1 : 1
+}
 
 // --- Chapter 7 → Chapter 8 demand assumption reference (read-only) ---
 // When the workspace is rendering Chapter 8 (Finance and Revenue Model),
@@ -1273,7 +1297,7 @@ watch(
 
 <template>
   <section class="space-y-4">
-    <header class="space-y-1">
+    <header v-if="!sectionMode" class="space-y-1">
       <p class="text-xs uppercase tracking-wide text-neutral-500">
         Output workspace
       </p>
@@ -1289,8 +1313,13 @@ watch(
     </header>
 
     <!-- How to use this workspace — short orientation so students know
-         which field to use when. Soft guidance, not a process gate. -->
-    <section class="rounded-md border border-phoenix-100 bg-phoenix-50/60 p-3">
+         which field to use when. Soft guidance, not a process gate.
+         Hidden in section-filter mode; the chapter hub orients
+         students before they enter a single-section workspace. -->
+    <section
+      v-if="!sectionMode"
+      class="rounded-md border border-phoenix-100 bg-phoenix-50/60 p-3"
+    >
       <p class="text-xs font-semibold uppercase tracking-wide text-phoenix-800">
         How to use this workspace
       </p>
@@ -1310,8 +1339,13 @@ watch(
       Couldn't initialize the output workspace: {{ provisioningError }}
     </p>
 
-    <!-- Readiness summary (soft signal only; submit gate stays requirement-coverage). -->
-    <section class="rounded-md border border-neutral-200 bg-white p-3">
+    <!-- Readiness summary (soft signal only; submit gate stays requirement-coverage).
+         Hidden in section-filter mode — the chapter hub renders its
+         own progress chips. -->
+    <section
+      v-if="!sectionMode"
+      class="rounded-md border border-neutral-200 bg-white p-3"
+    >
       <p class="text-sm font-medium text-neutral-900">
         Output readiness signal:
         {{ readiness.withFinal }} of {{ readiness.total }} sections have final Playbook text.
@@ -1555,11 +1589,13 @@ watch(
     <p v-if="loading" class="text-sm text-neutral-500">Loading workspace…</p>
 
     <!-- Phase 1 hybrid layout: section-by-section orientation note +
-         compact anchor navigation. The full Template Studio guidance
-         is still available above; each section card below repeats the
-         guidance the student needs while they actually work. Anchor
-         links use plain HTML scrolling so no router state changes. -->
-    <section v-if="!loading && studio.sections.length" class="card space-y-2">
+         compact anchor navigation. Hidden in section-filter mode (the
+         chapter hub already covers the navigation surface; the
+         section page only ever renders one section). -->
+    <section
+      v-if="!loading && !sectionMode && studio.sections.length"
+      class="card space-y-2"
+    >
       <p class="text-xs text-neutral-700">
         Work one section at a time. Each section below includes its guidance,
         source notes, draft response, final Playbook text, evidence, and any
@@ -1581,16 +1617,16 @@ watch(
       </nav>
     </section>
 
-    <ol v-if="!loading && studio.sections.length" class="space-y-3">
+    <ol v-if="!loading && visibleSections.length" class="space-y-3">
       <li
-        v-for="(s, i) in studio.sections"
+        v-for="(s, i) in visibleSections"
         :key="s.id"
         :id="`output-section-${s.id}`"
         class="card space-y-3 scroll-mt-4"
       >
         <header class="space-y-0.5">
           <p class="text-xs uppercase tracking-wide text-neutral-500">
-            Section {{ i + 1 }}
+            Section {{ originalSectionIndex(s.id) }}
           </p>
           <h3 class="font-medium text-neutral-900">{{ s.title }}</h3>
           <p
@@ -1610,7 +1646,7 @@ watch(
              scroll back up to remember what the section is asking. -->
         <SectionGuidanceSummary
           :section="s"
-          :section-index="i + 1"
+          :section-index="originalSectionIndex(s.id)"
         />
 
         <!-- Display-only writing scaffolds: suggested workflow, likely
@@ -2552,8 +2588,11 @@ watch(
       </li>
     </ol>
 
-    <!-- Playbook-ready preview — read-only roll-up of every section's final text. -->
-    <section class="card space-y-3">
+    <!-- Playbook-ready preview — read-only roll-up of every section's final text.
+         Hidden in section-filter mode; the chapter hub renders its own
+         (extracted) DeliverablePlaybookPreview so editors don't see a
+         cluttered roll-up of unrelated sections while focused on one. -->
+    <section v-if="!sectionMode" class="card space-y-3">
       <header>
         <p class="text-xs uppercase tracking-wide text-neutral-500">
           Playbook-ready preview
