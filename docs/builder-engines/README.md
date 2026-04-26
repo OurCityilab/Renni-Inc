@@ -4,6 +4,8 @@ Builder engines are guided decision tools inside Renni Command Center. They help
 
 They are not simple forms. A form collects answers. A builder engine helps students understand what their answers imply.
 
+Related future advisor engines should stay separate from builder engines. Builder engines support student-authored output. Advisor engines, such as the planned C-Suite Advisor, support read-only management awareness, sequencing, and leadership tradeoff review.
+
 ## Purpose
 
 Builder engines should help students:
