@@ -927,6 +927,12 @@ async function copyScaffold() {
                 </span>
               </span>
               <span>
+                Gross margin:
+                <span :class="(priceTests.rows[idx].estGrossMarginPct ?? 0) < 0 ? 'text-rose-700 font-medium' : 'font-medium text-neutral-900'">
+                  {{ formatPct(priceTests.rows[idx].estGrossMarginPct) }}
+                </span>
+              </span>
+              <span>
                 Gross profit:
                 <span :class="(priceTests.rows[idx].estGrossProfit ?? 0) < 0 ? 'text-rose-700 font-medium' : 'font-medium text-neutral-900'">
                   {{ priceTests.rows[idx].estGrossProfit != null ? '$' + formatMoney(priceTests.rows[idx].estGrossProfit) : '—' }}

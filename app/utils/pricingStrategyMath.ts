@@ -481,6 +481,7 @@ export interface PriceTestRowSummary {
   expectedUnitsSold: number | null
   estRevenue: number | null
   estUnitMargin: number | null
+  estGrossMarginPct: number | null
   estGrossProfit: number | null
   notes?: string
 }
@@ -499,6 +500,10 @@ export function summarizePriceTests(
     const price = safeNum(t.price)
     const units = safeNum(t.expectedUnitsSold)
     const margin = price != null ? price - totalUnitCost : null
+    const grossMarginPct =
+      price != null && price > 0 && margin != null
+        ? (margin / price) * 100
+        : null
     const revenue = price != null && units != null ? price * units : null
     const grossProfit = margin != null && units != null ? margin * units : null
     return {
@@ -507,6 +512,7 @@ export function summarizePriceTests(
       expectedUnitsSold: units,
       estRevenue: revenue,
       estUnitMargin: margin,
+      estGrossMarginPct: grossMarginPct,
       estGrossProfit: grossProfit,
       notes: t.notes
     }
