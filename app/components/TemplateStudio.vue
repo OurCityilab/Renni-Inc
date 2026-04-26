@@ -130,10 +130,21 @@ const coveredRequirementCount = computed(() => coverage.value.coveredRequirement
       </p>
     </section>
 
-    <!-- Guided sections -->
-    <section v-if="studio.sections.length" class="card space-y-3">
-      <h3 class="text-sm font-semibold">Work through each section</h3>
-      <ol class="space-y-3">
+    <!-- Guided sections.
+         Phase 1 hybrid layout: this block now reads as the full
+         studio reference, since each Output Workspace section card
+         below repeats the relevant guidance next to its inputs. We
+         wrap the whole block in <details> so students who want the
+         end-to-end studio view can still see it on demand without
+         scroll-fatigue. Default open=false keeps the page short. -->
+    <details v-if="studio.sections.length" class="card space-y-3">
+      <summary class="cursor-pointer text-sm font-semibold text-neutral-900">
+        Full section guide (reference)
+        <span class="ml-1 text-xs font-normal text-neutral-500">
+          — each section below also shows this guidance next to its inputs
+        </span>
+      </summary>
+      <ol class="mt-2 space-y-3">
         <li
           v-for="(s, i) in studio.sections"
           :key="s.title"
@@ -174,7 +185,7 @@ const coveredRequirementCount = computed(() => coverage.value.coveredRequirement
           </div>
         </li>
       </ol>
-    </section>
+    </details>
 
     <!-- Requirements with coverage + task creation -->
     <section v-if="studio.requirements.length" class="card space-y-2">

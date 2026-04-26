@@ -40,6 +40,7 @@ import MarketEvidenceReferencePanel, {
   type ReferencedMarketEntry
 } from '~/components/MarketEvidenceReferencePanel.vue'
 import MarketEvidenceCritiquePanel from '~/components/MarketEvidenceCritiquePanel.vue'
+import SectionGuidanceSummary from '~/components/SectionGuidanceSummary.vue'
 import MarketFitBuilder from '~/components/MarketFitBuilder.vue'
 import MarketFitReferencePanel, {
   type ReferencedMarketFitRow
@@ -1552,11 +1553,39 @@ watch(
 
     <p v-if="loading" class="text-sm text-neutral-500">Loading workspace…</p>
 
-    <ol v-else class="space-y-3">
+    <!-- Phase 1 hybrid layout: section-by-section orientation note +
+         compact anchor navigation. The full Template Studio guidance
+         is still available above; each section card below repeats the
+         guidance the student needs while they actually work. Anchor
+         links use plain HTML scrolling so no router state changes. -->
+    <section v-if="!loading && studio.sections.length" class="card space-y-2">
+      <p class="text-xs text-neutral-700">
+        Work one section at a time. Each section below includes its guidance,
+        source notes, draft response, final Playbook text, evidence, and any
+        builder tools that apply. Jump directly to a section using the links
+        below.
+      </p>
+      <nav aria-label="Output section navigation">
+        <ol class="flex flex-wrap gap-1.5 text-xs">
+          <li
+            v-for="(s, i) in studio.sections"
+            :key="`nav-${s.id}`"
+          >
+            <a
+              :href="`#output-section-${s.id}`"
+              class="rounded border border-neutral-300 bg-neutral-50 px-2 py-0.5 text-neutral-700 hover:bg-neutral-100"
+            >{{ i + 1 }}. {{ s.title }}</a>
+          </li>
+        </ol>
+      </nav>
+    </section>
+
+    <ol v-if="!loading && studio.sections.length" class="space-y-3">
       <li
         v-for="(s, i) in studio.sections"
         :key="s.id"
-        class="card space-y-3"
+        :id="`output-section-${s.id}`"
+        class="card space-y-3 scroll-mt-4"
       >
         <header class="space-y-0.5">
           <p class="text-xs uppercase tracking-wide text-neutral-500">
@@ -1573,6 +1602,15 @@ watch(
             </span>
           </p>
         </header>
+
+        <!-- Compact display-only guidance summary for this section.
+             Same content the Template Studio block above carries, but
+             positioned next to the inputs so students don't have to
+             scroll back up to remember what the section is asking. -->
+        <SectionGuidanceSummary
+          :section="s"
+          :section-index="i + 1"
+        />
 
         <div class="space-y-3">
           <div>
