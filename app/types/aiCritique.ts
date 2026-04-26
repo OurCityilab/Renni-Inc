@@ -124,6 +124,7 @@ export type MarketEvidenceCritiqueErrorCode =
   | 'ai_payload_too_large'
   | 'ai_provider_error'
   | 'ai_invalid_response'
+  | 'ai_unauthorized'
 
 export interface MarketEvidenceCritiqueError {
   code: MarketEvidenceCritiqueErrorCode

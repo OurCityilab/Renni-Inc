@@ -30,7 +30,7 @@ export default defineNuxtConfig({
         {
           name: 'description',
           content:
-            'Renni Command Center — production environment for Renaissance students working on the Renni Inc. Brand and Operations Bible.'
+            'Renni Command Center — production environment for Renaissance students working on the Renni Inc. Brand and Operations Playbook.'
         },
         { name: 'theme-color', content: '#ea580c' }
       ]

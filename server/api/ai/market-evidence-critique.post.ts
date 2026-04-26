@@ -7,12 +7,16 @@
 //     leaves runtimeConfig
 //   - input is validated and size-capped before we burn a model call
 //   - output is JSON-only, schema-checked, and returned verbatim
+//   - the caller MUST present a verified Firebase ID token; an
+//     unauthenticated request never reaches the provider
 //
-// The endpoint targets Anthropic's Messages API by default (single
-// JSON object response) but the base URL and model are configurable so
-// a different Anthropic-compatible host can be plugged in via env
-// without touching code.
+// The endpoint targets Anthropic's Messages API (Anthropic-compatible
+// only — no provider abstraction in V1). The base URL and model are
+// configurable via runtimeConfig so a compatible host can be plugged
+// in without code changes, but the request shape and response parsing
+// assume Anthropic's `/v1/messages` schema.
 
+import { adminAuth } from '~~/server/utils/admin'
 import {
   buildMarketEvidenceCritiquePrompt,
   type MarketEvidenceCritiquePrompt
@@ -49,6 +53,22 @@ function badRequest(
   const error: MarketEvidenceCritiqueError = { code, message }
   throw createError({
     statusCode: code === 'ai_disabled' ? 503 : 400,
+    statusMessage: message,
+    data: error
+  })
+}
+
+function unauthorized(message: string): never {
+  // Single safe message for any auth failure — present, malformed, or
+  // expired token, all surface the same prompt to the user. We never
+  // include token contents in the response so a misconfigured client
+  // can't echo a stale token back through logs.
+  const error: MarketEvidenceCritiqueError = {
+    code: 'ai_unauthorized',
+    message
+  }
+  throw createError({
+    statusCode: 401,
     statusMessage: message,
     data: error
   })
@@ -377,9 +397,16 @@ async function callProvider(opts: {
   return text
 }
 
-function asStringArray(value: unknown): string[] {
-  if (!Array.isArray(value)) return []
-  return value.filter((v): v is string => typeof v === 'string')
+function requireStringArray(value: unknown, field: string): string[] {
+  if (!Array.isArray(value)) {
+    malformedResponse(`AI response field "${field}" must be an array.`)
+  }
+  for (let i = 0; i < value.length; i += 1) {
+    if (typeof value[i] !== 'string') {
+      malformedResponse(`AI response field "${field}[${i}]" must be a string.`)
+    }
+  }
+  return value as string[]
 }
 
 function parseModelResponse(text: string): MarketEvidenceCritiqueResponse {
@@ -401,27 +428,89 @@ function parseModelResponse(text: string): MarketEvidenceCritiqueResponse {
   }
 
   const obj = parsed as Record<string, unknown>
+
+  // Strict schema check — every response field must be present with
+  // the expected type. Codex review flagged the prior soft fallbacks
+  // (`?? []`, `?? ''`) as cleaner-when-strict; this surfaces a
+  // malformed model response as ai_invalid_response instead of
+  // silently emitting an empty critique.
+  const strengths = requireStringArray(obj.strengths, 'strengths')
+  const missingEvidence = requireStringArray(
+    obj.missingEvidence,
+    'missingEvidence'
+  )
+  const weakAssumptions = requireStringArray(
+    obj.weakAssumptions,
+    'weakAssumptions'
+  )
+  const consistencyChecks = requireStringArray(
+    obj.consistencyChecks,
+    'consistencyChecks'
+  )
+  const questionsToAnswer = requireStringArray(
+    obj.questionsToAnswer,
+    'questionsToAnswer'
+  )
+  const nextValidationSteps = requireStringArray(
+    obj.nextValidationSteps,
+    'nextValidationSteps'
+  )
+
+  if (typeof obj.suggestedRevision !== 'string') {
+    malformedResponse('AI response field "suggestedRevision" must be a string.')
+  }
+  const suggestedRevision = obj.suggestedRevision as string
+
   const riskRaw = typeof obj.riskLevel === 'string' ? obj.riskLevel : ''
   if (!ALLOWED_RISK_LEVELS.has(riskRaw)) {
     malformedResponse(`AI returned unexpected riskLevel: ${riskRaw || '(missing)'}.`)
   }
 
   return {
-    strengths: asStringArray(obj.strengths),
-    missingEvidence: asStringArray(obj.missingEvidence),
-    weakAssumptions: asStringArray(obj.weakAssumptions),
-    consistencyChecks: asStringArray(obj.consistencyChecks),
-    questionsToAnswer: asStringArray(obj.questionsToAnswer),
-    suggestedRevision:
-      typeof obj.suggestedRevision === 'string' ? obj.suggestedRevision : '',
-    nextValidationSteps: asStringArray(obj.nextValidationSteps),
+    strengths,
+    missingEvidence,
+    weakAssumptions,
+    consistencyChecks,
+    questionsToAnswer,
+    suggestedRevision,
+    nextValidationSteps,
     riskLevel: riskRaw as MarketEvidenceCritiqueResponse['riskLevel']
   }
 }
 
+// Pull `Authorization: Bearer <token>` from the request. We accept
+// only Bearer; anything else is rejected so a misuse case doesn't fall
+// through to the provider call.
+function readBearerToken(event: Parameters<typeof getHeader>[0]): string {
+  const header = getHeader(event, 'authorization') || ''
+  const match = /^Bearer\s+(.+)$/i.exec(header.trim())
+  if (!match) {
+    unauthorized('Sign in again to use AI critique.')
+  }
+  const token = match[1].trim()
+  if (!token) {
+    unauthorized('Sign in again to use AI critique.')
+  }
+  return token
+}
+
 export default defineEventHandler(async (event) => {
+  // 1. Auth gate. Codex review verdict was RED on the unauthenticated
+  //    endpoint, so we verify a Firebase ID token before reading the
+  //    provider key, parsing the body, or building any prompt. An
+  //    unauthenticated caller never reaches a model invocation.
+  const idToken = readBearerToken(event)
+  try {
+    await adminAuth().verifyIdToken(idToken)
+  } catch {
+    unauthorized('Sign in again to use AI critique.')
+  }
+
   const config = useRuntimeConfig()
   const apiKey = (config.aiCritiqueApiKey as string | undefined) || ''
+  // Anthropic-compatible only. The endpoint speaks the Anthropic
+  // Messages API request/response shape; pointing baseUrl at any
+  // non-Anthropic provider will fail at parse time.
   const baseUrl =
     (config.aiCritiqueBaseUrl as string | undefined) || 'https://api.anthropic.com'
   // Default to a fast, cost-efficient model for high-frequency
@@ -441,6 +530,10 @@ export default defineEventHandler(async (event) => {
   const prompt = buildMarketEvidenceCritiquePrompt(validated)
   ensurePromptSize(prompt)
 
+  // The Firebase ID token never travels past this function — only the
+  // structured prompt payload reaches the provider. The token is not
+  // referenced inside callProvider, the prompt builder, or the
+  // returned response.
   const text = await callProvider({ apiKey, baseUrl, model, prompt })
   const parsed = parseModelResponse(text)
   return parsed

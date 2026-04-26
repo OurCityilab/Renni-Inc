@@ -17,11 +17,14 @@
 // student-authored input. We re-check (c) here as a defense in depth
 // so the button stays disabled if the parent ever forgets.
 import { computed, ref } from 'vue'
+import { useAuthStore } from '~/stores/auth'
 import type {
   AiCritiqueRiskLevel,
   MarketEvidenceCritiqueRequest,
   MarketEvidenceCritiqueResponse
 } from '~/types/aiCritique'
+
+const auth = useAuthStore()
 
 const props = defineProps<{
   request: MarketEvidenceCritiqueRequest
@@ -61,14 +64,38 @@ async function review() {
   // distinct from a stale prior critique.
   result.value = null
   try {
+    // Acquire a fresh Firebase ID token before the request. The token
+    // travels only to our local Nuxt endpoint, never to the AI
+    // provider — the server verifies it with Firebase Admin and only
+    // then issues the model call. If we don't have a signed-in user
+    // here, fail fast with a clear sign-in message; we do not call the
+    // endpoint without a token.
+    const fbUser = auth.user
+    if (!fbUser) {
+      errorMessage.value = 'Please sign in again before using AI critique.'
+      return
+    }
+    let idToken: string
+    try {
+      idToken = await fbUser.getIdToken()
+    } catch {
+      errorMessage.value = 'Please sign in again before using AI critique.'
+      return
+    }
+    if (!idToken) {
+      errorMessage.value = 'Please sign in again before using AI critique.'
+      return
+    }
     // $fetch sends a POST with a JSON body. We pass props.request
     // verbatim — the server validates and size-caps before it ever
-    // reaches the model. No auth tokens, no Firestore secrets, no
-    // unrelated student data leave the page.
+    // reaches the model. No auth state, no Firebase web config, no
+    // unrelated student data leave the page; only the section-scoped
+    // payload + the bearer token in the header.
     const data = await $fetch<MarketEvidenceCritiqueResponse>(
       '/api/ai/market-evidence-critique',
       {
         method: 'POST',
+        headers: { Authorization: `Bearer ${idToken}` },
         body: props.request
       }
     )
