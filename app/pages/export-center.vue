@@ -25,6 +25,8 @@ import {
 import {
   buildAdvisorActionPlanMd,
   buildDesignBriefMd,
+  buildFinalPresentationBundleMd,
+  buildFinalPresentationCoachPromptMd,
   buildPhoenixNestBriefMd,
   buildPlaybookChapterMd,
   buildPresentationOutlineMd,
@@ -100,6 +102,26 @@ const playbookChapterMd = computed(() => {
     outputsByDeliverableId.value[d.id] ?? null
   )
 })
+
+// Sprint 2 — Final Presentation Coach prompt + Bundle exports.
+// Coach prompt scope: defaults to "whole program"; the student can
+// scope to a single chapter using the existing Playbook chapter
+// selector.
+const coachScope = ref<'all' | 'one'>('all')
+const coachPromptMd = computed(() =>
+  buildFinalPresentationCoachPromptMd(
+    inputs.value,
+    advisorSignals.value,
+    coachScope.value === 'one' ? selectedDeliverableId.value || null : null
+  )
+)
+const bundleMd = computed(() =>
+  buildFinalPresentationBundleMd(
+    inputs.value,
+    advisorSignals.value,
+    selectedDesignOutput.value
+  )
+)
 
 // Design brief output selector.
 const DESIGN_OPTIONS: DesignOutputType[] = [
@@ -386,6 +408,106 @@ function download(filename: string, content: string, mime: string) {
         rows="10"
         class="w-full rounded border border-neutral-300 bg-neutral-50 p-2 font-mono text-[11px] leading-snug"
         :value="designBriefMd"
+      />
+      <p class="text-[11px] italic text-neutral-500">
+        Paste this into Claude Design or hand to a human designer.
+      </p>
+    </section>
+
+    <!-- 7. Final Presentation Coach prompt (Sprint 2) -->
+    <section class="card space-y-2 border-phoenix-200 bg-phoenix-50/30">
+      <header class="space-y-0.5">
+        <p class="text-xs font-semibold uppercase tracking-wide text-phoenix-700">
+          7. Final Presentation Coach prompt
+        </p>
+        <p class="text-xs text-neutral-700">
+          Copy this entire prompt into Claude / ChatGPT / another LLM. It will
+          critique what is on file in Renni Command Center against the May 12 / 15
+          final presentation. Do not paste any LLM response back into the app
+          without student review.
+        </p>
+        <p class="text-[11px] italic text-neutral-500">
+          AI is a coach, not an approver. Renni Command Center never sends this
+          prompt anywhere — copy / paste only.
+        </p>
+      </header>
+      <div class="flex flex-wrap items-end gap-2">
+        <fieldset class="text-xs">
+          <legend class="font-medium text-neutral-700">Scope</legend>
+          <label class="mr-3 inline-flex items-center gap-1">
+            <input type="radio" :value="'all'" v-model="coachScope" />
+            <span>Whole program</span>
+          </label>
+          <label class="inline-flex items-center gap-1">
+            <input type="radio" :value="'one'" v-model="coachScope" />
+            <span>Selected chapter only</span>
+          </label>
+        </fieldset>
+        <label v-if="coachScope === 'one'" class="text-xs">
+          <span class="font-medium text-neutral-700">Chapter</span>
+          <select
+            v-model="selectedDeliverableId"
+            class="mt-0.5 w-full rounded border border-neutral-300 p-1.5 text-sm sm:w-80"
+          >
+            <option v-for="d in studioBackedDeliverables" :key="d.id" :value="d.id">
+              {{ getTemplateStudio(d.id)?.title || d.title }}
+            </option>
+          </select>
+        </label>
+        <div class="flex gap-2 text-xs">
+          <button
+            type="button"
+            class="rounded border border-phoenix-300 bg-white px-2 py-1 text-phoenix-800 hover:bg-phoenix-50"
+            @click="copy('coach', coachPromptMd)"
+          >{{ copiedKey === 'coach' ? 'Copied ✓' : 'Copy markdown' }}</button>
+          <button
+            type="button"
+            class="rounded border border-phoenix-300 bg-white px-2 py-1 text-phoenix-800 hover:bg-phoenix-50"
+            @click="download('renni-final-presentation-coach-prompt.md', coachPromptMd, 'text/markdown')"
+          >Download .md</button>
+        </div>
+      </div>
+      <textarea
+        readonly
+        rows="10"
+        class="w-full rounded border border-neutral-300 bg-neutral-50 p-2 font-mono text-[11px] leading-snug"
+        :value="coachPromptMd"
+      />
+    </section>
+
+    <!-- 8. Final presentation bundle (Sprint 2) -->
+    <section class="card space-y-2 border-phoenix-200 bg-phoenix-50/30">
+      <header class="flex flex-wrap items-baseline justify-between gap-2">
+        <div>
+          <p class="text-xs font-semibold uppercase tracking-wide text-phoenix-700">
+            8. Final presentation bundle
+          </p>
+          <p class="text-xs text-neutral-700">
+            One markdown file combining the outline, Phoenix Nest brief, advisor
+            action plan, every chapter with finalText, and the Claude design brief.
+          </p>
+          <p class="text-[11px] italic text-neutral-500">
+            Paste into Google Docs as an outline; the bundle keeps headings and bullets.
+          </p>
+        </div>
+        <div class="flex gap-2 text-xs">
+          <button
+            type="button"
+            class="rounded border border-phoenix-300 bg-white px-2 py-1 text-phoenix-800 hover:bg-phoenix-50"
+            @click="copy('bundle', bundleMd)"
+          >{{ copiedKey === 'bundle' ? 'Copied ✓' : 'Copy markdown' }}</button>
+          <button
+            type="button"
+            class="rounded border border-phoenix-300 bg-white px-2 py-1 text-phoenix-800 hover:bg-phoenix-50"
+            @click="download('renni-final-presentation-bundle.md', bundleMd, 'text/markdown')"
+          >Download .md</button>
+        </div>
+      </header>
+      <textarea
+        readonly
+        rows="10"
+        class="w-full rounded border border-neutral-300 bg-neutral-50 p-2 font-mono text-[11px] leading-snug"
+        :value="bundleMd"
       />
     </section>
 

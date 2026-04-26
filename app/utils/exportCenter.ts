@@ -39,6 +39,7 @@ import {
   SOURCE_LABEL,
   type AggregatedAdvisorSignal
 } from '~/utils/cSuiteAdvisor'
+import { getTemplateStudio } from '~/data/templateStudios'
 
 // ---------- low-level CSV helper ----------
 
@@ -141,6 +142,84 @@ export function buildPresentationOutlineMd(inputs: ExportInputs): string {
 
 // ---------- 2. Phoenix Nest carry pitch brief (Markdown) ----------
 
+// Sprint 2 — explicit Ch. 8 / Ch. 7 source IDs for the Phoenix Nest
+// brief. Resolving from explicit deliverable ids first means a Ch. 8
+// section that already carries pricing wins over an accidental
+// pricing field on another chapter.
+const CH7_DELIVERABLE_ID_EXPORT = 'ch-07-current-product-line-and-pricing'
+const CH8_DELIVERABLE_ID_EXPORT = 'ch-08-finance-and-revenue-model'
+
+function findFirstPricingStrategy(
+  inputs: ExportInputs,
+  deliverableId: string
+): { row: ChapterReadinessRow; ps: PricingStrategyBuilder } | null {
+  const output = inputs.outputs[deliverableId] ?? null
+  if (!output) return null
+  const deliverable = inputs.deliverables.find((d) => d.id === deliverableId)
+  if (!deliverable) return null
+  const studio = inputs.studioResolver(deliverable)
+  for (const s of Object.values(output.sections ?? {})) {
+    const ps = s.pricingStrategy
+    if (ps?.proposedPrice != null && ps.proposedPrice > 0) {
+      const row: ChapterReadinessRow = {
+        deliverable,
+        studio,
+        status: deliverable.status,
+        finalTextDone: 0,
+        finalTextTotal: 0,
+        evidenceCovered: 0,
+        hasPricing: true,
+        hasMarketFitSegment: false,
+        hasFinalRecommendation: false,
+        missingRequiredTaskCount: 0,
+        blockerCount: 0,
+        riskCount: 0,
+        watchCount: 0,
+        daysToDue: null,
+        band: 'almost'
+      }
+      return { row, ps }
+    }
+  }
+  return null
+}
+
+function findFirstMarketFitSegment(
+  inputs: ExportInputs,
+  deliverableId: string
+): { row: ChapterReadinessRow; fit: MarketFitBuilder; seg: MarketFitSegment } | null {
+  const output = inputs.outputs[deliverableId] ?? null
+  if (!output) return null
+  const deliverable = inputs.deliverables.find((d) => d.id === deliverableId)
+  if (!deliverable) return null
+  const studio = inputs.studioResolver(deliverable)
+  for (const s of Object.values(output.sections ?? {})) {
+    const fit = s.marketFit
+    const segs = fit?.segments ?? []
+    if (segs.length > 0 && segs[0] && fit) {
+      const row: ChapterReadinessRow = {
+        deliverable,
+        studio,
+        status: deliverable.status,
+        finalTextDone: 0,
+        finalTextTotal: 0,
+        evidenceCovered: 0,
+        hasPricing: false,
+        hasMarketFitSegment: true,
+        hasFinalRecommendation: false,
+        missingRequiredTaskCount: 0,
+        blockerCount: 0,
+        riskCount: 0,
+        watchCount: 0,
+        daysToDue: null,
+        band: 'almost'
+      }
+      return { row, fit, seg: segs[0] }
+    }
+  }
+  return null
+}
+
 export function buildPhoenixNestBriefMd(inputs: ExportInputs): string {
   const lines: string[] = []
   lines.push('# Phoenix Nest carry pitch brief')
@@ -149,26 +228,35 @@ export function buildPhoenixNestBriefMd(inputs: ExportInputs): string {
     'Snapshot for retail carry conversations. Read the live Renni Command Center for the latest version.'
   )
 
-  // Pull the strongest pricing strategy and segment context across
-  // any chapter that has them populated. Ch. 8 typically owns
-  // pricing; Ch. 7 typically owns segments.
-  let bestPricing: { row: ChapterReadinessRow; ps: PricingStrategyBuilder } | null = null
-  let bestSegment: { row: ChapterReadinessRow; fit: MarketFitBuilder; seg: MarketFitSegment } | null = null
-  const { rows } = buildPresentationReadiness(inputs)
-  for (const row of rows) {
-    const output = inputs.outputs[row.deliverable.id] ?? null
-    if (!output) continue
-    for (const s of Object.values(output.sections ?? {})) {
-      const ps = s.pricingStrategy
-      if (
-        !bestPricing &&
-        ps?.proposedPrice != null &&
-        ps.proposedPrice > 0
-      ) bestPricing = { row, ps }
-      const fit = s.marketFit
-      const segs = fit?.segments ?? []
-      if (!bestSegment && segs.length > 0 && segs[0]) {
-        bestSegment = { row, fit: fit!, seg: segs[0] }
+  // Sprint 2 — prefer explicit Ch. 8 pricing context first, fall
+  // back to any chapter only if Ch. 8 has nothing on file. Same
+  // pattern for segments (Ch. 7 first).
+  let bestPricing: { row: ChapterReadinessRow; ps: PricingStrategyBuilder } | null =
+    findFirstPricingStrategy(inputs, CH8_DELIVERABLE_ID_EXPORT)
+  let bestSegment: { row: ChapterReadinessRow; fit: MarketFitBuilder; seg: MarketFitSegment } | null =
+    findFirstMarketFitSegment(inputs, CH7_DELIVERABLE_ID_EXPORT)
+  let pricingSourcedFromCh8 = bestPricing !== null
+  let segmentSourcedFromCh7 = bestSegment !== null
+
+  // Fallback: scan every chapter only when the explicit source is
+  // empty. This keeps the V1 behavior intact for non-studio cohorts.
+  if (!bestPricing || !bestSegment) {
+    const { rows } = buildPresentationReadiness(inputs)
+    for (const row of rows) {
+      const output = inputs.outputs[row.deliverable.id] ?? null
+      if (!output) continue
+      for (const s of Object.values(output.sections ?? {})) {
+        const ps = s.pricingStrategy
+        if (
+          !bestPricing &&
+          ps?.proposedPrice != null &&
+          ps.proposedPrice > 0
+        ) bestPricing = { row, ps }
+        const fit = s.marketFit
+        const segs = fit?.segments ?? []
+        if (!bestSegment && segs.length > 0 && segs[0]) {
+          bestSegment = { row, fit: fit!, seg: segs[0] }
+        }
       }
     }
   }
@@ -221,12 +309,77 @@ export function buildPhoenixNestBriefMd(inputs: ExportInputs): string {
     lines.push(mdSection('Target buyer', '_(no Market Fit segment on file yet)_'))
   }
 
+  // Carry risk band — deterministic. Below cost / weak margin /
+  // thin comps / low confidence each push the band downward.
+  if (bestPricing) {
+    const ps = bestPricing.ps
+    const derived = computePricingDerived(ps)
+    const margin = interpretMargin(derived)
+    const compPos = interpretCompPosition(ps)
+    const compCount = (ps.comparablePrices ?? []).filter(
+      (c) =>
+        typeof c.price === 'number' &&
+        Number.isFinite(c.price) &&
+        c.price > 0 &&
+        (c.name?.trim()?.length ?? 0) > 0
+    ).length
+    const carryRisks: string[] = []
+    if (derived.belowCost) carryRisks.push('Below-cost price — every unit loses money before fixed costs.')
+    else if (margin.band === 'weak') carryRisks.push('Weak margin (<30%) — leaves little room for retail markup.')
+    if (compCount < 2) carryRisks.push(`Light comp evidence (${compCount} valid comp${compCount === 1 ? '' : 's'}; need ≥ 2).`)
+    if (!ps.confidence || ps.confidence === 'low') carryRisks.push('Pricing confidence low or unset — willingness-to-pay not validated yet.')
+    if (!(ps.validationStep ?? '').trim()) carryRisks.push('No named validation step on file.')
+    if (compPos.band === 'far_above_range') carryRisks.push('Price sits well above comp range — acceptance risk is high.')
+    if (carryRisks.length > 0) {
+      lines.push('')
+      lines.push(mdSection('Carry risks', mdBullets(carryRisks)))
+    }
+  }
+
+  // Carry ask — what the team is asking the Phoenix Nest buyer for.
+  // Pulled from current Ch. 8 / Ch. 7 context if available so the
+  // brief reads as a real ask, not a template.
+  const askLines: string[] = []
+  if (bestPricing?.ps.productName) {
+    askLines.push(`We are asking Phoenix Nest to consider carrying **${bestPricing.ps.productName}**.`)
+  } else {
+    askLines.push('We are asking Phoenix Nest to consider carrying our flagship product.')
+  }
+  if (bestPricing?.ps.proposedPrice != null) {
+    askLines.push(`Proposed retail price: $${fmtPricingMoney(bestPricing.ps.proposedPrice)}.`)
+  }
+  if (bestSegment?.seg.profile?.profileName || bestSegment?.seg.name) {
+    askLines.push(`Strongest target buyer: ${bestSegment.seg.profile?.profileName || bestSegment.seg.name}.`)
+  }
+  if (bestPricing?.ps.productionStory) {
+    askLines.push(`Story: ${bestPricing.ps.productionStory}`)
+  }
+  lines.push('')
+  lines.push(mdSection('Carry ask', askLines.join(' ')))
+
   lines.push('')
   lines.push(mdSection('Carry-pitch reminders', mdBullets([
     'Lead with the buyer + the local-made story.',
     'Show the comp range you researched, not just the price you picked.',
     'Name validation evidence (interviews / preorders / observation).',
     'This brief is a starting point — chiefs and instructor still decide.'
+  ])))
+
+  // Source attribution. Helps the chief explain to the buyer where
+  // each number came from without re-opening the app.
+  lines.push('')
+  lines.push(mdSection('Sources', mdBullets([
+    pricingSourcedFromCh8
+      ? 'Pricing: Chapter 8 — Finance and Revenue Model.'
+      : bestPricing
+        ? 'Pricing: pulled from chapter outputs (no Ch. 8 pricing yet).'
+        : 'Pricing: not yet on file.',
+    segmentSourcedFromCh7
+      ? 'Segment: Chapter 7 — Market Fit Builder.'
+      : bestSegment
+        ? 'Segment: pulled from chapter outputs (no Ch. 7 segment yet).'
+        : 'Segment: not yet on file.',
+    'Source of truth: Renni Command Center.'
   ])))
 
   return lines.join('\n')
@@ -476,4 +629,258 @@ export function buildDesignBriefMd(
   ])))
 
   return lines.join('\n')
+}
+
+// ---------- 7. Final Presentation Coach prompt (Sprint 2, copy-only) ----------
+//
+// Pure deterministic prompt builder. The output is a structured
+// markdown prompt the student copies into Claude / ChatGPT / any LLM
+// outside the app — Renni Command Center never sends this anywhere.
+// No API call, no Firestore write, no AI dependency at the build
+// step. Posture: AI may critique, coach, and suggest, but cannot
+// approve, submit, invent data, change calculations, or override
+// chiefs/instructor.
+
+export function buildFinalPresentationCoachPromptMd(
+  inputs: ExportInputs,
+  signals: AggregatedAdvisorSignal[],
+  selectedDeliverableId?: string | null
+): string {
+  const lines: string[] = []
+  lines.push('# Final Presentation Coach — prompt for an external LLM')
+  lines.push('')
+  lines.push(
+    'Copy this entire prompt into Claude, ChatGPT, or another LLM. ' +
+      'It will critique what is on file in Renni Command Center against ' +
+      'the May 12 / 15 final presentation. Do not paste any LLM response back ' +
+      'into the app without student review.'
+  )
+
+  lines.push('')
+  lines.push(mdSection('Role', [
+    'You are a final-presentation coach for a high-school student company (Renni Inc., flagship House Phoenix). The team will present to instructors, parents, and Phoenix Nest retail buyers on May 12 or May 15. The TechTown pop-up is May 27.',
+    '',
+    'You **may not** approve the work, submit it, invent prices, comps, segment data, or demand evidence, or change any calculation. You may critique, coach, and suggest. The student chiefs and the instructor decide.'
+  ].join('\n')))
+
+  lines.push('')
+  lines.push(mdSection('Output format (always)', mdBullets([
+    'Strongest part — what is genuinely defensible.',
+    'Missing evidence — what they would be asked about.',
+    'Weak assumptions — what they are leaning on without proof.',
+    'Stakeholder questions — 3–5 questions an instructor / parent / buyer would ask.',
+    'Slide / pitch risk — what could land wrong on stage or in a buyer meeting.',
+    'Suggested revision — short, copy-friendly rewrite for the weakest part.',
+    'Next validation step — what they should do before May 12.',
+    'What the chief should fix before presenting — one sentence per chief role.',
+    'Distinguish facts (already on file) from suggestions (you are recommending).',
+    'Never approve, submit, invent prices/comps/demand, or change a calculation.'
+  ])))
+
+  // Filter to the selected chapter when provided — otherwise emit
+  // the whole-program coach prompt.
+  let scopedRows: ChapterReadinessRow[] = []
+  let scopedSignals: AggregatedAdvisorSignal[] = []
+  const { rows } = buildPresentationReadiness(inputs)
+  if (selectedDeliverableId) {
+    scopedRows = rows.filter((r) => r.deliverable.id === selectedDeliverableId)
+    scopedSignals = signals.filter(
+      (a) => a.deliverable.id === selectedDeliverableId
+    )
+    lines.push('')
+    lines.push(
+      mdSection(
+        'Scope',
+        `Critique focused on the chapter below. Do not extrapolate to chapters not included in this prompt.`
+      )
+    )
+  } else {
+    scopedRows = rows
+    scopedSignals = signals
+    lines.push('')
+    lines.push(
+      mdSection(
+        'Scope',
+        `Critique the team's full final-presentation readiness. Use only the data inside this prompt; do not invent anything else.`
+      )
+    )
+  }
+
+  // Presentation readiness summary.
+  const summary = buildSummaryFromRows(scopedRows, scopedSignals, inputs.tasks)
+  lines.push('')
+  lines.push(mdSection('Readiness snapshot', mdBullets([
+    `Chapters covered: ${summary.totalChapters}`,
+    `Approved: ${summary.approvedChapters} · In review: ${summary.inReviewChapters} · Draft: ${summary.draftChapters} · Needs revision: ${summary.needsRevisionChapters}`,
+    `Stops / Blocked: ${summary.blockerCount} · Needs Action: ${summary.riskCount} · Check Soon: ${summary.watchCount}`,
+    `Overdue tasks: ${summary.overdueTaskCount} · Blocked tasks: ${summary.blockedTaskCount} · Ownerless: ${summary.ownerlessTaskCount}`
+  ])))
+
+  // Per-chapter context — only include studio-backed chapters that
+  // have any saved content. Includes the strongest pricing + first
+  // populated segment as already done by the Phoenix Nest brief, so
+  // the coach can reason about price-segment fit.
+  for (const row of scopedRows) {
+    const studio = row.studio
+    if (!studio) continue
+    const output = inputs.outputs[row.deliverable.id] ?? null
+    const sectionLines: string[] = []
+    let anyContent = false
+    for (const s of studio.sections) {
+      const persisted = output?.sections?.[s.id]
+      const final = persisted?.finalText?.trim()
+      if (!final) continue
+      anyContent = true
+      sectionLines.push(`### ${s.title}`)
+      sectionLines.push(final)
+      sectionLines.push('')
+    }
+    if (!anyContent) continue
+    const meta: string[] = [
+      `- Status: ${row.status}`,
+      `- Readiness: ${row.band}`,
+      row.daysToDue != null ? `- Days to due: ${row.daysToDue}` : null,
+      row.blockerCount > 0 ? `- Stops / Blocked signals: ${row.blockerCount}` : null,
+      row.riskCount > 0 ? `- Needs Action signals: ${row.riskCount}` : null
+    ].filter((s): s is string => Boolean(s))
+    lines.push('')
+    lines.push(
+      mdSection(
+        `Chapter ${row.deliverable.chapter} — ${studio.title}`,
+        [meta.join('\n'), '', sectionLines.join('\n')].join('\n')
+      )
+    )
+  }
+
+  // Advisor signals — give the coach the deterministic gaps so it
+  // does not invent its own.
+  if (scopedSignals.length > 0) {
+    lines.push('')
+    lines.push(`## Advisor signals (${scopedSignals.length})`)
+    for (const a of scopedSignals.slice(0, 12)) {
+      const info = getAdvisorDisplayLabel(a.signal)
+      lines.push('')
+      lines.push(`### ${info.label} — ${a.studio?.title || a.deliverable.title}: ${a.signal.title}`)
+      lines.push(`- Owner: ${a.signal.owner}`)
+      lines.push(`- Source: ${SOURCE_LABEL[a.signal.source]}`)
+      lines.push(`- Next action: ${a.signal.nextAction}`)
+      lines.push(`- Why it matters: ${info.whyItMatters}`)
+      lines.push(`- How to fix: ${info.howToFix}`)
+    }
+  }
+
+  lines.push('')
+  lines.push(mdSection('Reminders', mdBullets([
+    'Reply only with the structured sections above.',
+    'Quote student-authored text when you critique it; do not paraphrase as if it were yours.',
+    'When you say something is missing, say what would be enough to satisfy it.',
+    'You are coaching, not approving.'
+  ])))
+
+  return lines.join('\n')
+}
+
+// Tiny re-implementation of the readiness summary for the coach
+// prompt. We can't import buildSummary directly without a circular
+// dependency between presentationReadiness and exportCenter. Mirrors
+// the same counting logic.
+function buildSummaryFromRows(
+  rows: ChapterReadinessRow[],
+  signals: AggregatedAdvisorSignal[],
+  tasks: ExportInputs['tasks']
+): PresentationReadinessSummary {
+  const today = (() => {
+    const d = new Date()
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+  })()
+  let approved = 0, inReview = 0, draft = 0, needsRevision = 0
+  for (const r of rows) {
+    if (r.status === 'approved') approved += 1
+    else if (r.status === 'in_review') inReview += 1
+    else if (r.status === 'draft') draft += 1
+    else if (r.status === 'needs_revision') needsRevision += 1
+  }
+  const blockerCount = signals.filter((a) => a.signal.severity === 'blocker').length
+  const riskCount = signals.filter((a) => a.signal.severity === 'risk').length
+  const watchCount = signals.filter((a) => a.signal.severity === 'watch').length
+  let blockedTask = 0, overdueTask = 0, ownerlessTask = 0, dueSoon = 0
+  for (const t of tasks) {
+    if (t.status === 'blocked') blockedTask += 1
+    if (
+      (t.status === 'not_started' || t.status === 'in_progress') &&
+      t.dueDate &&
+      t.dueDate < today
+    ) overdueTask += 1
+    if (!t.ownerEmail || !t.ownerEmail.trim()) ownerlessTask += 1
+  }
+  return {
+    totalChapters: rows.length,
+    approvedChapters: approved,
+    inReviewChapters: inReview,
+    draftChapters: draft,
+    needsRevisionChapters: needsRevision,
+    bandCounts: {
+      ready: rows.filter((r) => r.band === 'ready').length,
+      almost: rows.filter((r) => r.band === 'almost').length,
+      at_risk: rows.filter((r) => r.band === 'at_risk').length,
+      not_started: rows.filter((r) => r.band === 'not_started').length
+    },
+    blockerCount,
+    riskCount,
+    watchCount,
+    blockedTaskCount: blockedTask,
+    overdueTaskCount: overdueTask,
+    ownerlessTaskCount: ownerlessTask,
+    dueSoonTaskCount: dueSoon
+  }
+}
+
+// ---------- 8. Final presentation bundle (Sprint 2) ----------
+//
+// One markdown file that stitches the outline + Phoenix Nest brief +
+// advisor action plan + per-chapter Playbook export + Claude design
+// brief into a single download. Pure read; no zip required.
+
+export function buildFinalPresentationBundleMd(
+  inputs: ExportInputs,
+  signals: AggregatedAdvisorSignal[],
+  designOutput: DesignOutputType
+): string {
+  const out: string[] = []
+  out.push('# Renni Final Presentation Bundle')
+  out.push('')
+  out.push(
+    'Snapshot bundle for the May 12 / 15 final presentation. Renni Command Center remains the source of truth.'
+  )
+  out.push('')
+  out.push('---')
+  out.push('')
+  out.push(buildPresentationOutlineMd(inputs))
+  out.push('')
+  out.push('---')
+  out.push('')
+  out.push(buildPhoenixNestBriefMd(inputs))
+  out.push('')
+  out.push('---')
+  out.push('')
+  out.push(buildAdvisorActionPlanMd(signals))
+  out.push('')
+  out.push('---')
+  out.push('')
+  // Per-chapter Playbook text — only chapters with any finalText.
+  for (const d of inputs.deliverables) {
+    const studio = inputs.studioResolver(d) ?? getTemplateStudio(d.id)
+    if (!studio) continue
+    const output = inputs.outputs[d.id] ?? null
+    const hasAnyFinal = Object.values(output?.sections ?? {}).some(
+      (s) => (s.finalText ?? '').trim().length > 0
+    )
+    if (!hasAnyFinal) continue
+    out.push(buildPlaybookChapterMd(d, studio, output))
+    out.push('')
+    out.push('---')
+    out.push('')
+  }
+  out.push(buildDesignBriefMd(inputs, designOutput))
+  return out.join('\n')
 }

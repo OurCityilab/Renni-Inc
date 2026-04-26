@@ -51,6 +51,61 @@ const presentationReadiness = computed(() =>
 )
 const backplanSummary = computed(() => presentationReadiness.value.summary)
 
+// Sprint 2 — fixed milestone markers for May 12 / May 15 / May 27.
+// Display-only. Does NOT introduce a global deadline model and does
+// NOT edit any deliverable due date. Days remaining are computed at
+// render time so the chip flips to "today" or "passed" naturally.
+interface Milestone {
+  iso: string
+  label: string
+  detail: string
+}
+const MILESTONES: Milestone[] = [
+  {
+    iso: '2026-05-12',
+    label: 'Final presentation target',
+    detail: 'Primary final-presentation date.'
+  },
+  {
+    iso: '2026-05-15',
+    label: 'Final presentation fallback',
+    detail: 'Latest acceptable final-presentation date.'
+  },
+  {
+    iso: '2026-05-27',
+    label: 'TechTown pop-up',
+    detail: 'Pop-up sale day. Square remains the external POS.'
+  }
+]
+function todayMs(): number {
+  const d = new Date()
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime()
+}
+function milestoneMs(iso: string): number | null {
+  const [y, m, d] = iso.split('-').map(Number)
+  if (!y || !m || !d) return null
+  return new Date(y, m - 1, d).getTime()
+}
+function milestoneDaysRemaining(iso: string): number | null {
+  const t = milestoneMs(iso)
+  if (t === null) return null
+  return Math.round((t - todayMs()) / 86_400_000)
+}
+function milestoneTone(iso: string): string {
+  const days = milestoneDaysRemaining(iso) ?? 0
+  if (days < 0) return 'border-neutral-300 bg-neutral-50 text-neutral-500'
+  if (days <= 3) return 'border-rose-300 bg-rose-50 text-rose-800 font-semibold'
+  if (days <= 14) return 'border-amber-300 bg-amber-50 text-amber-800 font-semibold'
+  return 'border-sky-300 bg-sky-50 text-sky-800'
+}
+function milestoneDaysLabel(iso: string): string {
+  const days = milestoneDaysRemaining(iso)
+  if (days === null) return iso
+  if (days < 0) return `${Math.abs(days)}d ago`
+  if (days === 0) return 'today'
+  return `${days}d to go`
+}
+
 // Mirrors Firestore: admin, Co-CEO, or any chief may create/edit planning.
 const canPlan = computed(
   () => auth.isAdmin || auth.isCoCEO || auth.isChief
@@ -440,6 +495,27 @@ const dependencyCandidates = computed<Task[]>(() =>
           ]"
         >Ownerless · {{ backplanSummary.ownerlessTaskCount }}</li>
       </ul>
+
+      <!-- Sprint 2 — Milestone markers. Display-only. The known
+           dates (May 12 / 15 / 27) are constants in the script;
+           students cannot edit them here. -->
+      <ul class="grid gap-2 text-xs sm:grid-cols-3">
+        <li
+          v-for="m in MILESTONES"
+          :key="`milestone-${m.iso}`"
+          :class="['rounded-md border px-2 py-1.5', milestoneTone(m.iso)]"
+        >
+          <p class="text-[10px] uppercase tracking-wide opacity-80">{{ m.label }}</p>
+          <p class="font-semibold">{{ m.iso }}</p>
+          <p class="text-[11px]">{{ milestoneDaysLabel(m.iso) }}</p>
+          <p class="text-[10px] opacity-80">{{ m.detail }}</p>
+        </li>
+      </ul>
+      <p class="text-[11px] italic text-neutral-500">
+        Display-only milestones. Renni Command Center has no global deadline
+        model; chiefs and instructor still set deliverable due dates from each
+        deliverable detail page.
+      </p>
 
       <!-- Process-order ladder. Display-only; reminds the team
            which step blocks which next step. -->

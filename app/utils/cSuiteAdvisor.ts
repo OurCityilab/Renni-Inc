@@ -52,11 +52,12 @@ export interface AdvisorInputs {
   // V1.2 — optional cross-chapter context for smarter Ch. 7 → Ch. 8
   // signals. Pure read-only; the advisor never writes back to the
   // upstream chapter and never assumes more data than the caller
-  // hands in. Today only ch7Output is used; the field stays a small
-  // map so future passes can add more upstream chapters without a
-  // type churn.
+  // hands in. Sprint 2 added Ch. 8 → Ch. 11 by extending the same
+  // map; the aggregator passes whichever upstream outputs are
+  // relevant to the active deliverable.
   crossChapterContext?: {
     ch7Output?: DeliverableOutput | null
+    ch8Output?: DeliverableOutput | null
   } | null
 }
 
@@ -271,6 +272,49 @@ function isPremiumPriceSignal(
     if (proposedPrice >= max) return true
   }
   return false
+}
+
+// Sprint 2 — pick the strongest Ch. 8 pricing strategy across any
+// section. Ch. 8 typically owns pricing on the `sale-price`
+// section, but the helper iterates the whole chapter so a future
+// reorganization keeps working. Returns null when Ch. 8 has no
+// pricing data the advisor can reason against.
+interface PickedCh8Pricing {
+  sectionTitle: string
+  ps: NonNullable<DeliverableOutput['sections'][string]['pricingStrategy']>
+}
+function pickCh8Pricing(ch8: DeliverableOutput | null): PickedCh8Pricing | null {
+  if (!ch8) return null
+  for (const section of Object.values(ch8.sections ?? {})) {
+    const ps = section?.pricingStrategy
+    if (!ps) continue
+    if (
+      ps.proposedPrice != null ||
+      (ps.comparablePrices?.length ?? 0) > 0 ||
+      (ps.priceTests?.length ?? 0) > 0
+    ) {
+      return { sectionTitle: section.sectionTitleSnapshot || 'Sale price', ps }
+    }
+  }
+  return null
+}
+
+// Count valid comp prices on a Ch. 8 pricing strategy snapshot.
+// Mirrors pricingStrategyMath validComps semantics (name + finite
+// positive price), kept inline so we don't pull in the math helper
+// for one count.
+function validCompCountOnPs(
+  ps: NonNullable<DeliverableOutput['sections'][string]['pricingStrategy']>
+): number {
+  const comps = ps.comparablePrices ?? []
+  let n = 0
+  for (const c of comps) {
+    if (!c.name?.trim()) continue
+    if (typeof c.price !== 'number' || !Number.isFinite(c.price) || c.price <= 0)
+      continue
+    n += 1
+  }
+  return n
 }
 
 // ---------- rule builders ----------
@@ -917,6 +961,9 @@ function crossChapterSignals(inputs: AdvisorInputs): AdvisorSignal[] {
   }
 
   // Ch. 11 — carry pitch missing pricing / segment / margin context.
+  // The chapter-local check below stays so we still flag missing
+  // *intra-chapter* notes; Sprint 2 added cross-chapter rules below
+  // that read Ch. 8 pricing directly.
   if (id === 'ch-11-phoenix-nest-retail-carry-pitch') {
     let pricingPresent = false
     let segmentPresent = false
@@ -949,6 +996,190 @@ function crossChapterSignals(inputs: AdvisorInputs): AdvisorSignal[] {
         chapterId: id,
         source: 'outputs'
       })
+    }
+
+    // Sprint 2 — Ch. 8 → Ch. 11 cross-chapter rules. Read-only;
+    // Ch. 11 advisor never writes back to Ch. 8. We only emit
+    // signals when the caller actually passed ch8Output through
+    // crossChapterContext (the aggregator does this for the Ch. 11
+    // deliverable; no other caller will see these signals).
+    const ch8 = inputs.crossChapterContext?.ch8Output ?? null
+    const picked = pickCh8Pricing(ch8)
+
+    if (!picked) {
+      out.push({
+        id: makeId('xchap-carry-no-ch8-pricing', [id]),
+        scope: 'chapter',
+        severity: 'risk',
+        title: 'Phoenix Nest carry needs Chapter 8 pricing context',
+        summary:
+          'Chapter 8 has no pricing strategy data on file yet. The carry pitch cannot defend a price, margin, or comp position without it.',
+        gap: 'Ch. 8 deliverableOutputs has no pricingStrategy with a proposed price, comps, or price tests.',
+        owner: 'Co-CEOs',
+        supportingRoles: ['CFO'],
+        dependency: 'Ch. 8 pricing context before final Phoenix Nest carry recommendation.',
+        nextAction:
+          'Complete the Ch. 8 Pricing Strategy Builder (sale-price section) before finalizing the Phoenix Nest carry recommendation.',
+        whyItMatters:
+          'A retail buyer reads margin and comps before story. Without Ch. 8 pricing on file, the carry pitch is asking the buyer to trust an unargued number.',
+        howToFix:
+          'Open Chapter 8 → "What should we charge?" and fill at least the cost stack, proposed price, and 2 comps. The carry brief will pick that up automatically.',
+        chapterId: id,
+        source: 'pricing'
+      })
+    } else {
+      const ps = picked.ps
+      const derived = computeDerived(ps)
+      const margin = interpretMargin(derived)
+
+      // Below-cost = "Major Issue" advisory (blocker severity for
+      // sorting, but the explanation copy stays advisory only —
+      // Ch. 11 has no submit gate on pricing).
+      if (derived.belowCost) {
+        out.push({
+          id: makeId('xchap-carry-below-cost', [id]),
+          scope: 'chapter',
+          severity: 'blocker',
+          title: 'Phoenix Nest carry would lose money on every unit',
+          summary:
+            'Chapter 8 proposed price is below total unit cost. Each unit a retailer carries would lose money before fixed costs.',
+          gap: `Ch. 8 unitMargin = ${derived.unitMargin != null ? '$' + derived.unitMargin.toFixed(2) : '—'} on the current cost stack.`,
+          owner: 'CFO',
+          supportingRoles: ['Co-CEOs'],
+          dependency: 'Price/margin before carry recommendation.',
+          nextAction:
+            'Either raise the price or lower unit cost in Chapter 8 before pitching this product to a Phoenix Nest buyer.',
+          whyItMatters:
+            'A retail buyer who notices the math before you do will not carry this product. Ch. 11 cannot defend a price that loses money.',
+          howToFix:
+            'Open Chapter 8 → Pricing Strategy Builder, raise the proposed price OR cut the cost stack until the unit margin is positive. Then re-read the carry brief.',
+          chapterId: id,
+          source: 'pricing'
+        })
+      } else if (margin.band === 'weak') {
+        out.push({
+          id: makeId('xchap-carry-weak-margin', [id]),
+          scope: 'chapter',
+          severity: 'risk',
+          title: 'Phoenix Nest carry leans on a weak margin',
+          summary:
+            'Chapter 8 gross margin is under 30%. A Phoenix Nest buyer needs room for retail markup; weak margin makes the carry hard to defend.',
+          gap: `Ch. 8 grossMarginPct ≈ ${derived.grossMarginPct != null ? derived.grossMarginPct.toFixed(1) + '%' : '—'} (band = weak).`,
+          owner: 'CFO',
+          supportingRoles: ['Co-CEOs'],
+          dependency: 'Price/margin before carry recommendation.',
+          nextAction:
+            'Tighten cost or raise price in Chapter 8 before treating this as a defensible carry-pitch number.',
+          whyItMatters:
+            'Retail carry typically expects room for the retailer to mark up. A weak Renni-side margin makes the pitch hard to defend at a Phoenix Nest buyer table.',
+          howToFix:
+            'Revisit the cost stack in Chapter 8, or explain in writing why the team should still pitch this product despite the weak margin.',
+          chapterId: id,
+          source: 'pricing'
+        })
+      }
+
+      // Light comp evidence under the carry frame.
+      const compCount = validCompCountOnPs(ps)
+      if (compCount < 2) {
+        out.push({
+          id: makeId('xchap-carry-thin-comps', [id]),
+          scope: 'chapter',
+          severity: 'risk',
+          title: 'Carry pitch needs comparable evidence',
+          summary:
+            `Chapter 8 has ${compCount} valid comparable product${compCount === 1 ? '' : 's'} on file. The carry pitch cannot place this price against the market on this evidence.`,
+          gap: `Ch. 8 valid comp count = ${compCount} (need ≥ 2).`,
+          owner: 'CFO',
+          supportingRoles: ['Chief Strategy and Growth Officer'],
+          dependency: 'Comps before defending price at carry buyer table.',
+          nextAction:
+            'Add at least two comparable products with name, price, and source in Chapter 8 before defending this price to a retailer.',
+          whyItMatters:
+            'Retail buyers compare every price against products they already carry. Without 2+ comps, the price reads as "we picked a number" rather than "we placed it against the market."',
+          howToFix:
+            'Open Chapter 8 → Pricing Strategy Builder → Step 3 and add comparables (the pasted-text Comp Source Assistant helps).',
+          chapterId: id,
+          source: 'pricing'
+        })
+      }
+
+      // Pricing confidence + validation step.
+      const confidence = ps.confidence ?? ''
+      if (!confidence || confidence === 'low') {
+        out.push({
+          id: makeId('xchap-carry-low-confidence', [id]),
+          scope: 'chapter',
+          severity: confidence === 'low' ? 'risk' : 'watch',
+          title: 'Validate willingness to pay before final Phoenix Nest pitch',
+          summary:
+            'Chapter 8 pricing confidence is ' +
+            (confidence === 'low' ? 'low' : 'unset') +
+            '. The team should validate willingness to pay with at least one direct customer signal before treating the price as defensible at a buyer table.',
+          gap: `Ch. 8 pricingStrategy.confidence = ${confidence || 'unset'}.`,
+          owner: 'Chief Strategy and Growth Officer',
+          supportingRoles: ['CFO'],
+          dependency: 'Validation before final Phoenix Nest carry recommendation.',
+          nextAction:
+            'Run a small preorder or side-by-side test with a target buyer before finalizing the carry pitch.',
+          whyItMatters:
+            'A retail buyer asks "who actually pays this?" — without preorder or interview evidence, the answer is "we hope so."',
+          howToFix:
+            'Open Chapter 8 → Pricing Strategy Builder → Step 4. Set confidence and name the validation step that ran (or will run).',
+          chapterId: id,
+          source: 'pricing'
+        })
+      }
+
+      // Missing validation step text.
+      if (!(ps.validationStep ?? '').trim()) {
+        out.push({
+          id: makeId('xchap-carry-no-validation', [id]),
+          scope: 'chapter',
+          severity: 'watch',
+          title: 'Carry pitch lacks a named validation step',
+          summary:
+            'Chapter 8 has no validation step on file. A buyer-facing brief reads stronger when the team can name what would prove or break the price.',
+          gap: 'Ch. 8 pricingStrategy.validationStep is empty.',
+          owner: 'Chief Strategy and Growth Officer',
+          supportingRoles: ['CFO'],
+          nextAction:
+            'In Chapter 8, name a concrete validation step (preorder / interview / side-by-side) before exporting the carry pitch.',
+          whyItMatters:
+            'Saying "we will validate later" is weaker than naming the step. Phoenix Nest buyers respect teams that already know how they will check their assumption.',
+          howToFix:
+            'Open Chapter 8 → Pricing Strategy Builder → Step 4 → Validation step.',
+          chapterId: id,
+          source: 'pricing'
+        })
+      }
+
+      // Segment fit. Read Ch. 7's selected segment if available;
+      // mirror the Ch. 8 → segment guidance into the carry frame.
+      const ch7 = inputs.crossChapterContext?.ch7Output ?? null
+      const ch7Picked = ch7 ? pickCh7SegmentProfile(ch7) : null
+      if (!ch7Picked) {
+        out.push({
+          id: makeId('xchap-carry-no-segment', [id]),
+          scope: 'chapter',
+          severity: 'risk',
+          title: 'Carry pitch needs a target buyer / segment',
+          summary:
+            'Neither Chapter 7 nor this chapter carries a structured customer segment. A carry pitch without a named buyer drifts toward "everyone, no one."',
+          gap: 'No populated Market Fit segment in Ch. 7 or this chapter.',
+          owner: 'Chief Strategy and Growth Officer',
+          supportingRoles: ['CMO'],
+          dependency: 'Segment before campaign messaging; segment before defending premium price.',
+          nextAction:
+            'Compose at least one structured segment in Chapter 7 (Segment Composer) before exporting the Phoenix Nest brief.',
+          whyItMatters:
+            'Retail buyers ask "who buys this?" before "what does it cost?" Without a structured segment, every other answer in the carry pitch leans on a guess.',
+          howToFix:
+            'Open Chapter 7 → Market Fit and apply a PRIZM-inspired template (Civic Premium Buyer / Premium Parent / Alumni Legacy) plus evidence sources.',
+          chapterId: id,
+          source: 'segments'
+        })
+      }
     }
   }
 
@@ -1029,12 +1260,14 @@ export interface AggregateAdvisorInputs {
 
 const CH7_DELIVERABLE_ID = 'ch-07-current-product-line-and-pricing'
 const CH8_DELIVERABLE_ID = 'ch-08-finance-and-revenue-model'
+const CH11_DELIVERABLE_ID = 'ch-11-phoenix-nest-retail-carry-pitch'
 
 export function aggregateAdvisorSignals(
   inputs: AggregateAdvisorInputs
 ): AggregatedAdvisorSignal[] {
   const { deliverables, tasks, outputs, studioResolver } = inputs
   const ch7Output = outputs[CH7_DELIVERABLE_ID] ?? null
+  const ch8Output = outputs[CH8_DELIVERABLE_ID] ?? null
   const out: AggregatedAdvisorSignal[] = []
   for (const d of deliverables) {
     const studio = studioResolver(d)
@@ -1044,14 +1277,23 @@ export function aggregateAdvisorSignals(
       studio.requirements,
       tasksForD
     )
+    // Pick which upstream context is relevant for this active
+    // deliverable. Ch. 8 reads Ch. 7 (segments); Ch. 11 reads
+    // Ch. 8 (pricing/margin/comps) AND Ch. 7 (segment fit).
+    // Other chapters get no cross-chapter context.
+    let crossChapterContext: AdvisorInputs['crossChapterContext'] = null
+    if (d.id === CH8_DELIVERABLE_ID) {
+      crossChapterContext = { ch7Output }
+    } else if (d.id === CH11_DELIVERABLE_ID) {
+      crossChapterContext = { ch7Output, ch8Output }
+    }
     const signals = generateAdvisorSignals({
       deliverable: d,
       studio,
       tasks: tasksForD,
       output: outputs[d.id] ?? null,
       requirementCoverage: reqCoverage,
-      crossChapterContext:
-        d.id === CH8_DELIVERABLE_ID ? { ch7Output } : null
+      crossChapterContext
     })
     for (const s of signals) {
       out.push({ signal: s, deliverable: d, studio })
