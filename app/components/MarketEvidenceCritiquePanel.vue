@@ -56,7 +56,38 @@ function riskTone(level: AiCritiqueRiskLevel): string {
   return 'border-emerald-300 bg-emerald-50 text-emerald-800'
 }
 
+// Student-facing error copy. We deliberately do NOT surface raw server
+// messages, stack traces, provider details, secret names, or status
+// codes — students see one of these short prompts and that's it. The
+// raw error is dropped on the floor; the network tab still has it for
+// developers who need to debug.
+const SIGN_IN_MESSAGE = 'You need to be signed in and authorized to use this coach.'
+const DISABLED_MESSAGE = 'AI critique is not configured on this server yet.'
+const GENERIC_MESSAGE = 'The coach could not review this section. Try again after checking your notes.'
+
+interface FetchError {
+  status?: number
+  statusCode?: number
+  data?: { code?: string }
+}
+
+function studentFacingError(e: unknown): string {
+  const err = (e ?? {}) as FetchError
+  const status = err.status ?? err.statusCode
+  const code = err.data?.code
+  if (status === 401 || status === 403 || code === 'ai_unauthorized') {
+    return SIGN_IN_MESSAGE
+  }
+  if (status === 503 || code === 'ai_disabled') {
+    return DISABLED_MESSAGE
+  }
+  return GENERIC_MESSAGE
+}
+
 async function review() {
+  // Defense in depth — `loading` already disables the button via
+  // `buttonDisabled`, but a synchronous re-entry guard makes a
+  // double-click a no-op even if the parent rebinds the handler.
   if (buttonDisabled.value) return
   loading.value = true
   errorMessage.value = null
@@ -72,18 +103,18 @@ async function review() {
     // endpoint without a token.
     const fbUser = auth.user
     if (!fbUser) {
-      errorMessage.value = 'Please sign in again before using AI critique.'
+      errorMessage.value = SIGN_IN_MESSAGE
       return
     }
     let idToken: string
     try {
       idToken = await fbUser.getIdToken()
     } catch {
-      errorMessage.value = 'Please sign in again before using AI critique.'
+      errorMessage.value = SIGN_IN_MESSAGE
       return
     }
     if (!idToken) {
-      errorMessage.value = 'Please sign in again before using AI critique.'
+      errorMessage.value = SIGN_IN_MESSAGE
       return
     }
     // $fetch sends a POST with a JSON body. We pass props.request
@@ -101,16 +132,7 @@ async function review() {
     )
     result.value = data
   } catch (e: unknown) {
-    // Nuxt $fetch errors carry a `data` payload from createError. Pull
-    // the user-facing message out of that, falling back to the raw
-    // error if the server didn't shape it.
-    const err = e as {
-      data?: { message?: string }
-      statusMessage?: string
-      message?: string
-    }
-    errorMessage.value =
-      err?.data?.message || err?.statusMessage || err?.message || 'Critique failed.'
+    errorMessage.value = studentFacingError(e)
   } finally {
     loading.value = false
   }
@@ -132,9 +154,9 @@ function clear() {
         Coach this section against the market evidence rubric
       </h4>
       <p class="text-xs text-neutral-600">
-        Send this section's source notes, draft, evidence, and Market Builder
-        entries to the AI coach for a structured critique. Suggestions only —
-        nothing is saved or submitted.
+        Send this section's source notes, draft, evidence, and demand estimates
+        to the AI coach for a structured critique. Suggestions only — nothing is
+        saved or submitted.
       </p>
     </header>
 
@@ -148,6 +170,19 @@ function clear() {
       <li>Verify every source and number before using a suggestion.</li>
       <li>Do not paste suggestions blindly into final Playbook text.</li>
     </ul>
+
+    <!-- Pre-click guidance for empty sections. Prominent enough that
+         students see it before clicking, but framed as a suggestion
+         (the button stays disabled, so this is the explainer). The
+         coach itself also handles blank input gracefully on the
+         server, so we never accidentally invent evidence. -->
+    <p
+      v-if="!hasStudentInput"
+      class="rounded-md border border-amber-200 bg-amber-50 p-2 text-xs text-amber-900"
+    >
+      Add source notes, evidence, or demand estimates before running critique.
+      The coach can review your thinking, but it cannot critique a blank section.
+    </p>
 
     <div class="flex flex-wrap items-center gap-2">
       <button
@@ -165,13 +200,6 @@ function clear() {
         :disabled="loading"
         @click="clear"
       >Clear critique</button>
-      <p
-        v-if="!hasStudentInput"
-        class="text-xs italic text-neutral-500"
-      >
-        Add source notes, a draft, evidence, or a Market Builder entry first —
-        the coach won't critique an empty section.
-      </p>
     </div>
 
     <p
