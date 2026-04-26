@@ -18,11 +18,13 @@ import type { TemplateStudio } from '~/types/templateStudio'
 import type { RequirementCoverageSummary } from '~/utils/requirementCoverage'
 import type { AdvisorSignal } from '~/types/advisor'
 import {
-  SEVERITY_CHIP_CLASS,
-  SEVERITY_LABEL,
   SOURCE_LABEL,
   generateAdvisorSignals
 } from '~/utils/cSuiteAdvisor'
+import {
+  DISPLAY_LABEL_CHIP_CLASS,
+  getAdvisorDisplayLabel
+} from '~/utils/advisorDisplay'
 
 const props = defineProps<{
   deliverable: Deliverable
@@ -119,8 +121,8 @@ const subtitle = computed(() => {
             <div class="flex flex-wrap items-center gap-1.5">
               <span
                 class="rounded-full border px-2 py-0.5 text-[10px] uppercase tracking-wide"
-                :class="SEVERITY_CHIP_CLASS[topPriority.severity]"
-              >{{ SEVERITY_LABEL[topPriority.severity] }}</span>
+                :class="DISPLAY_LABEL_CHIP_CLASS[getAdvisorDisplayLabel(topPriority).label]"
+              >{{ getAdvisorDisplayLabel(topPriority).label }}</span>
               <span class="rounded-full border border-violet-300 bg-violet-50 px-2 py-0.5 text-[10px] uppercase tracking-wide text-violet-800">
                 Owner · {{ topPriority.owner }}
               </span>
@@ -140,7 +142,19 @@ const subtitle = computed(() => {
             </p>
           </summary>
           <div class="space-y-1 border-t border-neutral-200 p-2">
-            <p class="text-neutral-800">{{ topPriority.summary }}</p>
+            <p class="text-neutral-800">
+              <span class="font-medium text-neutral-600">What this means:</span>
+              {{ getAdvisorDisplayLabel(topPriority).explanation }}
+            </p>
+            <p class="text-neutral-800">
+              <span class="font-medium text-neutral-600">Why it matters:</span>
+              {{ getAdvisorDisplayLabel(topPriority).whyItMatters }}
+            </p>
+            <p class="text-neutral-800">
+              <span class="font-medium text-neutral-600">How to fix:</span>
+              {{ getAdvisorDisplayLabel(topPriority).howToFix }}
+            </p>
+            <p class="text-neutral-700">{{ topPriority.summary }}</p>
             <p v-if="topPriority.gap" class="text-neutral-700">
               <span class="font-medium text-neutral-600">Gap:</span> {{ topPriority.gap }}
             </p>
@@ -217,8 +231,8 @@ const subtitle = computed(() => {
                 <div class="flex flex-wrap items-center gap-1.5">
                   <span
                     class="rounded-full border px-2 py-0.5 text-[10px] uppercase tracking-wide"
-                    :class="SEVERITY_CHIP_CLASS[sig.severity]"
-                  >{{ SEVERITY_LABEL[sig.severity] }}</span>
+                    :class="DISPLAY_LABEL_CHIP_CLASS[getAdvisorDisplayLabel(sig).label]"
+                  >{{ getAdvisorDisplayLabel(sig).label }}</span>
                   <span class="rounded-full border border-violet-300 bg-violet-50 px-2 py-0.5 text-[10px] uppercase tracking-wide text-violet-800">
                     {{ sig.owner }}
                   </span>
@@ -232,6 +246,14 @@ const subtitle = computed(() => {
                 </p>
               </summary>
               <div class="space-y-1 border-t border-neutral-200 p-2">
+                <p class="text-neutral-700">
+                  <span class="font-medium text-neutral-600">Why it matters:</span>
+                  {{ getAdvisorDisplayLabel(sig).whyItMatters }}
+                </p>
+                <p class="text-neutral-700">
+                  <span class="font-medium text-neutral-600">How to fix:</span>
+                  {{ getAdvisorDisplayLabel(sig).howToFix }}
+                </p>
                 <p class="text-neutral-700">{{ sig.summary }}</p>
                 <p v-if="sig.gap" class="text-neutral-700">
                   <span class="font-medium text-neutral-600">Gap:</span> {{ sig.gap }}

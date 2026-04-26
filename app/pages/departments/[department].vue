@@ -7,9 +7,13 @@ import { useDeliverables } from '~/composables/useDeliverables'
 import { useGoals } from '~/composables/useGoals'
 import { useRoster } from '~/composables/useRoster'
 import { useTasks } from '~/composables/useTasks'
+import { useDeliverableOutputs } from '~/composables/useDeliverableOutputs'
 import { DEPARTMENTS } from '~/types/models'
 import type { Deliverable, Department, RosterEntry, Task } from '~/types/models'
 import { taskStatusLabel } from '~/utils/taskStatus'
+import { rolesForDepartment } from '~/utils/cSuiteAdvisor'
+import RoleAdvisorCard from '~/components/RoleAdvisorCard.vue'
+import { getTemplateStudio } from '~/data/templateStudios'
 
 // Local goal-status label map. Goals are simpler (4 values, single
 // surface) so an inline map is preferred over another shared util.
@@ -30,6 +34,7 @@ const deliverables = useDeliverables()
 const goals = useGoals()
 const roster = useRoster()
 const tasks = useTasks()
+const outputs = useDeliverableOutputs()
 
 const dept = computed(() => String(route.params.department) as Department)
 const valid = computed(() => DEPARTMENTS.includes(dept.value))
@@ -41,6 +46,21 @@ const { data: rosterEntries } = roster.watchAll()
 const { data: allTasks, loading: tasksLoading } = tasks.watchAll()
 const { data: allDeliverables, loading: delLoading } = deliverables.watchList()
 const { data: allGoals, loading: goalsLoading } = goals.watchList()
+
+// V1.2 — load deliverableOutputs for studio-backed deliverables only
+// so the RoleAdvisorCard runs the same engine as the cockpit. No new
+// collection; reuses watchManyOutputs read-only fan-out.
+const studioBackedIds = computed<string[]>(() =>
+  allDeliverables.value
+    .filter((d) => Boolean(getTemplateStudio(d.id)))
+    .map((d) => d.id)
+)
+const { data: outputsByDeliverableId, loading: outputsLoading } =
+  outputs.watchManyOutputs(studioBackedIds)
+const advisorRoles = computed(() => rolesForDepartment(dept.value))
+const advisorLoading = computed(
+  () => tasksLoading.value || delLoading.value || outputsLoading.value
+)
 
 // Department chief excludes admin so the card matches the student-facing org chart.
 const chief = computed<RosterEntry | null>(
@@ -183,6 +203,18 @@ function deliverableLinkLabel(t: Task) {
           :tone="blockedTasks.length > 0 ? 'warn' : 'default'"
         />
       </div>
+
+      <!-- C-Suite Advisor V1.2 — daily moves for this department's
+           chief. Read-only; never creates tasks or edits dates. -->
+      <RoleAdvisorCard
+        v-if="advisorRoles.length > 0"
+        :roles="advisorRoles"
+        :title="`${label} — daily moves`"
+        :deliverables="allDeliverables"
+        :tasks="allTasks"
+        :outputs="outputsByDeliverableId"
+        :loading="advisorLoading"
+      />
 
       <!-- Who is on this team? -->
       <section class="card space-y-2">

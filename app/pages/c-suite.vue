@@ -2,12 +2,18 @@
 import { computed, onMounted, ref } from 'vue'
 import { useAuthStore } from '~/stores/auth'
 import { useDeliverables } from '~/composables/useDeliverables'
+import { useTasks } from '~/composables/useTasks'
+import { useDeliverableOutputs } from '~/composables/useDeliverableOutputs'
 import type { Deliverable, Department } from '~/types/models'
+import RoleAdvisorCard from '~/components/RoleAdvisorCard.vue'
+import { getTemplateStudio } from '~/data/templateStudios'
 
 definePageMeta({ middleware: ['c-suite'] })
 
 const auth = useAuthStore()
 const deliverables = useDeliverables()
+const tasks = useTasks()
+const outputs = useDeliverableOutputs()
 
 const all = ref<Deliverable[]>([])
 const loading = ref(true)
@@ -22,6 +28,27 @@ onMounted(async () => {
   all.value = await deliverables.list()
   loading.value = false
 })
+
+// V1.2 — live data for the Co-CEOs / cross-functional advisor card.
+// Independent of `all` (which is used by the existing KPI rollup
+// below). watchManyOutputs + watchAll keep the card reactive without
+// forcing the rest of the dashboard to switch reactivity model.
+const { data: liveDeliverables, loading: liveDeliverablesLoading } =
+  deliverables.watchList()
+const { data: liveTasks, loading: liveTasksLoading } = tasks.watchAll()
+const advisorStudioBackedIds = computed<string[]>(() =>
+  liveDeliverables.value
+    .filter((d) => Boolean(getTemplateStudio(d.id)))
+    .map((d) => d.id)
+)
+const { data: liveOutputs, loading: liveOutputsLoading } =
+  outputs.watchManyOutputs(advisorStudioBackedIds)
+const advisorLoading = computed(
+  () =>
+    liveDeliverablesLoading.value ||
+    liveTasksLoading.value ||
+    liveOutputsLoading.value
+)
 
 const totalApproved = computed(() => all.value.filter((d) => d.status === 'approved').length)
 const inReview = computed(() => all.value.filter((d) => d.status === 'in_review'))
@@ -87,6 +114,18 @@ const pendingForMe = computed(() => {
           :tone="pendingForMe.length > 0 ? 'warn' : 'default'"
         />
       </div>
+
+      <!-- C-Suite Advisor V1.2 — Co-CEOs / cross-functional view.
+           Read-only; same engine as /c-suite-advisor cockpit. -->
+      <RoleAdvisorCard
+        :roles="['Co-CEOs', 'Instructor/Admin']"
+        title="Co-CEOs — daily moves"
+        subtitle="Cross-functional and approval-readiness signals across studio-backed deliverables. Read-only."
+        :deliverables="liveDeliverables"
+        :tasks="liveTasks"
+        :outputs="liveOutputs"
+        :loading="advisorLoading"
+      />
 
       <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <NuxtLink

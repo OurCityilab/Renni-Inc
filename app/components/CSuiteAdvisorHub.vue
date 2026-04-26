@@ -24,19 +24,21 @@ import type {
   Task
 } from '~/types/models'
 import type { TemplateStudio } from '~/types/templateStudio'
+import { computeRequirementCoverage } from '~/utils/requirementCoverage'
 import {
-  computeRequirementCoverage,
-  type RequirementCoverageSummary
-} from '~/utils/requirementCoverage'
-import {
+  aggregateAdvisorSignals,
+  filterAggregatedByRoles,
   generateAdvisorSignals,
-  SEVERITY_CHIP_CLASS,
-  SEVERITY_LABEL,
-  SOURCE_LABEL
+  SEVERITY_RANK,
+  SOURCE_LABEL,
+  type AggregatedAdvisorSignal
 } from '~/utils/cSuiteAdvisor'
+import {
+  DISPLAY_LABEL_CHIP_CLASS,
+  getAdvisorDisplayLabel
+} from '~/utils/advisorDisplay'
 import type {
   AdvisorRole,
-  AdvisorSignal,
   AdvisorSignalSeverity
 } from '~/types/advisor'
 import { getTemplateStudio } from '~/data/templateStudios'
@@ -49,40 +51,22 @@ const props = defineProps<{
 }>()
 
 // ---- per-deliverable signal generation ----
-// We build a flat list of {signal, deliverable, studio} so every
-// downstream view can group/sort/filter without re-running the
-// engine. Non-studio deliverables yield no signals but still
-// appear in the deliverable count, which is fine — the brief
-// excludes them from advisor signals explicitly.
-interface AggregatedSignal {
-  signal: AdvisorSignal
-  deliverable: Deliverable
-  studio: TemplateStudio
-}
+// V1.2 — uses the shared aggregator so the dashboard role cards
+// produce identical signals. Cross-chapter context (Ch. 7 → Ch. 8
+// price-segment fit) is wired automatically by the aggregator.
+type AggregatedSignal = AggregatedAdvisorSignal
 
-const allAggregated = computed<AggregatedSignal[]>(() => {
-  const out: AggregatedSignal[] = []
-  for (const d of props.deliverables) {
-    const studio = getTemplateStudio(d.id)
-    if (!studio) continue
-    const tasksForD = props.tasks.filter((t) => t.deliverableId === d.id)
-    const reqCoverage: RequirementCoverageSummary = computeRequirementCoverage(
-      studio.requirements,
-      tasksForD
-    )
-    const signals = generateAdvisorSignals({
-      deliverable: d,
-      studio,
-      tasks: tasksForD,
-      output: props.outputs[d.id] ?? null,
-      requirementCoverage: reqCoverage
-    })
-    for (const s of signals) {
-      out.push({ signal: s, deliverable: d, studio })
-    }
-  }
-  return out
-})
+const allAggregated = computed<AggregatedSignal[]>(() =>
+  aggregateAdvisorSignals({
+    deliverables: props.deliverables,
+    tasks: props.tasks,
+    outputs: props.outputs,
+    studioResolver: (d) => getTemplateStudio(d.id)
+  })
+)
+// Suppress unused-warning on computeRequirementCoverage (kept
+// imported because the matrix recomputes coverage display below).
+void computeRequirementCoverage
 
 // ---- role filter (local state only) ----
 // Filters by signal.owner OR (signal.supportingRoles ?? []).includes(role).
@@ -100,12 +84,7 @@ const roleFilter = ref<AdvisorRole | 'All'>('All')
 
 const filteredAggregated = computed<AggregatedSignal[]>(() => {
   if (roleFilter.value === 'All') return allAggregated.value
-  const role = roleFilter.value
-  return allAggregated.value.filter(
-    (a) =>
-      a.signal.owner === role ||
-      (a.signal.supportingRoles ?? []).includes(role)
-  )
+  return filterAggregatedByRoles(allAggregated.value, [roleFilter.value])
 })
 
 // ---- B. Summary counts ----
@@ -128,23 +107,21 @@ const statusCounts = computed(() => {
   return acc
 })
 
-// ---- C. Top 3 moves ----
-// AdvisorSignal lists are already severity-sorted per deliverable.
-// We re-sort the flat list here so blockers across all chapters
-// surface above risks within any single chapter.
-const SEVERITY_RANK: Record<AdvisorSignalSeverity, number> = {
-  blocker: 0,
-  risk: 1,
-  watch: 2,
-  info: 3
-}
+// ---- C. Today's Moves ----
+// Re-rank the flat list so blockers across all chapters surface
+// above risks within any single chapter. Uses the shared
+// SEVERITY_RANK so the cockpit and dashboard cards order signals
+// the same way.
+// Up to 5 highest-priority moves (brief V1.2 — "3 to 5"). The list
+// auto-shrinks when fewer signals exist; the empty state covers
+// zero.
 const topMoves = computed<AggregatedSignal[]>(() => {
   return [...filteredAggregated.value]
     .sort(
       (a, b) =>
         SEVERITY_RANK[a.signal.severity] - SEVERITY_RANK[b.signal.severity]
     )
-    .slice(0, 3)
+    .slice(0, 5)
 })
 
 // ---- D. Owner lanes ----
@@ -183,6 +160,7 @@ interface AtRiskChapter {
   highestSeverity: AdvisorSignalSeverity
   topOwner: AdvisorRole
   topNextAction: string
+  topSignalRef: AggregatedSignal['signal']
   signalCount: number
 }
 const atRiskChapters = computed<AtRiskChapter[]>(() => {
@@ -207,6 +185,7 @@ const atRiskChapters = computed<AtRiskChapter[]>(() => {
       highestSeverity: top.signal.severity,
       topOwner: top.signal.owner,
       topNextAction: top.signal.nextAction,
+      topSignalRef: top.signal,
       signalCount: list.length
     })
   }
@@ -386,22 +365,31 @@ function fmtDate(iso: string | null): string {
       </p>
     </section>
 
-    <!-- B. Summary cards -->
+    <!-- B. Summary cards (V1.2 — student-friendly labels) -->
     <section class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
       <article class="card border-rose-200 bg-rose-50/40">
-        <p class="text-xs uppercase tracking-wide text-rose-700">Blockers</p>
+        <p class="text-xs uppercase tracking-wide text-rose-700">Stops / Blocked</p>
         <p class="text-2xl font-semibold text-rose-900">{{ severityCounts.blocker }}</p>
+        <p class="text-[11px] text-rose-700">
+          Items that stop submit or show a task is blocked.
+        </p>
       </article>
       <article class="card border-amber-200 bg-amber-50/40">
-        <p class="text-xs uppercase tracking-wide text-amber-700">Risks</p>
+        <p class="text-xs uppercase tracking-wide text-amber-700">Needs Action</p>
         <p class="text-2xl font-semibold text-amber-900">{{ severityCounts.risk }}</p>
+        <p class="text-[11px] text-amber-700">
+          Work can continue, but this could weaken the chapter or pitch.
+        </p>
       </article>
       <article class="card border-sky-200 bg-sky-50/40">
-        <p class="text-xs uppercase tracking-wide text-sky-700">Watch</p>
+        <p class="text-xs uppercase tracking-wide text-sky-700">Check Soon</p>
         <p class="text-2xl font-semibold text-sky-900">{{ severityCounts.watch }}</p>
+        <p class="text-[11px] text-sky-700">
+          Not urgent yet, but do not ignore it.
+        </p>
       </article>
       <article class="card border-emerald-200 bg-emerald-50/40">
-        <p class="text-xs uppercase tracking-wide text-emerald-700">Monitoring / info</p>
+        <p class="text-xs uppercase tracking-wide text-emerald-700">FYI / Monitoring</p>
         <p class="text-2xl font-semibold text-emerald-900">{{ severityCounts.info }}</p>
         <p class="text-[11px] text-emerald-700">
           {{ statusCounts.in_review }} in review · {{ statusCounts.approved }} approved
@@ -409,21 +397,21 @@ function fmtDate(iso: string | null): string {
       </article>
     </section>
 
-    <!-- C. Top 3 moves -->
+    <!-- C. Today's Moves (was Top 3 — V1.2) -->
     <section class="card space-y-2">
       <header class="space-y-0.5">
         <p class="text-xs font-semibold uppercase tracking-wide text-neutral-600">
-          Top 3 moves
+          Today's Moves
         </p>
         <p class="text-xs text-neutral-500">
-          Highest-severity signals across studio-backed deliverables.
+          Highest-priority actions for student chiefs. Up to 5 across studio-backed deliverables.
         </p>
       </header>
       <p
         v-if="topMoves.length === 0"
         class="rounded-md border border-emerald-200 bg-emerald-50 p-2 text-xs text-emerald-900"
       >
-        No active blockers, risks, or watches under this filter. Continue
+        No Stops Submit, Needs Action, or Check Soon items under this filter. Continue
         reviewing final text and approval rubric.
       </p>
       <ul v-else class="space-y-2">
@@ -435,10 +423,13 @@ function fmtDate(iso: string | null): string {
           <div class="flex flex-wrap items-center gap-1.5">
             <span
               class="rounded-full border px-2 py-0.5 text-[10px] uppercase tracking-wide"
-              :class="SEVERITY_CHIP_CLASS[a.signal.severity]"
-            >{{ SEVERITY_LABEL[a.signal.severity] }}</span>
+              :class="DISPLAY_LABEL_CHIP_CLASS[getAdvisorDisplayLabel(a.signal).label]"
+            >{{ getAdvisorDisplayLabel(a.signal).label }}</span>
             <span class="rounded-full border border-violet-300 bg-violet-50 px-2 py-0.5 text-[10px] uppercase tracking-wide text-violet-800">
-              {{ a.signal.owner }}
+              Owner · {{ a.signal.owner }}
+            </span>
+            <span class="rounded-full border border-neutral-300 bg-neutral-50 px-2 py-0.5 text-[10px] uppercase tracking-wide text-neutral-700">
+              {{ chapterTitle(a.deliverable, a.studio) }}
             </span>
             <span class="rounded-full border border-neutral-300 bg-neutral-50 px-2 py-0.5 text-[10px] uppercase tracking-wide text-neutral-700">
               {{ SOURCE_LABEL[a.signal.source] }}
@@ -449,9 +440,46 @@ function fmtDate(iso: string | null): string {
             >Open chapter →</NuxtLink>
           </div>
           <p class="text-neutral-900">
-            <span class="font-medium">{{ chapterTitle(a.deliverable, a.studio) }} — {{ a.signal.title }}.</span>
+            <span class="font-medium">{{ a.signal.title }}.</span>
             {{ a.signal.nextAction }}
           </p>
+          <details class="text-neutral-700">
+            <summary class="cursor-pointer text-[11px] text-phoenix-700 hover:underline">
+              What this means / why it matters / how to fix
+            </summary>
+            <div class="mt-1 space-y-0.5 text-[11px]">
+              <p>
+                <span class="font-medium text-neutral-600">What this means:</span>
+                {{ getAdvisorDisplayLabel(a.signal).explanation }}
+              </p>
+              <p>
+                <span class="font-medium text-neutral-600">Why it matters:</span>
+                {{ getAdvisorDisplayLabel(a.signal).whyItMatters }}
+              </p>
+              <p>
+                <span class="font-medium text-neutral-600">How to fix:</span>
+                {{ getAdvisorDisplayLabel(a.signal).howToFix }}
+              </p>
+              <p
+                v-if="(a.signal.supportingRoles?.length ?? 0) > 0"
+                class="text-neutral-700"
+              >
+                <span class="font-medium text-neutral-600">Help from:</span>
+                {{ a.signal.supportingRoles!.join(' · ') }}
+              </p>
+              <p v-if="a.signal.dependency" class="text-neutral-700">
+                <span class="font-medium text-neutral-600">Happens first:</span>
+                {{ a.signal.dependency }}
+              </p>
+              <p
+                v-if="a.signal.suggestedTask?.definitionOfDone"
+                class="text-neutral-700"
+              >
+                <span class="font-medium text-neutral-600">Done looks like:</span>
+                {{ a.signal.suggestedTask.definitionOfDone }}
+              </p>
+            </div>
+          </details>
         </li>
       </ul>
     </section>
@@ -491,8 +519,8 @@ function fmtDate(iso: string | null): string {
               <div class="flex flex-wrap items-center gap-1.5">
                 <span
                   class="rounded-full border px-1.5 py-0.5 text-[10px] uppercase tracking-wide"
-                  :class="SEVERITY_CHIP_CLASS[a.signal.severity]"
-                >{{ SEVERITY_LABEL[a.signal.severity] }}</span>
+                  :class="DISPLAY_LABEL_CHIP_CLASS[getAdvisorDisplayLabel(a.signal).label]"
+                >{{ getAdvisorDisplayLabel(a.signal).label }}</span>
                 <NuxtLink
                   :to="`/deliverables/${a.deliverable.id}`"
                   class="text-[10px] text-phoenix-700 hover:underline"
@@ -515,7 +543,7 @@ function fmtDate(iso: string | null): string {
           At-risk chapters
         </p>
         <p class="text-xs text-neutral-500">
-          Chapters with at least one blocker, risk, or watch. Sorted by severity.
+          Chapters with at least one Stops Submit / Blocked Task / Needs Action / Check Soon. Sorted by severity.
         </p>
       </header>
       <p
@@ -533,8 +561,8 @@ function fmtDate(iso: string | null): string {
           <div class="flex flex-wrap items-center gap-1.5">
             <span
               class="rounded-full border px-1.5 py-0.5 text-[10px] uppercase tracking-wide"
-              :class="SEVERITY_CHIP_CLASS[row.highestSeverity]"
-            >{{ SEVERITY_LABEL[row.highestSeverity] }}</span>
+              :class="DISPLAY_LABEL_CHIP_CLASS[getAdvisorDisplayLabel(row.topSignalRef).label]"
+            >{{ getAdvisorDisplayLabel(row.topSignalRef).label }}</span>
             <span class="rounded-full border border-violet-300 bg-violet-50 px-2 py-0.5 text-[10px] uppercase tracking-wide text-violet-800">
               {{ row.topOwner }}
             </span>

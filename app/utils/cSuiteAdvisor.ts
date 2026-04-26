@@ -20,9 +20,10 @@
 
 import type { Deliverable, DeliverableOutput, Task } from '~/types/models'
 import type { TemplateStudio, TemplateStudioRequirement } from '~/types/templateStudio'
-import type {
-  RequirementCoverageEntry,
-  RequirementCoverageSummary
+import {
+  computeRequirementCoverage,
+  type RequirementCoverageEntry,
+  type RequirementCoverageSummary
 } from '~/utils/requirementCoverage'
 import type {
   AdvisorRole,
@@ -48,6 +49,15 @@ export interface AdvisorInputs {
   // Optional — when omitted (e.g., non-studio deliverable), advisor
   // skips requirement signals.
   requirementCoverage?: RequirementCoverageSummary | null
+  // V1.2 — optional cross-chapter context for smarter Ch. 7 → Ch. 8
+  // signals. Pure read-only; the advisor never writes back to the
+  // upstream chapter and never assumes more data than the caller
+  // hands in. Today only ch7Output is used; the field stays a small
+  // map so future passes can add more upstream chapters without a
+  // type churn.
+  crossChapterContext?: {
+    ch7Output?: DeliverableOutput | null
+  } | null
 }
 
 // ---------- owner mapping ----------
@@ -157,7 +167,7 @@ function ownerForRequirement(req: TemplateStudioRequirement): AdvisorRole {
 
 // ---------- severity ranking ----------
 
-const SEVERITY_RANK: Record<AdvisorSignalSeverity, number> = {
+export const SEVERITY_RANK: Record<AdvisorSignalSeverity, number> = {
   blocker: 0,
   risk: 1,
   watch: 2,
@@ -187,6 +197,80 @@ function todayIso(): string {
   const m = String(d.getMonth() + 1).padStart(2, '0')
   const day = String(d.getDate()).padStart(2, '0')
   return `${y}-${m}-${day}`
+}
+
+// V1.2 — pick the strongest-signal Ch. 7 segment profile to feed
+// the cross-chapter advisor. Selection priority:
+//   1. The segment named in scenarioAssumptions.selectedSegmentId
+//      (when present and populated).
+//   2. Otherwise the first segment with a populated profile.
+// Returns null when no Ch. 7 segment carries a structured profile
+// the advisor can reason against.
+interface PickedCh7Segment {
+  segmentName: string
+  profile: NonNullable<
+    NonNullable<DeliverableOutput['sections'][string]['marketFit']>['segments']
+  >[number]['profile'] & {}
+}
+function pickCh7SegmentProfile(ch7: DeliverableOutput): PickedCh7Segment | null {
+  const sections = Object.values(ch7.sections ?? {})
+  // Pass 1: honor scenarioAssumptions.selectedSegmentId.
+  for (const section of sections) {
+    const fit = section?.marketFit
+    if (!fit) continue
+    const selectedId = fit.scenarioAssumptions?.selectedSegmentId ?? null
+    if (!selectedId) continue
+    const seg = (fit.segments ?? []).find((s) => s.id === selectedId)
+    if (seg?.profile) {
+      return { segmentName: seg.name || 'Selected segment', profile: seg.profile }
+    }
+  }
+  // Pass 2: first segment with any structured profile content.
+  for (const section of sections) {
+    for (const seg of section?.marketFit?.segments ?? []) {
+      const p = seg.profile
+      if (!p) continue
+      const populated =
+        Boolean(p.relationshipRole?.trim()) ||
+        Boolean(p.lifeStage) ||
+        Boolean(p.incomeBracket) ||
+        Boolean(p.geography) ||
+        Boolean(p.urbanicity) ||
+        Boolean(p.spendingPower) ||
+        Boolean(p.priceSensitivity) ||
+        Boolean(p.buyingBehavior) ||
+        Boolean(p.evidenceConfidence) ||
+        Boolean(p.profileName?.trim()) ||
+        Boolean(p.motivations?.trim()) ||
+        Boolean(p.likelyObjections?.trim())
+      if (populated) {
+        return { segmentName: seg.name || p.profileName || 'Segment', profile: p }
+      }
+    }
+  }
+  return null
+}
+
+// V1.2 — premium-price heuristic for Ch. 7 → Ch. 8 cross-chapter
+// rules. Premium = price ≥ $100 OR comp position lands at/above the
+// comp range OR confidence flagged as low while price is non-zero.
+// Deliberately conservative: only fires when we're confident the
+// pricing argument leans premium, not just because a number exists.
+function isPremiumPriceSignal(
+  ps: NonNullable<
+    DeliverableOutput['sections'][string]['pricingStrategy']
+  >,
+  proposedPrice: number
+): boolean {
+  if (proposedPrice >= 100) return true
+  const compMin = (ps.comparablePrices ?? [])
+    .map((c) => c.price)
+    .filter((p): p is number => typeof p === 'number' && Number.isFinite(p) && p > 0)
+  if (compMin.length >= 2) {
+    const max = Math.max(...compMin)
+    if (proposedPrice >= max) return true
+  }
+  return false
 }
 
 // ---------- rule builders ----------
@@ -701,10 +785,102 @@ function crossChapterSignals(inputs: AdvisorInputs): AdvisorSignal[] {
             'Segment before defending premium price; comps + segment before campaign messaging.',
           nextAction:
             'Name the target segment in the Pricing Strategy Builder, or compose a structured segment in Chapter 7 first.',
+          whyItMatters:
+            'A premium price without a named buyer reads as "we hope someone wants this." The team cannot defend the number to a chief or buyer until the segment is named.',
+          howToFix:
+            'Open the Pricing Strategy Builder on this section and set the target segment, or pull a structured segment from Chapter 7 first.',
           chapterId: id,
           sectionId: section.id,
           source: 'pricing'
         })
+      }
+    }
+
+    // V1.2 — smarter Ch. 7 → Ch. 8 cross-chapter cues. Only fires
+    // when the caller passed crossChapterContext.ch7Output. We
+    // surface two specific gaps the chapter-local rules can't see:
+    //   (a) Ch. 8 has a premium price AND Ch. 7 selected segment is
+    //       price-sensitive / constrained → "Price-segment fit
+    //       needs validation"
+    //   (b) Ch. 7 segment has low/unset evidenceConfidence AND
+    //       Ch. 8 has any pricing recommendation → "Validate
+    //       segment before final pricing recommendation"
+    const ch7 = inputs.crossChapterContext?.ch7Output ?? null
+    if (ch7) {
+      // Find the strongest-signal Ch. 7 segment profile. Selection
+      // priority: scenarioAssumptions.selectedSegmentId if set,
+      // otherwise the first populated segment with a structured
+      // profile.
+      const ch7Picked = pickCh7SegmentProfile(ch7)
+      if (ch7Picked) {
+        for (const section of studio.sections) {
+          if (!section.pricingStrategy?.enabled) continue
+          const ps = output?.sections?.[section.id]?.pricingStrategy ?? null
+          if (!ps?.proposedPrice) continue
+          const proposed = ps.proposedPrice
+          const isPremium = isPremiumPriceSignal(ps, proposed)
+          const profile = ch7Picked.profile
+          const sensitiveOrConstrained =
+            profile.priceSensitivity === 'high' ||
+            profile.spendingPower === 'constrained' ||
+            profile.incomeBracket === 'under-35k'
+          if (isPremium && sensitiveOrConstrained) {
+            out.push({
+              id: makeId('xchap-price-segment-fit', [id, section.id]),
+              scope: 'section',
+              severity: 'risk',
+              title: 'Price-segment fit needs validation',
+              summary:
+                'Chapter 8 has a premium price on file, but the Chapter 7 segment is price-sensitive or constrained. The team needs willingness-to-pay evidence or a better-fit premium segment.',
+              gap: `Ch. 7 segment "${ch7Picked.segmentName}" → priceSensitivity=${profile.priceSensitivity || 'unset'}, spendingPower=${profile.spendingPower || 'unset'}, incomeBracket=${profile.incomeBracket || 'unset'}.`,
+              owner: 'CFO',
+              supportingRoles: [
+                'Chief Strategy and Growth Officer',
+                'CMO'
+              ],
+              dependency:
+                'Segment before defending premium price; comps + evidence before locking the recommendation.',
+              nextAction:
+                'Validate willingness to pay with this segment, or pivot to a premium-fit segment (Premium Metro Civic Localist, Premium Parent Supporter, Alumni Legacy Buyer).',
+              whyItMatters:
+                'A $100 sweatshirt may be a weak fit for high-sensitivity student buyers but stronger for premium civic / parent-supporter / alumni segments. Without evidence, the price-segment pair is an assumption.',
+              howToFix:
+                'Run a small willingness-to-pay test (preorder / interview) at this price with the Ch. 7 segment, OR open Ch. 7 Market Fit and apply a premium-fit template (Civic Premium / Premium Parent / Alumni).',
+              chapterId: id,
+              sectionId: section.id,
+              source: 'pricing'
+            })
+          }
+          // Ch. 7 evidenceConfidence low/unset + Ch. 8 pricing
+          // present → "Validate segment before final pricing"
+          const ec = profile.evidenceConfidence ?? ''
+          if (!ec || ec === 'low') {
+            out.push({
+              id: makeId(
+                'xchap-validate-segment-before-pricing',
+                [id, section.id]
+              ),
+              scope: 'section',
+              severity: ec === 'low' ? 'risk' : 'watch',
+              title: 'Validate segment before final pricing recommendation',
+              summary:
+                'Chapter 8 has a price recommendation, but the Chapter 7 segment is still mostly an assumption.',
+              gap: `Ch. 7 segment "${ch7Picked.segmentName}" → evidenceConfidence=${ec || 'unset'}.`,
+              owner: 'Chief Strategy and Growth Officer',
+              supportingRoles: ['CFO'],
+              dependency: 'Segment evidence before final pricing recommendation.',
+              nextAction:
+                'Run interviews / surveys / a small preorder against this segment, then lock the price.',
+              whyItMatters:
+                'Locking a price on top of a segment-fit assumption means defending two soft pieces at once. Validate the segment first; the pricing argument gets stronger.',
+              howToFix:
+                'Open Ch. 7 Market Fit, fill in evidenceSources / validationStep on the segment profile, and capture direct customer evidence before locking the price.',
+              chapterId: id,
+              sectionId: section.id,
+              source: 'marketFit'
+            })
+          }
+        }
       }
     }
   }
@@ -825,3 +1001,102 @@ export const SOURCE_LABEL: Record<AdvisorSource, string> = {
   approval: 'Approval',
   dueDate: 'Due date'
 }
+
+// V1.2 — shared aggregation for the cockpit and the role/department
+// dashboard cards. Returns one flat list across studio-backed
+// deliverables with the per-signal `deliverable` and `studio`
+// attached. Pure read-only; never persists, never fetches.
+//
+// Cross-chapter context: Chapter 8 advisor signals look at the
+// Chapter 7 output (when present in `outputs`) so price-vs-segment
+// signals can read structured Ch. 7 profile data.
+export interface AggregatedAdvisorSignal {
+  signal: AdvisorSignal
+  deliverable: Deliverable
+  studio: TemplateStudio
+}
+
+export interface AggregateAdvisorInputs {
+  deliverables: Deliverable[]
+  tasks: Task[]
+  outputs: Record<string, DeliverableOutput | null>
+  // Optional resolver from deliverable → its studio. Falls back to
+  // a noop loader so the function works in environments where the
+  // caller wants to control the studio shape (tests, future
+  // pluggable studios).
+  studioResolver: (deliverable: Deliverable) => TemplateStudio | null
+}
+
+const CH7_DELIVERABLE_ID = 'ch-07-current-product-line-and-pricing'
+const CH8_DELIVERABLE_ID = 'ch-08-finance-and-revenue-model'
+
+export function aggregateAdvisorSignals(
+  inputs: AggregateAdvisorInputs
+): AggregatedAdvisorSignal[] {
+  const { deliverables, tasks, outputs, studioResolver } = inputs
+  const ch7Output = outputs[CH7_DELIVERABLE_ID] ?? null
+  const out: AggregatedAdvisorSignal[] = []
+  for (const d of deliverables) {
+    const studio = studioResolver(d)
+    if (!studio) continue
+    const tasksForD = tasks.filter((t) => t.deliverableId === d.id)
+    const reqCoverage = computeRequirementCoverage(
+      studio.requirements,
+      tasksForD
+    )
+    const signals = generateAdvisorSignals({
+      deliverable: d,
+      studio,
+      tasks: tasksForD,
+      output: outputs[d.id] ?? null,
+      requirementCoverage: reqCoverage,
+      crossChapterContext:
+        d.id === CH8_DELIVERABLE_ID ? { ch7Output } : null
+    })
+    for (const s of signals) {
+      out.push({ signal: s, deliverable: d, studio })
+    }
+  }
+  return out
+}
+
+// V1.2 — role/department mapping helpers used by dashboard cards.
+// Department dashboard route is /departments/{department}; the
+// advisor needs to know which AdvisorRole(s) live in that
+// department so the card filters signals correctly.
+export function rolesForDepartment(
+  department: 'finance' | 'operations' | 'marketing' | 'strategy-growth' | 'executive' | 'admin'
+): AdvisorRole[] {
+  switch (department) {
+    case 'finance':
+      return ['CFO']
+    case 'operations':
+      return ['COO']
+    case 'marketing':
+      return ['CMO']
+    case 'strategy-growth':
+      return ['Chief Strategy and Growth Officer']
+    case 'executive':
+      return ['Co-CEOs']
+    case 'admin':
+      return ['Instructor/Admin']
+    default:
+      return []
+  }
+}
+
+// Filter aggregated signals to those owned or supported by any of
+// the supplied roles. Pure read.
+export function filterAggregatedByRoles(
+  rows: AggregatedAdvisorSignal[],
+  roles: AdvisorRole[]
+): AggregatedAdvisorSignal[] {
+  if (roles.length === 0) return rows
+  const set = new Set(roles)
+  return rows.filter(
+    (r) =>
+      set.has(r.signal.owner) ||
+      (r.signal.supportingRoles ?? []).some((sr) => set.has(sr))
+  )
+}
+

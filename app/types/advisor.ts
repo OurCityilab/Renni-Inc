@@ -88,4 +88,9 @@ export interface AdvisorSignal {
   chapterId?: string
   sectionId?: string
   source: AdvisorSource
+  // V1.2 — student-facing handhold copy. Both optional; the helper
+  // getAdvisorDisplayLabel() falls back to a sensible default per
+  // severity + source when the rule didn't supply these.
+  whyItMatters?: string
+  howToFix?: string
 }
