@@ -9,6 +9,7 @@ import {
   type SectionSavePayload
 } from '~/composables/useDeliverableOutputs'
 import type {
+  BrandFitBuilder as BrandFitBuilderState,
   Deliverable,
   DeliverableEvidenceLink,
   DeliverableOutput,
@@ -43,6 +44,11 @@ import MarketFitBuilder from '~/components/MarketFitBuilder.vue'
 import MarketFitReferencePanel, {
   type ReferencedMarketFitRow
 } from '~/components/MarketFitReferencePanel.vue'
+import BrandFitBuilder from '~/components/BrandFitBuilder.vue'
+import {
+  buildBrandFitSnapshot,
+  type BrandFitSnapshot
+} from '~/utils/brandFitNarrative'
 import {
   buildDemandSnapshot,
   buildDemandToRevenueNarrative,
@@ -996,6 +1002,18 @@ function shouldShowMarketFit(s: TemplateStudioSection): boolean {
 
 function persistedMarketFit(s: TemplateStudioSection): MarketFitBuilderState | null {
   return persistedSection(s)?.marketFit ?? null
+}
+
+// Brand Fit Builder gate. Independent of marketFit so a section can
+// surface either, both, or neither. Studio sections opt in via
+// `s.brandFit?.enabled` (set on the Ch 5 / Ch 6 / Ch 10 brand-relevant
+// sections).
+function shouldShowBrandFit(s: TemplateStudioSection): boolean {
+  return s.brandFit?.enabled === true
+}
+
+function persistedBrandFit(s: TemplateStudioSection): BrandFitBuilderState | null {
+  return persistedSection(s)?.brandFit ?? null
 }
 
 // Synthesize MarketBuilderEntry rows from the section's Market Fit
@@ -2448,6 +2466,25 @@ watch(
           :guidance="s.marketFit?.guidance ?? null"
         />
 
+        <!-- Brand Fit Builder V1 — section-level identity-vs-market
+             signal tool. Visible only on sections that opt in via
+             studio metadata (Ch 5 / Ch 6 / Ch 10 brand-relevant
+             sections). Independent of Market Fit / Market Builder /
+             AI Critique. We pass the same section's Market Fit state
+             as a read-only context callout so the team can validate
+             that brand identity signals the same target customer.
+             Brand Fit works without Market Fit data. -->
+        <BrandFitBuilder
+          v-if="shouldShowBrandFit(s)"
+          :deliverable-id="deliverable.id"
+          :section-id="s.id"
+          :section-title="s.title"
+          :initial="persistedBrandFit(s)"
+          :editing-enabled="editingEnabled"
+          :guidance="s.brandFit?.guidance ?? null"
+          :market-fit-context="persistedMarketFit(s)"
+        />
+
         <!-- AI Critique V1 — read-only coach panel for the Market
              Evidence Suite. Visible only when:
                (a) the chapter is one of the three market-evidence
@@ -2756,6 +2793,71 @@ watch(
                 {{ buildDemandSnapshot(persistedMarketFit(s))!.validationStep }}
               </p>
             </template>
+          </div>
+
+          <!-- Brand Fit Builder roll-up. Compact: brand signal +
+               target match + perceived price/quality + strongest
+               reference + production risk + recommended adjustment +
+               validation step. Same opt-in gate as the editor —
+               sections that haven't enabled Brand Fit skip the
+               roll-up so the preview matches what the section can
+               actually author. -->
+          <div
+            v-if="s.brandFit?.enabled && buildBrandFitSnapshot(persistedBrandFit(s))"
+            class="mt-2 space-y-1 text-xs"
+          >
+            <p class="font-medium uppercase tracking-wide text-neutral-500">
+              Brand fit
+            </p>
+            <p
+              v-if="buildBrandFitSnapshot(persistedBrandFit(s))!.brandSignal"
+              class="text-neutral-700"
+            >
+              <span class="font-medium text-neutral-600">Brand signal:</span>
+              {{ buildBrandFitSnapshot(persistedBrandFit(s))!.brandSignal }}
+            </p>
+            <p
+              v-if="buildBrandFitSnapshot(persistedBrandFit(s))!.targetCustomerMatch"
+              class="text-neutral-700"
+            >
+              <span class="font-medium text-neutral-600">Target match:</span>
+              {{ buildBrandFitSnapshot(persistedBrandFit(s))!.targetCustomerMatch }}
+            </p>
+            <p
+              v-if="buildBrandFitSnapshot(persistedBrandFit(s))!.perceivedPriceQuality"
+              class="text-neutral-700"
+            >
+              <span class="font-medium text-neutral-600">Perceived price / quality:</span>
+              {{ buildBrandFitSnapshot(persistedBrandFit(s))!.perceivedPriceQuality }}
+            </p>
+            <p
+              v-if="buildBrandFitSnapshot(persistedBrandFit(s))!.strongestReference"
+              class="text-neutral-700"
+            >
+              <span class="font-medium text-neutral-600">Strongest reference:</span>
+              {{ buildBrandFitSnapshot(persistedBrandFit(s))!.strongestReference }}
+            </p>
+            <p
+              v-if="buildBrandFitSnapshot(persistedBrandFit(s))!.productionRisk"
+              class="text-neutral-700"
+            >
+              <span class="font-medium text-neutral-600">Production risk:</span>
+              {{ buildBrandFitSnapshot(persistedBrandFit(s))!.productionRisk }}
+            </p>
+            <p
+              v-if="buildBrandFitSnapshot(persistedBrandFit(s))!.recommendedAdjustment"
+              class="whitespace-pre-wrap text-neutral-700"
+            >
+              <span class="font-medium text-neutral-600">Recommended adjustment:</span>
+              {{ buildBrandFitSnapshot(persistedBrandFit(s))!.recommendedAdjustment }}
+            </p>
+            <p
+              v-if="buildBrandFitSnapshot(persistedBrandFit(s))!.validationStep"
+              class="text-neutral-700"
+            >
+              <span class="font-medium text-neutral-600">Validation step:</span>
+              {{ buildBrandFitSnapshot(persistedBrandFit(s))!.validationStep }}
+            </p>
           </div>
         </li>
       </ol>

@@ -149,7 +149,12 @@ export const popUpCampaign: TemplateStudio = {
       ],
       completionCriteria: [
         'Audience list matches the brand story; channels are specific, not generic.'
-      ]
+      ],
+      brandFit: {
+        enabled: true,
+        guidance:
+          'Use Brand Fit Builder to check whether the campaign audience signals match the brand identity audience. If the campaign is targeting students but the visual identity reads premium adult, flag the mismatch here.'
+      }
     },
     {
       id: 'touchpoints',
@@ -180,7 +185,12 @@ export const popUpCampaign: TemplateStudio = {
       requiredInputs: ['First post caption', 'Table sign headline'],
       completionCriteria: [
         'Copy reads in the brand voice and names the pop-up, date, and what to bring (cash/card).'
-      ]
+      ],
+      brandFit: {
+        enabled: true,
+        guidance:
+          'Use the Brand Fit Builder voice block to argue tone, vocabulary, and what the brand never says agree with the price point and target customer.'
+      }
     },
     {
       id: 'measurement',

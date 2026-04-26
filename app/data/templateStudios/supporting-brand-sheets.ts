@@ -45,6 +45,11 @@ export const supportingBrandSheets: TemplateStudio = {
         enabled: true,
         guidance:
           'Size Lumen demand by audience × interest × conversion at the proposed price. Conservative / base / ambitious — the buyer will weigh the range, not a single number.'
+      },
+      brandFit: {
+        enabled: true,
+        guidance:
+          'Use Brand Fit Builder to argue that Lumen\'s palette, packaging, voice, and references signal the candle buyer the team is targeting.'
       }
     },
     {
@@ -80,6 +85,11 @@ export const supportingBrandSheets: TemplateStudio = {
         enabled: true,
         guidance:
           'Size Notice demand at the proposed retail and wholesale prices. Use comparable jewelry brands as your interest-rate baseline and label the assumption.'
+      },
+      brandFit: {
+        enabled: true,
+        guidance:
+          'Use Brand Fit Builder to argue that Notice\'s design language, photography, and case display signal the right jewelry buyer at the right price.'
       }
     },
     {
@@ -115,6 +125,11 @@ export const supportingBrandSheets: TemplateStudio = {
         enabled: true,
         guidance:
           'Size Humble Oven demand at the pop-up. Audience is foot traffic; interest and conversion should be based on prior bake-sale or pop-up patterns, not a guess.'
+      },
+      brandFit: {
+        enabled: true,
+        guidance:
+          'Use Brand Fit Builder to argue that Humble Oven\'s packaging, allergen labeling, voice, and pop-up display signal the food buyer at the right impulse-purchase price.'
       }
     },
     {
@@ -154,7 +169,12 @@ export const supportingBrandSheets: TemplateStudio = {
       completionCriteria: [
         'At least one shared signal across the three is named.',
         'Sign-off path for new SKUs is named.'
-      ]
+      ],
+      brandFit: {
+        enabled: true,
+        guidance:
+          'Use Brand Fit Builder to argue the family rules send a coherent signal across House Phoenix and the supporting brands without forcing any single brand to copy the others.'
+      }
     },
     {
       id: 'launch-readiness',

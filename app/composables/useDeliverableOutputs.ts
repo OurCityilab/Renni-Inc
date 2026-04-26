@@ -15,6 +15,7 @@ import {
   type MaybeRefOrGetter
 } from 'vue'
 import type {
+  BrandFitBuilder,
   DeliverableEvidenceLink,
   DeliverableOutput,
   DeliverableOutputSection,
@@ -679,6 +680,43 @@ export function useDeliverableOutputs() {
     })
   }
 
+  // --- brand fit builder (Brand Fit Builder V1) ---
+  // Same whole-section save pattern Market Fit uses: the editor sends
+  // the full builder state and we write it as one nested map at
+  // sections.${sectionId}.brandFit. Sibling fields (sourceNotes,
+  // draftText, finalText, evidenceLinks, structuredEvidence,
+  // marketBuilderEntries, marketFit) are untouched on every save.
+  // stripUndefinedDeep guards against the same Firestore-undefined
+  // payload risk the Market Builder + Structured Evidence paths
+  // already handle.
+  async function saveBrandFitBuilder(
+    deliverableId: string,
+    sectionId: string,
+    sectionTitleSnapshot: string,
+    fit: BrandFitBuilder,
+    actor: DeliverableOutputActor
+  ): Promise<void> {
+    const now = new Date().toISOString()
+    const payload: BrandFitBuilder = stripUndefinedDeep({
+      ...fit,
+      updatedAt: now,
+      updatedByUid: actor.uid,
+      updatedByEmail: actor.email
+    })
+    const r = ref_(deliverableId)
+    await updateDoc(r, {
+      [`sections.${sectionId}.sectionId`]: sectionId,
+      [`sections.${sectionId}.sectionTitleSnapshot`]: sectionTitleSnapshot,
+      [`sections.${sectionId}.brandFit`]: payload,
+      [`sections.${sectionId}.updatedAt`]: now,
+      [`sections.${sectionId}.updatedByUid`]: actor.uid,
+      [`sections.${sectionId}.updatedByEmail`]: actor.email,
+      updatedAt: now,
+      updatedByUid: actor.uid,
+      updatedByEmail: actor.email
+    })
+  }
+
   return {
     watchOutput,
     createOutputIfMissing,
@@ -691,6 +729,7 @@ export function useDeliverableOutputs() {
     addMarketBuilderEntry,
     updateMarketBuilderEntry,
     removeMarketBuilderEntry,
-    saveMarketFitBuilder
+    saveMarketFitBuilder,
+    saveBrandFitBuilder
   }
 }

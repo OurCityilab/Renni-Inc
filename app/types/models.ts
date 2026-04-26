@@ -587,6 +587,157 @@ export interface MarketFitBuilder {
   updatedByEmail?: string | null
 }
 
+// Brand Fit Builder V1 — section-level decision tool that connects
+// brand identity choices to market signals. Stored alongside marketFit
+// on DeliverableOutputSection; co-exists with everything that came
+// before. Renaissance students use it to argue that fonts, colors,
+// logos, voice, and production methods *agree* with the price point
+// and target customer the team is claiming. Pure additive — never
+// gates submit, never affects Playbook readiness, never writes back
+// to the pricing engine.
+export type BrandFitQualityLevel =
+  | 'budget'
+  | 'standard'
+  | 'premium'
+  | 'luxury'
+  | ''
+
+export type BrandFitRole =
+  | 'parent'
+  | 'apparel_goods'
+  | 'candles'
+  | 'jewelry'
+  | 'baked_goods'
+  | 'other'
+  | ''
+
+export type BrandFitAlignment = 'strong' | 'partial' | 'weak' | 'unsure' | ''
+
+export type BrandFitRiskLevel = 'low' | 'medium' | 'high' | ''
+
+export type BrandFitProductionUseCase =
+  | 'embroidery'
+  | 'screen_print'
+  | 'patch'
+  | 'hang_tag'
+  | 'packaging'
+  | 'signage'
+  | 'social'
+  | 'pitch_deck'
+  | 'other'
+
+export type BrandFitFeedbackMethod =
+  | 'survey'
+  | 'interview'
+  | 'side_by_side_test'
+  | 'social_poll'
+  | 'retail_observation'
+  | 'custom'
+  | ''
+
+export interface BrandFitIntent {
+  brandName?: string
+  brandRole?: BrandFitRole
+  targetCustomer?: string
+  targetProfileName?: string
+  pricePoint?: string
+  qualityLevel?: BrandFitQualityLevel
+  targetFeeling?: string
+  brandPromise?: string
+  primaryChannel?: string
+  notes?: string
+}
+
+export interface BrandFitVisualIdentity {
+  colorPalette?: string
+  colorSignal?: string
+  fontDirection?: string
+  fontSignal?: string
+  logoStyle?: string
+  logoSignal?: string
+  iconSymbolDirection?: string
+  photographyMood?: string
+  packagingDisplayDirection?: string
+  designAdjectives?: string
+  stylesToAvoid?: string
+}
+
+export interface BrandFitVoice {
+  toneWords?: string
+  vocabulary?: string
+  phrasesToUse?: string
+  phrasesToAvoid?: string
+  whatBrandNeverSays?: string
+  storyAlignmentNotes?: string
+}
+
+export interface BrandFitReferenceBrand {
+  id: string
+  brandOrExample: string
+  whatWeLike?: string
+  likelyCustomer?: string
+  priceQualitySignal?: string
+  visualSignal?: string
+  voiceSignal?: string
+  whatNotToCopy?: string
+  lessonForRenni?: string
+  source?: string
+  alignment?: BrandFitAlignment
+}
+
+export interface BrandFitAudiencePerception {
+  whoItAttracts?: string
+  whoItMayTurnAway?: string
+  perceivedPrice?: string
+  perceivedQuality?: string
+  perceivedAgeRange?: string
+  perceivedIncomeContext?: string
+  urbanSuburbanSignal?: string
+  schoolMerchVsPremiumSignal?: string
+  targetMatch?: BrandFitAlignment
+  mismatchRisk?: string
+}
+
+export interface BrandFitProductionCheck {
+  id: string
+  useCase: BrandFitProductionUseCase
+  concern?: string
+  riskLevel?: BrandFitRiskLevel
+  adjustment?: string
+}
+
+export interface BrandFitValidationPlan {
+  testAudience?: string
+  questionToAnswer?: string
+  feedbackMethod?: BrandFitFeedbackMethod
+  sampleSizeGoal?: number | null
+  whatToRecord?: string
+  successSignal?: string
+  nextStep?: string
+}
+
+export interface BrandFitRecommendation {
+  brandSignalSummary?: string
+  strongestAlignment?: string
+  weakestMismatch?: string
+  recommendedAdjustment?: string
+  validationStep?: string
+}
+
+export interface BrandFitBuilder {
+  brandIntent?: BrandFitIntent
+  visualIdentity?: BrandFitVisualIdentity
+  voice?: BrandFitVoice
+  referenceBrands?: BrandFitReferenceBrand[]
+  audiencePerception?: BrandFitAudiencePerception
+  productionChecks?: BrandFitProductionCheck[]
+  validationPlan?: BrandFitValidationPlan
+  recommendation?: BrandFitRecommendation
+  updatedAt?: IsoTimestamp | null
+  updatedByUid?: string | null
+  updatedByEmail?: string | null
+}
+
 export interface DeliverableOutputSection {
   sectionId: string
   sectionTitleSnapshot: string
@@ -604,6 +755,10 @@ export interface DeliverableOutputSection {
   // helps decide *which* market to target. Co-exists with
   // marketBuilderEntries; either, both, or neither may be present.
   marketFit?: MarketFitBuilder
+  // Optional Brand Fit Builder — section-level identity-vs-market
+  // signal tool. Independent of marketFit so a section can have
+  // either, both, or neither.
+  brandFit?: BrandFitBuilder
   status?: DeliverableOutputSectionStatus
   updatedAt?: IsoTimestamp | null
   updatedByUid?: string | null

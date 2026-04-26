@@ -50,6 +50,15 @@ export interface TemplateStudioSection {
     enabled: boolean
     guidance?: string
   }
+  // Brand Fit Builder visibility metadata. Same opt-in pattern again:
+  // sections default to off so the tool only appears in identity-
+  // relevant sections (House Phoenix Brand Story, Supporting Brand
+  // Sheets, Pop-up Campaign audience/messaging). Independent of
+  // marketFit and marketBuilder.
+  brandFit?: {
+    enabled: boolean
+    guidance?: string
+  }
 }
 
 export interface TemplateStudioRequirement {

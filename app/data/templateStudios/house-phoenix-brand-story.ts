@@ -58,7 +58,12 @@ export const housePhoenixBrandStory: TemplateStudio = {
       ],
       completionCriteria: [
         'Three adjectives are specific enough to guide writing decisions.'
-      ]
+      ],
+      brandFit: {
+        enabled: true,
+        guidance:
+          'Use the Brand Fit Builder voice block to argue that tone, vocabulary, and what the brand never says match the customer and the price point.'
+      }
     },
     {
       id: 'identity',
@@ -73,7 +78,12 @@ export const housePhoenixBrandStory: TemplateStudio = {
       completionCriteria: [
         'Every element is in a linked working doc or asset folder.',
         'A teammate who was not in the design meeting could apply the brand correctly.'
-      ]
+      ],
+      brandFit: {
+        enabled: true,
+        guidance:
+          'Use the Brand Fit Builder to argue that color, font, logo, and packaging choices send the same signal as the price point and target customer the team is claiming.'
+      }
     }
   ],
   requirements: [
