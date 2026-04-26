@@ -38,8 +38,12 @@ import type {
   MarketFitBuilder
 } from '~/types/models'
 import {
+  BRAND_LANGUAGE_TRANSLATIONS,
+  BRAND_SIGNAL_CHIPS,
+  buildBrandFitNextBestMove,
   buildBrandSignalSummary,
-  buildReferenceBrandFeedback
+  buildReferenceBrandFeedback,
+  buildSignalTradeoffNotes
 } from '~/utils/brandFitNarrative'
 
 const props = defineProps<{
@@ -245,6 +249,10 @@ interface Form {
   productionChecks: BrandFitProductionCheck[]
   validationPlan: BrandFitValidationPlan
   recommendation: BrandFitRecommendation
+  // Signal chips render at the top of the editor and feed the
+  // deterministic summary. Saved as a string array so future authors
+  // can ship additional chips without breaking old data.
+  brandSignals: string[]
 }
 
 function cloneFromInitial(src: BrandFitBuilder | null): Form {
@@ -271,7 +279,12 @@ function cloneFromInitial(src: BrandFitBuilder | null): Form {
     recommendation: {
       ...blankRecommendation(),
       ...(src?.recommendation ?? {})
-    }
+    },
+    // Defensive copy + filter so any stray non-strings don't reach
+    // the editor.
+    brandSignals: Array.isArray(src?.brandSignals)
+      ? src!.brandSignals.filter((s): s is string => typeof s === 'string')
+      : []
   }
 }
 
@@ -340,13 +353,128 @@ function asFitForUtil(): BrandFitBuilder {
     audiencePerception: form.audiencePerception,
     productionChecks: form.productionChecks,
     validationPlan: form.validationPlan,
-    recommendation: form.recommendation
+    recommendation: form.recommendation,
+    brandSignals: form.brandSignals
   }
 }
 
 const generatedSummary = computed<string>(() =>
   buildBrandSignalSummary(asFitForUtil())
 )
+const generatedNextBestMove = computed<string>(() =>
+  buildBrandFitNextBestMove(asFitForUtil())
+)
+const selectedSignalNotes = computed(() =>
+  buildSignalTradeoffNotes(form.brandSignals)
+)
+
+// --- signal chip toggles -------------------------------------------
+function isSignalSelected(signal: string): boolean {
+  const lc = signal.toLowerCase()
+  return form.brandSignals.some((s) => s.toLowerCase() === lc)
+}
+function toggleSignal(signal: string) {
+  if (!props.editingEnabled) return
+  const idx = form.brandSignals.findIndex(
+    (s) => s.toLowerCase() === signal.toLowerCase()
+  )
+  if (idx >= 0) {
+    form.brandSignals.splice(idx, 1)
+  } else {
+    form.brandSignals.push(signal)
+  }
+  markDirty()
+}
+
+// --- per-section progress cues -------------------------------------
+type SectionStatus = 'not_started' | 'started' | 'needs_evidence' | 'ready_to_test' | 'ready_for_playbook'
+const STATUS_LABELS: Record<SectionStatus, string> = {
+  not_started: 'Not started',
+  started: 'Started',
+  needs_evidence: 'Needs evidence',
+  ready_to_test: 'Ready to test',
+  ready_for_playbook: 'Ready for Playbook draft'
+}
+const STATUS_TONE: Record<SectionStatus, string> = {
+  not_started: 'border-neutral-300 bg-neutral-50 text-neutral-600',
+  started: 'border-sky-300 bg-sky-50 text-sky-800',
+  needs_evidence: 'border-amber-300 bg-amber-50 text-amber-800',
+  ready_to_test: 'border-emerald-300 bg-emerald-50 text-emerald-800',
+  ready_for_playbook: 'border-emerald-400 bg-emerald-100 text-emerald-900'
+}
+function statusBadgeClass(status: SectionStatus): string {
+  return `rounded-full border px-2 py-0.5 text-[10px] uppercase tracking-wide ${STATUS_TONE[status]}`
+}
+function hasText(...vals: Array<string | undefined | null>): boolean {
+  return vals.some((v) => typeof v === 'string' && v.trim() !== '')
+}
+
+const sectionStatus = computed<Record<string, SectionStatus>>(() => {
+  const intent = form.brandIntent
+  const visual = form.visualIdentity
+  const voice = form.voice
+  const refs = form.referenceBrands
+  const perception = form.audiencePerception
+  const checks = form.productionChecks
+  const validation = form.validationPlan
+  const signals = form.brandSignals
+
+  const intentStarted =
+    hasText(intent.brandName, intent.targetCustomer, intent.targetFeeling, intent.brandPromise) ||
+    Boolean(intent.qualityLevel) ||
+    Boolean(intent.brandRole)
+  const visualStarted =
+    hasText(
+      visual.colorPalette,
+      visual.fontDirection,
+      visual.logoStyle,
+      visual.designAdjectives,
+      visual.colorSignal,
+      visual.fontSignal,
+      visual.logoSignal,
+      visual.iconSymbolDirection,
+      visual.photographyMood,
+      visual.packagingDisplayDirection,
+      visual.stylesToAvoid
+    ) || signals.length > 0
+  const voiceStarted = hasText(
+    voice.toneWords,
+    voice.vocabulary,
+    voice.phrasesToUse,
+    voice.phrasesToAvoid,
+    voice.whatBrandNeverSays,
+    voice.storyAlignmentNotes
+  )
+  const referencesStarted = refs.length > 0
+  const perceptionStarted =
+    hasText(perception.whoItAttracts, perception.whoItMayTurnAway, perception.perceivedPrice, perception.perceivedQuality, perception.mismatchRisk) ||
+    Boolean(perception.targetMatch)
+  const productionStarted = checks.length > 0
+  const validationStarted = hasText(
+    validation.testAudience,
+    validation.questionToAnswer,
+    validation.whatToRecord,
+    validation.successSignal,
+    validation.nextStep
+  )
+  const validationReadyToTest =
+    hasText(validation.testAudience) &&
+    (hasText(validation.questionToAnswer) || hasText(validation.nextStep))
+
+  return {
+    intent: intentStarted ? 'started' : 'not_started',
+    visual: visualStarted ? 'started' : 'not_started',
+    voice: voiceStarted ? 'started' : 'not_started',
+    references: referencesStarted ? 'started' : 'not_started',
+    perception: perceptionStarted ? 'started' : 'not_started',
+    production: productionStarted ? 'started' : 'not_started',
+    validation: validationReadyToTest
+      ? 'ready_to_test'
+      : validationStarted
+        ? 'started'
+        : 'not_started'
+  }
+})
 
 // Market Fit context surfaced as a small read-only callout. Pulls the
 // selected segment's profile name when present so Brand Fit can be
@@ -397,7 +525,8 @@ async function save() {
       audiencePerception: { ...form.audiencePerception },
       productionChecks: form.productionChecks.map((c) => ({ ...c })),
       validationPlan: { ...form.validationPlan },
-      recommendation: { ...form.recommendation }
+      recommendation: { ...form.recommendation },
+      brandSignals: [...form.brandSignals]
     }
     await outputs.saveBrandFitBuilder(
       props.deliverableId,
@@ -435,6 +564,24 @@ async function save() {
       </p>
     </header>
 
+    <!-- Start Here card. Compact set of orienting prompts so the
+         builder doesn't read as a long form on first open. -->
+    <section class="rounded-md border border-rose-300 bg-white p-3 text-xs text-neutral-800">
+      <p class="text-xs font-semibold uppercase tracking-wide text-rose-700">
+        Start here
+      </p>
+      <p class="mt-1">
+        Brand Fit helps you check whether the brand looks, sounds, and feels right for the customer and price point you are claiming. Answer these as you go — the rest of the panel just helps you argue your case in detail.
+      </p>
+      <ol class="mt-2 list-decimal space-y-0.5 pl-5">
+        <li>What are we selling or presenting?</li>
+        <li>Who should this brand attract?</li>
+        <li>What should it feel like?</li>
+        <li>What price or quality level does it need to support?</li>
+        <li>What needs to be tested before finalizing?</li>
+      </ol>
+    </section>
+
     <!-- Optional Market Fit cross-link. Read-only callout when the
          section already has a Market Fit selected segment / profile. -->
     <p
@@ -451,10 +598,56 @@ async function save() {
       Use this to check whether the brand identity signals the same customer.
     </p>
 
+    <!-- Signal chips. Quick-add palette + tradeoff notes for each
+         selected signal so students learn what each chip implies. -->
+    <fieldset class="space-y-2 rounded-md border border-neutral-200 bg-white p-2">
+      <legend class="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-neutral-600">
+        Brand signals
+        <span :class="statusBadgeClass(form.brandSignals.length ? 'started' : 'not_started')">
+          {{ STATUS_LABELS[form.brandSignals.length ? 'started' : 'not_started'] }}
+        </span>
+      </legend>
+      <p class="text-xs text-neutral-600">
+        Pick the signals this brand should send. Each signal has a tradeoff — selecting one will surface a short coach note explaining what it supports and what it costs.
+      </p>
+      <div class="flex flex-wrap gap-1.5">
+        <button
+          v-for="chip in BRAND_SIGNAL_CHIPS"
+          :key="chip"
+          type="button"
+          :disabled="!editingEnabled"
+          :class="[
+            'rounded-full border px-2 py-0.5 text-xs',
+            isSignalSelected(chip)
+              ? 'border-rose-400 bg-rose-100 text-rose-900'
+              : 'border-neutral-300 bg-neutral-50 text-neutral-700 hover:bg-neutral-100',
+            !editingEnabled ? 'opacity-50' : ''
+          ]"
+          @click="toggleSignal(chip)"
+        >{{ chip }}</button>
+      </div>
+      <ul
+        v-if="selectedSignalNotes.length"
+        class="mt-1 space-y-1"
+      >
+        <li
+          v-for="(n, i) in selectedSignalNotes"
+          :key="`signal-note-${i}`"
+          class="rounded-md border border-rose-200 bg-rose-50/60 p-2 text-xs text-neutral-800"
+        >
+          <span class="font-medium text-rose-800">{{ n.signal }}:</span>
+          {{ n.note }}
+        </li>
+      </ul>
+    </fieldset>
+
     <!-- Brand intent -->
     <fieldset class="space-y-2 rounded-md border border-neutral-200 bg-white p-2">
-      <legend class="text-xs font-semibold uppercase tracking-wide text-neutral-600">
+      <legend class="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-neutral-600">
         Brand intent
+        <span :class="statusBadgeClass(sectionStatus.intent)">
+          {{ STATUS_LABELS[sectionStatus.intent] }}
+        </span>
       </legend>
       <p class="text-xs text-neutral-600">
         Brand choices send signals. A premium price, local-made story, or mature customer profile should be supported by fonts, colors, logo style, voice, and production choices that feel credible to that buyer.
@@ -574,8 +767,11 @@ async function save() {
 
     <!-- Visual identity -->
     <fieldset class="space-y-2 rounded-md border border-neutral-200 bg-white p-2">
-      <legend class="text-xs font-semibold uppercase tracking-wide text-neutral-600">
+      <legend class="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-neutral-600">
         Visual identity
+        <span :class="statusBadgeClass(sectionStatus.visual)">
+          {{ STATUS_LABELS[sectionStatus.visual] }}
+        </span>
       </legend>
       <ul class="list-disc space-y-0.5 pl-5 text-xs text-neutral-700">
         <li>Bright school colors can improve school recognition but may limit broader premium appeal.</li>
@@ -712,8 +908,11 @@ async function save() {
 
     <!-- Voice -->
     <fieldset class="space-y-2 rounded-md border border-neutral-200 bg-white p-2">
-      <legend class="text-xs font-semibold uppercase tracking-wide text-neutral-600">
+      <legend class="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-neutral-600">
         Voice
+        <span :class="statusBadgeClass(sectionStatus.voice)">
+          {{ STATUS_LABELS[sectionStatus.voice] }}
+        </span>
       </legend>
       <p class="text-xs text-neutral-600">
         Voice should match the customer and the price point. Premium brands usually need restraint, clarity, and confidence. Student-facing campaigns may need more energy, immediacy, or cultural relevance.
@@ -790,8 +989,11 @@ async function save() {
 
     <!-- Reference brands -->
     <fieldset class="space-y-2 rounded-md border border-neutral-200 bg-white p-2">
-      <legend class="text-xs font-semibold uppercase tracking-wide text-neutral-600">
+      <legend class="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-neutral-600">
         Reference brand board
+        <span :class="statusBadgeClass(sectionStatus.references)">
+          {{ STATUS_LABELS[sectionStatus.references] }}
+        </span>
       </legend>
       <p class="rounded-md border border-amber-200 bg-amber-50 p-2 text-xs text-neutral-800">
         Use references to learn signals, not to copy. Name what you are learning and what you will avoid copying.
@@ -934,8 +1136,11 @@ async function save() {
 
     <!-- Audience perception -->
     <fieldset class="space-y-2 rounded-md border border-neutral-200 bg-white p-2">
-      <legend class="text-xs font-semibold uppercase tracking-wide text-neutral-600">
+      <legend class="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-neutral-600">
         Audience perception check
+        <span :class="statusBadgeClass(sectionStatus.perception)">
+          {{ STATUS_LABELS[sectionStatus.perception] }}
+        </span>
       </legend>
       <p class="text-xs text-neutral-600">
         Ask: What does this brand look like it costs? Who does it look like it is for? Does that match who we say we are targeting?
@@ -1050,8 +1255,11 @@ async function save() {
 
     <!-- Production checks -->
     <fieldset class="space-y-2 rounded-md border border-neutral-200 bg-white p-2">
-      <legend class="text-xs font-semibold uppercase tracking-wide text-neutral-600">
+      <legend class="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-neutral-600">
         Production and accessibility checks
+        <span :class="statusBadgeClass(sectionStatus.production)">
+          {{ STATUS_LABELS[sectionStatus.production] }}
+        </span>
       </legend>
       <p class="text-xs text-neutral-600">
         A logo that works on screen may fail on fabric, packaging, or signage. Thin lines, tiny text, low contrast, and too many colors can weaken production quality.
@@ -1132,8 +1340,11 @@ async function save() {
 
     <!-- Validation plan -->
     <fieldset class="space-y-2 rounded-md border border-neutral-200 bg-white p-2">
-      <legend class="text-xs font-semibold uppercase tracking-wide text-neutral-600">
+      <legend class="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-neutral-600">
         Validation plan
+        <span :class="statusBadgeClass(sectionStatus.validation)">
+          {{ STATUS_LABELS[sectionStatus.validation] }}
+        </span>
       </legend>
       <ul class="list-disc space-y-0.5 pl-5 text-xs text-neutral-700">
         <li>Show 3 logo options to 15 students and 5 adults.</li>
@@ -1223,6 +1434,67 @@ async function save() {
       </div>
     </fieldset>
 
+    <!-- Student-to-professional language translator. Read-only
+         reference table — students can scan the column and copy the
+         professional phrasing into the recommendation fields. The
+         table is intentionally simple so it does not become a save
+         path. -->
+    <fieldset class="space-y-2 rounded-md border border-neutral-200 bg-white p-2">
+      <legend class="text-xs font-semibold uppercase tracking-wide text-neutral-600">
+        Language translator (student → Playbook)
+      </legend>
+      <p class="text-xs text-neutral-600">
+        Use this when an instinctive phrase needs to become Playbook-ready language. Copy the right column into the recommendation or final Playbook text — no need to fight for words.
+      </p>
+      <table class="min-w-full text-xs">
+        <thead>
+          <tr class="text-left text-neutral-500">
+            <th class="py-1 pr-2 font-medium">Student phrase</th>
+            <th class="py-1 pr-2 font-medium">Professional / Playbook</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr
+            v-for="(t, i) in BRAND_LANGUAGE_TRANSLATIONS"
+            :key="`lang-${i}`"
+            class="align-top"
+          >
+            <td class="py-0.5 pr-2 italic text-neutral-700">"{{ t.studentPhrase }}"</td>
+            <td class="py-0.5 pr-2 text-neutral-800">{{ t.professional }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </fieldset>
+
+    <!-- Good / better / best brand statement example. Static block —
+         shows students the kind of language the recommendation block
+         can produce when the inputs are filled in. -->
+    <fieldset class="space-y-2 rounded-md border border-neutral-200 bg-white p-2">
+      <legend class="text-xs font-semibold uppercase tracking-wide text-neutral-600">
+        Good / better / best brand statement
+      </legend>
+      <div class="space-y-1.5 text-xs text-neutral-800">
+        <p>
+          <span class="rounded-full border border-neutral-300 bg-neutral-50 px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-neutral-700">
+            Good
+          </span>
+          <span class="ml-1">House Phoenix feels premium.</span>
+        </p>
+        <p>
+          <span class="rounded-full border border-amber-300 bg-amber-50 px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-amber-800">
+            Better
+          </span>
+          <span class="ml-1">House Phoenix feels premium because the logo, colors, and voice are restrained and mature.</span>
+        </p>
+        <p>
+          <span class="rounded-full border border-emerald-300 bg-emerald-50 px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-emerald-800">
+            Best
+          </span>
+          <span class="ml-1">House Phoenix is positioned as premium civic apparel. The restrained palette, architectural phoenix, and Detroit-made story support a higher price point and may appeal to adults, alumni, staff, and Detroit supporters, while students may be better treated as an awareness and validation market until willingness-to-pay is proven.</span>
+        </p>
+      </div>
+    </fieldset>
+
     <!-- Recommendation summary -->
     <fieldset class="space-y-2 rounded-md border border-neutral-200 bg-white p-2">
       <legend class="text-xs font-semibold uppercase tracking-wide text-neutral-600">
@@ -1231,6 +1503,10 @@ async function save() {
       <p class="rounded-md border border-rose-200 bg-rose-50 p-2 text-xs text-neutral-800">
         <span class="font-medium">Auto-summary (deterministic, no AI):</span>
         {{ generatedSummary }}
+      </p>
+      <p class="rounded-md border border-emerald-300 bg-emerald-50 p-2 text-xs text-neutral-800">
+        <span class="font-medium text-emerald-800">Next best move:</span>
+        {{ generatedNextBestMove }}
       </p>
       <div class="grid gap-2 sm:grid-cols-2">
         <label class="block text-xs font-medium text-neutral-800">

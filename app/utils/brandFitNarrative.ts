@@ -18,6 +18,116 @@ import type {
   BrandFitRiskLevel
 } from '~/types/models'
 
+// --- brand signal chip palette + tradeoff notes --------------------
+// Curated set of signals the editor surfaces as quick-add chips. The
+// list is shipped here (not in Firestore) so curriculum updates stay
+// in source control. Free-form so students can author additional
+// signals — only entries in this map get a deterministic tradeoff
+// note shown in the editor.
+export const BRAND_SIGNAL_CHIPS: string[] = [
+  'Premium',
+  'Student-facing',
+  'School-spirit',
+  'Detroit-made',
+  'Civic',
+  'Giftable',
+  'Streetwear',
+  'Minimal',
+  'Bold',
+  'Warm',
+  'Handmade',
+  'Retail-ready',
+  'Heritage',
+  'Playful',
+  'Accessible',
+  'Limited-run'
+]
+
+// Per-signal tradeoff coach notes. Keyed by lowercase signal text so
+// case mismatches still resolve. Each note is a single sentence the
+// editor renders below the chip strip when the chip is selected.
+const SIGNAL_TRADEOFFS: Record<string, string> = {
+  premium:
+    'Premium supports a higher price and adult/gift buyers, but may feel less accessible to students unless the story and quality are clear.',
+  'student-facing':
+    'Student-facing reaches the easiest audience to mobilize, but may limit perceived price and dilute adult-buyer credibility.',
+  'school-spirit':
+    'School-spirit improves recognition inside Renaissance, but can feel generic if the design relies only on standard school colors or varsity styling.',
+  'detroit-made':
+    'Detroit-made signals authenticity and place — strong with civic and gift buyers, weaker if production evidence is thin or quality reads inconsistent.',
+  civic:
+    'Civic signals maturity and place-based pride, which support adults, alumni, and supporters — but ask whether students still feel invited.',
+  giftable:
+    'Giftable opens parent / alumni / supporter buyers, but the product needs presentation (packaging, hang tag, story) that earns the gift price.',
+  streetwear:
+    'Streetwear can pull cultural energy and student appeal, but risks feeling generic without a distinctive Detroit hook or limited-run discipline.',
+  minimal:
+    'Minimal reads premium and disciplined, but needs strong type, photography, or story to avoid feeling plain on the shelf.',
+  bold:
+    'Bold catches attention and signals confidence, but risks feeling loud or aggressive for premium / gift buyers.',
+  warm:
+    'Warm reads inviting and grounded, but may underplay premium signals if cost is high.',
+  handmade:
+    'Handmade signals authenticity and student-led work, but can weaken the premium claim if quality is not visibly strong.',
+  'retail-ready':
+    'Retail-ready supports Phoenix Nest carry and gift buyers, but the cohort needs production discipline (packaging, hang tags, signage) to deliver on the signal.',
+  heritage:
+    'Heritage reads timeless and credible, but risks feeling stuck or institutional if not paired with a contemporary cultural hook.',
+  playful:
+    'Playful pulls student and gift-buyer interest, but may erode price defensibility if used without restraint.',
+  accessible:
+    'Accessible reaches first-time buyers, but limits perceived price and may compete with basic school merch.',
+  'limited-run':
+    'Limited-run supports premium pricing and urgency, but only if the team can defend why supply is short — story, capacity, or cohort cycle.'
+}
+
+export interface BrandSignalTradeoffNote {
+  signal: string
+  note: string
+}
+
+export function buildSignalTradeoffNotes(
+  signals: string[] | null | undefined
+): BrandSignalTradeoffNote[] {
+  if (!signals || signals.length === 0) return []
+  const seen = new Set<string>()
+  const out: BrandSignalTradeoffNote[] = []
+  for (const raw of signals) {
+    const s = raw?.trim()
+    if (!s) continue
+    const key = s.toLowerCase()
+    if (seen.has(key)) continue
+    seen.add(key)
+    const note = SIGNAL_TRADEOFFS[key]
+    if (note) {
+      out.push({ signal: s, note })
+    }
+  }
+  return out
+}
+
+// --- student → professional language translator --------------------
+// Read-only reference table the editor renders. The brief lists this
+// as either a static helper or a click-to-append. We export the
+// data so the component renders the table without inventing entries.
+export interface BrandLanguageTranslation {
+  studentPhrase: string
+  professional: string
+}
+
+export const BRAND_LANGUAGE_TRANSLATIONS: BrandLanguageTranslation[] = [
+  { studentPhrase: 'clean', professional: 'minimal, restrained, uncluttered' },
+  { studentPhrase: 'expensive', professional: 'premium, elevated, high perceived value' },
+  { studentPhrase: 'grown', professional: 'mature, refined, adult-facing' },
+  { studentPhrase: 'gives Detroit', professional: 'place-based, civic, locally rooted' },
+  { studentPhrase: 'people would wear it', professional: 'wearable, versatile, lifestyle-oriented' },
+  { studentPhrase: 'not too much', professional: 'disciplined, balanced, restrained' },
+  { studentPhrase: 'official', professional: 'credible, polished, retail-ready' },
+  { studentPhrase: 'school but not corny', professional: 'school-linked without feeling generic' },
+  { studentPhrase: 'stands out', professional: 'distinctive, memorable, high-recognition' },
+  { studentPhrase: 'calm', professional: 'warm, simple, grounded, low-noise' }
+]
+
 const ALIGNMENT_LABEL: Record<BrandFitAlignment, string> = {
   '': 'not set',
   strong: 'strong',
@@ -218,6 +328,28 @@ export function strongestReferenceBrand(
 // own intent, perception, references, and production checks and
 // returns one paragraph the editor renders inline. Empty inputs
 // collapse gracefully — the helper says so rather than inventing.
+// Concatenate brand signals + design adjectives into one human-
+// readable signal phrase. Prefers selected chips when present, falls
+// back to designAdjectives, then to fontSignal / colorSignal.
+function describeBrandSignal(fit: BrandFitBuilder): string {
+  const signals = (fit.brandSignals ?? [])
+    .map((s) => s?.trim())
+    .filter((s): s is string => Boolean(s))
+  if (signals.length > 0) {
+    const lower = signals.map((s) => s.toLowerCase())
+    return lower.length === 1
+      ? lower[0]
+      : `${lower.slice(0, -1).join(', ')} and ${lower[lower.length - 1]}`
+  }
+  const visual = fit.visualIdentity ?? {}
+  return (
+    visual.designAdjectives?.trim() ||
+    visual.fontSignal?.trim() ||
+    visual.colorSignal?.trim() ||
+    ''
+  )
+}
+
 export function buildBrandSignalSummary(
   fit: BrandFitBuilder | null | undefined
 ): string {
@@ -225,43 +357,58 @@ export function buildBrandSignalSummary(
     return 'No Brand Fit Builder data has been saved for this section yet.'
   }
   const intent = fit.brandIntent ?? {}
-  const visual = fit.visualIdentity ?? {}
   const perception = fit.audiencePerception ?? {}
   const recommendation = fit.recommendation ?? {}
 
   const brandName = intent.brandName?.trim() || 'this brand direction'
+  const signalPhrase = describeBrandSignal(fit)
   const quality = intent.qualityLevel || ''
-  const adjectives =
-    visual.designAdjectives?.trim() ||
-    visual.fontSignal?.trim() ||
-    visual.colorSignal?.trim() ||
-    ''
   const targetCustomer =
     intent.targetCustomer?.trim() ||
     intent.targetProfileName?.trim() ||
     perception.whoItAttracts?.trim() ||
     'the intended customer'
 
-  const lead = adjectives
-    ? `${brandName} reads as ${adjectives}.`
+  // Lead sentence: lead with positioning when we have signals + a
+  // target customer; otherwise gracefully degrade to a less-specific
+  // read-out so the summary always says something useful.
+  const positioning = signalPhrase
+    ? quality
+      ? `${brandName} is currently positioned as a ${quality} ${signalPhrase} brand.`
+      : `${brandName} is currently positioned as a ${signalPhrase} brand.`
     : quality
       ? `${brandName} reads at the ${quality} quality level.`
-      : `${brandName} does not yet have enough visual / voice signal to summarize.`
+      : `${brandName} does not yet have enough visual / voice signal to summarize — add design adjectives, signal chips, or a font/color signal.`
 
-  const matchLine = perception.targetMatch
-    ? ` Target match: ${ALIGNMENT_LABEL[perception.targetMatch]} for ${targetCustomer}.`
+  // What is supporting the position: prefer audience perception fields
+  // first (those describe what the brand actually reads as), then
+  // recommendation.strongestAlignment, then visual signals.
+  const supportingSignals: string[] = []
+  if (perception.perceivedPrice?.trim()) {
+    supportingSignals.push(`reads ${perception.perceivedPrice.trim()} on price`)
+  }
+  if (perception.perceivedQuality?.trim()) {
+    supportingSignals.push(`reads ${perception.perceivedQuality.trim()} on quality`)
+  }
+  if (perception.schoolMerchVsPremiumSignal?.trim()) {
+    supportingSignals.push(perception.schoolMerchVsPremiumSignal.trim())
+  }
+  if (recommendation.strongestAlignment?.trim()) {
+    supportingSignals.push(recommendation.strongestAlignment.trim())
+  }
+  const supportingLine = supportingSignals.length
+    ? ` The strongest signals are ${supportingSignals.join('; ')}.`
     : ''
 
-  const priceQuality =
-    perception.perceivedPrice?.trim() || perception.perceivedQuality?.trim()
-      ? ` Perceived ${[
-          perception.perceivedPrice?.trim() ? `price: ${perception.perceivedPrice.trim()}` : '',
-          perception.perceivedQuality?.trim() ? `quality: ${perception.perceivedQuality.trim()}` : ''
-        ]
-          .filter(Boolean)
-          .join(' · ')}.`
+  // Match + likely audience — use targetMatch when set, else infer
+  // from intent.targetCustomer / profile.
+  const matchLine = perception.targetMatch
+    ? ` Target match: ${ALIGNMENT_LABEL[perception.targetMatch]} for ${targetCustomer}.`
+    : intent.targetCustomer?.trim() || intent.targetProfileName?.trim()
+      ? ` This may appeal to ${targetCustomer}.`
       : ''
 
+  // Reference + tradeoff lines.
   const top = strongestReferenceBrand(fit)
   const strongestRefLine = top?.brandOrExample?.trim()
     ? ` Strongest reference: ${top.brandOrExample.trim()}${
@@ -270,7 +417,9 @@ export function buildBrandSignalSummary(
     : ''
 
   const mismatch = detectBrandMismatchRisk(fit)
-  const mismatchLine = mismatch ? ` Mismatch risk: ${mismatch}` : ''
+  const mismatchLine = mismatch
+    ? ` Main tradeoff: ${mismatch}`
+    : ''
 
   const production = detectProductionRisk(fit)
   const productionLine = production
@@ -283,26 +432,92 @@ export function buildBrandSignalSummary(
     ''
   const adjustmentLine = adjustment ? ` Recommended adjustment: ${adjustment}.` : ''
 
-  const validation =
-    recommendation.validationStep?.trim() ||
-    fit.validationPlan?.questionToAnswer?.trim() ||
-    ''
-  const validationLine = validation
-    ? ` Validate before finalizing — next step: ${validation}.`
-    : ' Validate brand direction with real people before finalizing it.'
+  // Always close with a single, deterministic next-best-move line —
+  // students get a clear next action whether or not the team has
+  // populated the recommendation block.
+  const nextBestMove = buildBrandFitNextBestMove(fit)
+  const nextLine = ` Next best move: ${nextBestMove}`
 
   return [
-    lead,
+    positioning,
+    supportingLine,
     matchLine,
-    priceQuality,
     strongestRefLine,
     mismatchLine,
     productionLine,
     adjustmentLine,
-    validationLine
+    nextLine
   ]
     .filter(Boolean)
     .join('')
+}
+
+// --- next best move ------------------------------------------------
+// Single deterministic action line. Priority order is the brief's
+// rules: validation plan missing → audience test; production risk
+// high → simplify; target mismatch / weak match → perception test;
+// references thin/weak → add a stronger reference; otherwise a
+// general "describe it back to you" perception test.
+export function buildBrandFitNextBestMove(
+  fit: BrandFitBuilder | null | undefined
+): string {
+  if (!fit) {
+    return 'Add brand intent and at least one visual or voice signal to start a Brand Fit pass.'
+  }
+  const validation = fit.validationPlan ?? {}
+  const recommendation = fit.recommendation ?? {}
+
+  // Highest-priority: production risk high.
+  const production = detectProductionRisk(fit)
+  if (production && production.level === 'high') {
+    const useCase = production.check.useCase
+    const adjustment = production.check.adjustment?.trim()
+    if (adjustment) {
+      return `Address the high production risk on ${useCase.replace(/_/g, ' ')} — ${adjustment}.`
+    }
+    return `Simplify the mark or layout for ${useCase.replace(/_/g, ' ')} before committing to production runs.`
+  }
+
+  // Mismatch risk wins next: explicit perception test.
+  const mismatch = detectBrandMismatchRisk(fit)
+  if (mismatch) {
+    return 'Test perception with 10 students and 5 adults — ask who they think the brand is for, what it costs, and whether they would buy it. Compare answers to the intended target.'
+  }
+
+  // No validation plan yet — the brief says suggest audience testing.
+  const noValidationPlan =
+    !validation.testAudience?.trim() &&
+    !validation.questionToAnswer?.trim() &&
+    !validation.nextStep?.trim() &&
+    !recommendation.validationStep?.trim()
+  if (noValidationPlan) {
+    return 'Show this direction to 10 students and 5 adults and ask who they think it is for, what it costs, and whether they would buy it.'
+  }
+
+  // References missing or too weak.
+  const refs = fit.referenceBrands ?? []
+  const strongRefs = refs.filter((r) => r.alignment === 'strong')
+  if (refs.length === 0) {
+    return 'Add at least two reference brands — one student-facing and one adult / gift-buyer reference — so you can test which direction this brand reads as.'
+  }
+  if (strongRefs.length === 0) {
+    return 'Add one stronger reference brand on price or story to defend the positioning before relying on the existing references.'
+  }
+
+  // Recommendation already names a validation step — surface it.
+  if (recommendation.validationStep?.trim()) {
+    return recommendation.validationStep.trim()
+  }
+
+  // Validation plan exists but missing a question to answer.
+  if (
+    validation.testAudience?.trim() &&
+    !validation.questionToAnswer?.trim()
+  ) {
+    return 'Name the question your validation should answer — e.g. "do students and adults describe this brand the same way the team intends?" — before running the test.'
+  }
+
+  return 'Test whether students and adults describe this brand the same way the team intends.'
 }
 
 // --- compact preview snapshot --------------------------------------
@@ -316,6 +531,10 @@ export interface BrandFitSnapshot {
   productionRisk: string | null
   recommendedAdjustment: string | null
   validationStep: string | null
+  // Single deterministic next-action line — same logic the editor's
+  // summary closes with. Surfaced in the Playbook-ready preview so a
+  // student reading the rollup can see what to do next.
+  nextBestMove: string | null
 }
 
 export function buildBrandFitSnapshot(
@@ -327,12 +546,19 @@ export function buildBrandFitSnapshot(
   const perception = fit.audiencePerception ?? {}
   const recommendation = fit.recommendation ?? {}
 
-  const adjectives =
-    visual.designAdjectives?.trim() ||
-    visual.colorSignal?.trim() ||
-    visual.fontSignal?.trim() ||
-    intent.qualityLevel ||
-    null
+  // Prefer brand signal chips when present so the rollup reads in
+  // student-facing language; otherwise fall back to design
+  // adjectives / signals / quality level.
+  const signalsList = (fit.brandSignals ?? [])
+    .map((s) => s?.trim())
+    .filter((s): s is string => Boolean(s))
+  const adjectives = signalsList.length
+    ? signalsList.map((s) => s.toLowerCase()).join(', ')
+    : visual.designAdjectives?.trim() ||
+      visual.colorSignal?.trim() ||
+      visual.fontSignal?.trim() ||
+      intent.qualityLevel ||
+      null
   const brandSignal = adjectives ? `${adjectives}` : null
 
   const targetCustomerMatch = perception.targetMatch
@@ -369,8 +595,12 @@ export function buildBrandFitSnapshot(
     fit.validationPlan?.questionToAnswer?.trim() ||
     null
 
-  // If literally nothing is populated, skip the rollup entirely so the
-  // preview stays compact.
+  // Always compute the next-best-move alongside the rollup. When any
+  // other field is populated, surface it in the preview; if literally
+  // nothing else is filled in we still skip the snapshot entirely so
+  // the preview stays compact.
+  const nextBestMove = buildBrandFitNextBestMove(fit)
+
   const anyContent =
     brandSignal ||
     targetCustomerMatch ||
@@ -388,6 +618,7 @@ export function buildBrandFitSnapshot(
     strongestReference,
     productionRisk: productionRiskLine,
     recommendedAdjustment,
-    validationStep
+    validationStep,
+    nextBestMove
   }
 }

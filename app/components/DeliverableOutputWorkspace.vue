@@ -2858,6 +2858,13 @@ watch(
               <span class="font-medium text-neutral-600">Validation step:</span>
               {{ buildBrandFitSnapshot(persistedBrandFit(s))!.validationStep }}
             </p>
+            <p
+              v-if="buildBrandFitSnapshot(persistedBrandFit(s))!.nextBestMove"
+              class="text-neutral-700"
+            >
+              <span class="font-medium text-neutral-600">Next best move:</span>
+              {{ buildBrandFitSnapshot(persistedBrandFit(s))!.nextBestMove }}
+            </p>
           </div>
         </li>
       </ol>

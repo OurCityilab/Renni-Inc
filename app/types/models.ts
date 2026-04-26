@@ -733,6 +733,11 @@ export interface BrandFitBuilder {
   productionChecks?: BrandFitProductionCheck[]
   validationPlan?: BrandFitValidationPlan
   recommendation?: BrandFitRecommendation
+  // Optional brand signal chips ("premium", "school-spirit", etc.).
+  // Free-form list — the builder seeds a curated chip palette but
+  // students can save any subset. Drives the signal-tradeoff coach
+  // notes and feeds the deterministic summary alongside designAdjectives.
+  brandSignals?: string[]
   updatedAt?: IsoTimestamp | null
   updatedByUid?: string | null
   updatedByEmail?: string | null
