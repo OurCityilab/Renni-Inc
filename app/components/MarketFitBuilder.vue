@@ -836,10 +836,65 @@ const generatedSummary = computed<string>(() => {
     .join('')
 })
 
+function invalidNumberLabel(
+  label: string,
+  value: number | null | undefined,
+  opts: { min?: number; max?: number } = {}
+): string | null {
+  if (value == null) return null
+  if (!Number.isFinite(value)) return `${label} must be a valid number.`
+  if (opts.min != null && value < opts.min) return `${label} cannot be negative.`
+  if (opts.max != null && value > opts.max) {
+    return `${label} must be ${opts.max} or lower.`
+  }
+  return null
+}
+
+function validateBeforeSave(): string | null {
+  const checks: Array<[string, number | null | undefined, { min?: number; max?: number }]> = [
+    ['Product price', form.productFacts.price, { min: 0 }],
+    ['Production limit', form.productFacts.productionLimit, { min: 0 }]
+  ]
+
+  for (const seg of form.segments) {
+    const name = seg.name?.trim() || 'Unnamed segment'
+    checks.push(
+      [`${name} reachable audience`, seg.reachableAudience, { min: 0 }],
+      [`${name} interest rate`, seg.interestRatePct, { min: 0, max: 100 }],
+      [`${name} conversion rate`, seg.conversionRatePct, { min: 0, max: 100 }]
+    )
+  }
+
+  for (const comp of form.comparables) {
+    const name = comp.brandOrProduct?.trim() || 'Unnamed comparable'
+    checks.push([`${name} price`, comp.price, { min: 0 }])
+  }
+
+  checks.push(
+    ['Conservative interest rate', form.scenarioAssumptions.conservativeInterestRatePct, { min: 0, max: 100 }],
+    ['Base interest rate', form.scenarioAssumptions.baseInterestRatePct, { min: 0, max: 100 }],
+    ['Ambitious interest rate', form.scenarioAssumptions.ambitiousInterestRatePct, { min: 0, max: 100 }],
+    ['Conservative conversion rate', form.scenarioAssumptions.conservativeConversionRatePct, { min: 0, max: 100 }],
+    ['Base conversion rate', form.scenarioAssumptions.baseConversionRatePct, { min: 0, max: 100 }],
+    ['Ambitious conversion rate', form.scenarioAssumptions.ambitiousConversionRatePct, { min: 0, max: 100 }]
+  )
+
+  for (const [label, value, opts] of checks) {
+    const error = invalidNumberLabel(label, value, opts)
+    if (error) return error
+  }
+  return null
+}
+
 // --- save -----------------------------------------------------------
 async function save() {
   if (!props.editingEnabled || saving.value) return
   if (!auth.user || !auth.profile) return
+  const validationError = validateBeforeSave()
+  if (validationError) {
+    saveError.value = validationError
+    return
+  }
   saving.value = true
   saveError.value = null
   try {
