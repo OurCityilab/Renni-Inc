@@ -160,6 +160,80 @@ export function useDeliverableOutputs() {
     return { data, loading }
   }
 
+  // Read-only fan-out subscription for many deliverable outputs.
+  // Used by /c-suite-advisor to aggregate signals across studio-
+  // backed deliverables. Posture (do not relax):
+  //   - read-only only, never provisions, never writes
+  //   - missing docs are tolerated (returned as `null` in the map)
+  //   - rebinds when the id list changes (length or contents)
+  //   - cleans up every subscription on scope dispose
+  //   - simple by design: one onSnapshot per id, no batched query
+  //     or aggregation hops the rules layer
+  function watchManyOutputs(idsSource: MaybeRefOrGetter<string[]>) {
+    const data = ref<Record<string, DeliverableOutput | null>>({})
+    // True until the first snapshot lands for *every* requested id;
+    // flips to false once we've heard back from each subscription
+    // (or the id list is empty).
+    const loading = ref(true)
+    const subs: Map<string, Unsubscribe> = new Map()
+    const heard: Set<string> = new Set()
+    let currentIds: string[] = []
+
+    function refreshLoading() {
+      if (currentIds.length === 0) {
+        loading.value = false
+        return
+      }
+      loading.value = currentIds.some((id) => !heard.has(id))
+    }
+
+    function rebind(nextIds: string[]) {
+      const next = Array.from(new Set(nextIds.filter(Boolean)))
+      // Drop subscriptions for ids that left the list.
+      for (const [id, unsub] of subs) {
+        if (!next.includes(id)) {
+          unsub()
+          subs.delete(id)
+          heard.delete(id)
+          // Remove from data so callers see the id has gone.
+          if (id in data.value) {
+            const copy = { ...data.value }
+            delete copy[id]
+            data.value = copy
+          }
+        }
+      }
+      // Add subscriptions for new ids.
+      for (const id of next) {
+        if (subs.has(id)) continue
+        const unsub = onSnapshot(ref_(id), (snap) => {
+          const value = snap.exists() ? (snap.data() as DeliverableOutput) : null
+          data.value = { ...data.value, [id]: value }
+          heard.add(id)
+          refreshLoading()
+        })
+        subs.set(id, unsub)
+      }
+      currentIds = next
+      refreshLoading()
+    }
+
+    onMounted(() => {
+      watch(
+        () => toValue(idsSource),
+        (next) => rebind(next ?? []),
+        { immediate: true }
+      )
+    })
+    onScopeDispose(() => {
+      for (const [, unsub] of subs) unsub()
+      subs.clear()
+      heard.clear()
+    })
+
+    return { data, loading }
+  }
+
   // Lazy create of the output doc. Called when the workspace is first
   // opened on a deliverable that doesn't have one yet. Idempotent — does
   // nothing if the doc already exists, so it's safe to call on every
@@ -759,6 +833,7 @@ export function useDeliverableOutputs() {
 
   return {
     watchOutput,
+    watchManyOutputs,
     createOutputIfMissing,
     saveSection,
     addEvidenceLink,

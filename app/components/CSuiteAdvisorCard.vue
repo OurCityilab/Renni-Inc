@@ -105,165 +105,170 @@ const subtitle = computed(() => {
     </p>
 
     <template v-else>
-      <!-- Top priority — pulled out so the card opens with the most
-           important thing for the chief to see. -->
+      <!-- V1.1 — single visible top-priority row + collapsed
+           details. The cockpit pattern: chiefs answer "what's the
+           top issue, who owns it, what's next" without scrolling.
+           Full detail (gap, dependency, process order, suggested
+           task) lives one click away. -->
       <article
         v-if="topPriority"
-        class="space-y-1 rounded-md border border-neutral-300 bg-white p-2 text-xs"
+        class="rounded-md border border-neutral-300 bg-white text-xs"
       >
-        <div class="flex flex-wrap items-center justify-between gap-2">
-          <p class="text-[11px] font-semibold uppercase tracking-wide text-neutral-500">
-            Top priority
-          </p>
-          <span
-            class="rounded-full border px-2 py-0.5 text-[10px] uppercase tracking-wide"
-            :class="SEVERITY_CHIP_CLASS[topPriority.severity]"
-          >{{ SEVERITY_LABEL[topPriority.severity] }} · {{ SOURCE_LABEL[topPriority.source] }}</span>
-        </div>
-        <h4 class="font-semibold text-neutral-900">{{ topPriority.title }}</h4>
-        <p class="text-neutral-800">{{ topPriority.summary }}</p>
-        <p v-if="topPriority.gap" class="text-neutral-700">
-          <span class="font-medium text-neutral-600">Gap:</span> {{ topPriority.gap }}
-        </p>
-        <p class="text-neutral-700">
-          <span class="font-medium text-neutral-600">Owner:</span> {{ topPriority.owner }}
-          <span v-if="(topPriority.supportingRoles?.length ?? 0) > 0">
-            · support: {{ topPriority.supportingRoles!.join(' · ') }}
-          </span>
-        </p>
-        <p v-if="topPriority.dependency" class="text-neutral-700">
-          <span class="font-medium text-neutral-600">Dependency:</span> {{ topPriority.dependency }}
-        </p>
-        <ol
-          v-if="(topPriority.processOrder?.length ?? 0) > 0"
-          class="ml-4 list-decimal space-y-0.5 text-neutral-700"
-        >
-          <li v-for="(p, i) in topPriority.processOrder" :key="`top-proc-${i}`">{{ p }}</li>
-        </ol>
-        <p
-          v-if="topPriority.taskCoverage"
-          class="text-neutral-700"
-        >
-          <span class="font-medium text-neutral-600">Task coverage:</span>
-          {{ topPriority.taskCoverage.status }}
-          <span v-if="topPriority.taskCoverage.relatedRequirementId">
-            · req {{ topPriority.taskCoverage.relatedRequirementId }}
-          </span>
-        </p>
-        <p class="text-neutral-900">
-          <span class="font-medium text-neutral-600">Next action:</span>
-          {{ topPriority.nextAction }}
-        </p>
-        <div
-          v-if="topPriority.suggestedTask"
-          class="rounded border border-amber-200 bg-amber-50 p-2 text-[11px] text-amber-900"
-        >
-          <p class="font-semibold">Suggested task (copy only — chiefs create the task)</p>
-          <p>
-            <span class="font-medium">Title:</span> {{ topPriority.suggestedTask.title }}
-          </p>
-          <p>
-            <span class="font-medium">Owner:</span> {{ topPriority.suggestedTask.owner }}
-            · due {{ topPriority.suggestedTask.dueDate }}
-          </p>
-          <p v-if="topPriority.suggestedTask.dependency">
-            <span class="font-medium">Depends on:</span> {{ topPriority.suggestedTask.dependency }}
-          </p>
-          <p>
-            <span class="font-medium">Definition of done:</span>
-            {{ topPriority.suggestedTask.definitionOfDone }}
-          </p>
-          <p v-if="topPriority.suggestedTask.playbookChapter">
-            <span class="font-medium">Playbook:</span> {{ topPriority.suggestedTask.playbookChapter }}
-          </p>
-        </div>
-      </article>
-
-      <!-- Other priorities today — show up to two more signals -->
-      <div v-if="nextTwo.length > 0" class="space-y-1">
-        <p class="text-[11px] font-semibold uppercase tracking-wide text-neutral-500">
-          Other priorities today
-        </p>
-        <article
-          v-for="sig in nextTwo"
-          :key="sig.id"
-          class="space-y-1 rounded-md border border-neutral-200 bg-neutral-50 p-2 text-xs"
-        >
-          <div class="flex flex-wrap items-center justify-between gap-2">
-            <h4 class="font-medium text-neutral-900">{{ sig.title }}</h4>
-            <span
-              class="rounded-full border px-2 py-0.5 text-[10px] uppercase tracking-wide"
-              :class="SEVERITY_CHIP_CLASS[sig.severity]"
-            >{{ SEVERITY_LABEL[sig.severity] }}</span>
-          </div>
-          <p class="text-neutral-700">{{ sig.summary }}</p>
-          <p class="text-neutral-700">
-            <span class="font-medium text-neutral-600">Owner:</span> {{ sig.owner }}
-          </p>
-          <p class="text-neutral-900">
-            <span class="font-medium text-neutral-600">Next action:</span>
-            {{ sig.nextAction }}
-          </p>
-        </article>
-      </div>
-
-      <!-- View all — collapsible -->
-      <details v-if="remaining.length > 0" class="rounded-md border border-neutral-200 bg-white p-2">
-        <summary class="cursor-pointer text-xs font-medium text-neutral-700">
-          View all signals ({{ remaining.length }} more)
-        </summary>
-        <div class="mt-2 space-y-2">
-          <article
-            v-for="sig in remaining"
-            :key="sig.id"
-            class="space-y-1 rounded-md border border-neutral-200 bg-neutral-50 p-2 text-xs"
-          >
-            <div class="flex flex-wrap items-center justify-between gap-2">
-              <h4 class="font-medium text-neutral-900">{{ sig.title }}</h4>
+        <details class="group">
+          <summary class="cursor-pointer space-y-1 p-2">
+            <div class="flex flex-wrap items-center gap-1.5">
               <span
                 class="rounded-full border px-2 py-0.5 text-[10px] uppercase tracking-wide"
-                :class="SEVERITY_CHIP_CLASS[sig.severity]"
-              >{{ SEVERITY_LABEL[sig.severity] }}</span>
+                :class="SEVERITY_CHIP_CLASS[topPriority.severity]"
+              >{{ SEVERITY_LABEL[topPriority.severity] }}</span>
+              <span class="rounded-full border border-violet-300 bg-violet-50 px-2 py-0.5 text-[10px] uppercase tracking-wide text-violet-800">
+                Owner · {{ topPriority.owner }}
+              </span>
+              <span class="rounded-full border border-neutral-300 bg-neutral-50 px-2 py-0.5 text-[10px] uppercase tracking-wide text-neutral-700">
+                {{ SOURCE_LABEL[topPriority.source] }}
+              </span>
+              <span class="ml-auto text-[10px] text-neutral-500 group-open:hidden">
+                Tap for detail ▸
+              </span>
+              <span class="ml-auto text-[10px] text-neutral-500 hidden group-open:inline">
+                Hide detail ▾
+              </span>
             </div>
-            <p class="text-neutral-700">{{ sig.summary }}</p>
-            <p v-if="sig.gap" class="text-neutral-700">
-              <span class="font-medium text-neutral-600">Gap:</span> {{ sig.gap }}
+            <p class="text-neutral-900">
+              <span class="font-medium">{{ topPriority.title }}.</span>
+              {{ topPriority.nextAction }}
             </p>
-            <p class="text-neutral-700">
-              <span class="font-medium text-neutral-600">Owner:</span> {{ sig.owner }}
-              <span v-if="(sig.supportingRoles?.length ?? 0) > 0">
-                · support: {{ sig.supportingRoles!.join(' · ') }}
+          </summary>
+          <div class="space-y-1 border-t border-neutral-200 p-2">
+            <p class="text-neutral-800">{{ topPriority.summary }}</p>
+            <p v-if="topPriority.gap" class="text-neutral-700">
+              <span class="font-medium text-neutral-600">Gap:</span> {{ topPriority.gap }}
+            </p>
+            <p
+              v-if="(topPriority.supportingRoles?.length ?? 0) > 0"
+              class="text-neutral-700"
+            >
+              <span class="font-medium text-neutral-600">Support:</span>
+              {{ topPriority.supportingRoles!.join(' · ') }}
+            </p>
+            <p v-if="topPriority.dependency" class="text-neutral-700">
+              <span class="font-medium text-neutral-600">Dependency:</span> {{ topPriority.dependency }}
+            </p>
+            <ol
+              v-if="(topPriority.processOrder?.length ?? 0) > 0"
+              class="ml-4 list-decimal space-y-0.5 text-neutral-700"
+            >
+              <li v-for="(p, i) in topPriority.processOrder" :key="`top-proc-${i}`">{{ p }}</li>
+            </ol>
+            <p
+              v-if="topPriority.taskCoverage"
+              class="text-neutral-700"
+            >
+              <span class="font-medium text-neutral-600">Task coverage:</span>
+              {{ topPriority.taskCoverage.status }}
+              <span v-if="topPriority.taskCoverage.relatedRequirementId">
+                · req {{ topPriority.taskCoverage.relatedRequirementId }}
               </span>
             </p>
-            <p v-if="sig.dependency" class="text-neutral-700">
-              <span class="font-medium text-neutral-600">Dependency:</span> {{ sig.dependency }}
-            </p>
-            <p class="text-neutral-900">
-              <span class="font-medium text-neutral-600">Next action:</span>
-              {{ sig.nextAction }}
-            </p>
             <div
-              v-if="sig.suggestedTask"
+              v-if="topPriority.suggestedTask"
               class="rounded border border-amber-200 bg-amber-50 p-2 text-[11px] text-amber-900"
             >
-              <p class="font-semibold">Suggested task (copy only)</p>
+              <p class="font-semibold">Suggested task (copy only — chiefs create the task)</p>
               <p>
-                <span class="font-medium">Title:</span> {{ sig.suggestedTask.title }}
-                · owner {{ sig.suggestedTask.owner }}
-                · due {{ sig.suggestedTask.dueDate }}
+                <span class="font-medium">Title:</span> {{ topPriority.suggestedTask.title }}
+              </p>
+              <p>
+                <span class="font-medium">Owner:</span> {{ topPriority.suggestedTask.owner }}
+                · due {{ topPriority.suggestedTask.dueDate }}
+              </p>
+              <p v-if="topPriority.suggestedTask.dependency">
+                <span class="font-medium">Depends on:</span> {{ topPriority.suggestedTask.dependency }}
               </p>
               <p>
                 <span class="font-medium">Definition of done:</span>
-                {{ sig.suggestedTask.definitionOfDone }}
+                {{ topPriority.suggestedTask.definitionOfDone }}
+              </p>
+              <p v-if="topPriority.suggestedTask.playbookChapter">
+                <span class="font-medium">Playbook:</span> {{ topPriority.suggestedTask.playbookChapter }}
               </p>
             </div>
-          </article>
-        </div>
+          </div>
+        </details>
+      </article>
+
+      <!-- Other priorities — collapsed list of compact rows.
+           Each row carries the chip + owner + one-line next
+           action; expanding a row reveals the full detail. -->
+      <details
+        v-if="nextTwo.length > 0 || remaining.length > 0"
+        class="rounded-md border border-neutral-200 bg-white"
+      >
+        <summary class="cursor-pointer p-2 text-xs font-medium text-neutral-700">
+          Other priorities ({{ nextTwo.length + remaining.length }})
+        </summary>
+        <ul class="space-y-1 border-t border-neutral-200 p-2 text-xs">
+          <li
+            v-for="sig in [...nextTwo, ...remaining]"
+            :key="sig.id"
+          >
+            <details class="rounded-md border border-neutral-200 bg-neutral-50">
+              <summary class="cursor-pointer space-y-1 p-2">
+                <div class="flex flex-wrap items-center gap-1.5">
+                  <span
+                    class="rounded-full border px-2 py-0.5 text-[10px] uppercase tracking-wide"
+                    :class="SEVERITY_CHIP_CLASS[sig.severity]"
+                  >{{ SEVERITY_LABEL[sig.severity] }}</span>
+                  <span class="rounded-full border border-violet-300 bg-violet-50 px-2 py-0.5 text-[10px] uppercase tracking-wide text-violet-800">
+                    {{ sig.owner }}
+                  </span>
+                  <span class="rounded-full border border-neutral-300 bg-white px-2 py-0.5 text-[10px] uppercase tracking-wide text-neutral-700">
+                    {{ SOURCE_LABEL[sig.source] }}
+                  </span>
+                </div>
+                <p class="text-neutral-900">
+                  <span class="font-medium">{{ sig.title }}.</span>
+                  {{ sig.nextAction }}
+                </p>
+              </summary>
+              <div class="space-y-1 border-t border-neutral-200 p-2">
+                <p class="text-neutral-700">{{ sig.summary }}</p>
+                <p v-if="sig.gap" class="text-neutral-700">
+                  <span class="font-medium text-neutral-600">Gap:</span> {{ sig.gap }}
+                </p>
+                <p v-if="(sig.supportingRoles?.length ?? 0) > 0" class="text-neutral-700">
+                  <span class="font-medium text-neutral-600">Support:</span>
+                  {{ sig.supportingRoles!.join(' · ') }}
+                </p>
+                <p v-if="sig.dependency" class="text-neutral-700">
+                  <span class="font-medium text-neutral-600">Dependency:</span> {{ sig.dependency }}
+                </p>
+                <div
+                  v-if="sig.suggestedTask"
+                  class="rounded border border-amber-200 bg-amber-50 p-2 text-[11px] text-amber-900"
+                >
+                  <p class="font-semibold">Suggested task (copy only)</p>
+                  <p>
+                    <span class="font-medium">Title:</span> {{ sig.suggestedTask.title }}
+                    · owner {{ sig.suggestedTask.owner }}
+                    · due {{ sig.suggestedTask.dueDate }}
+                  </p>
+                  <p>
+                    <span class="font-medium">Definition of done:</span>
+                    {{ sig.suggestedTask.definitionOfDone }}
+                  </p>
+                </div>
+              </div>
+            </details>
+          </li>
+        </ul>
       </details>
 
       <p class="text-[11px] italic text-neutral-500">
         Advisor signals are read-only and display-only. They do not change the
-        submit gate, Playbook readiness, or approval state.
+        submit gate, Playbook readiness, or approval state. Open
+        <NuxtLink to="/c-suite-advisor" class="text-phoenix-700 hover:underline">C-Suite Advisor</NuxtLink>
+        for the leadership cockpit across chapters.
       </p>
     </template>
   </section>

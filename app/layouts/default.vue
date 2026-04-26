@@ -37,6 +37,8 @@ const navGroups = computed<NavGroup[]>(() => {
   ]
   const adminItems: NavItem[] = []
   if (auth.isChief || auth.isAdmin) adminItems.push({ to: '/c-suite', label: 'C-Suite' })
+  if (auth.isChief || auth.isAdmin)
+    adminItems.push({ to: '/c-suite-advisor', label: 'C-Suite Advisor' })
   if (auth.isAdmin) adminItems.push({ to: '/team', label: 'Team' })
   if (adminItems.length) groups.push({ label: 'Admin', items: adminItems })
   return groups
