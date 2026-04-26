@@ -31,7 +31,9 @@ const navGroups = computed<NavGroup[]>(() => {
         { to: '/timeline', label: 'Timeline' },
         { to: '/goals', label: 'Goals' },
         { to: '/pricing', label: 'Pricing' },
-        { to: '/revenue', label: 'Revenue' }
+        { to: '/revenue', label: 'Revenue' },
+        { to: '/presentation-readiness', label: 'Presentation' },
+        { to: '/export-center', label: 'Export' }
       ]
     }
   ]

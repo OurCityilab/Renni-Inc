@@ -5,6 +5,7 @@ import { useAuthStore } from '~/stores/auth'
 import { useDeliverables } from '~/composables/useDeliverables'
 import { useRoster } from '~/composables/useRoster'
 import { useTasks, type NewTaskInput } from '~/composables/useTasks'
+import { useDeliverableOutputs } from '~/composables/useDeliverableOutputs'
 import {
   DEPARTMENTS,
   type Department,
@@ -14,15 +15,41 @@ import {
   type TaskStatus
 } from '~/types/models'
 import { taskStatusLabel } from '~/utils/taskStatus'
+import { getTemplateStudio } from '~/data/templateStudios'
+import {
+  buildPresentationReadiness,
+  PROCESS_ORDER
+} from '~/utils/presentationReadiness'
 
 const auth = useAuthStore()
 const tasks = useTasks()
 const deliverables = useDeliverables()
 const roster = useRoster()
+const outputs = useDeliverableOutputs()
 
 const { data: allTasks, loading: tasksLoading } = tasks.watchAll()
 const { data: allDeliverables } = deliverables.watchList()
 const { data: rosterEntries } = roster.watchAll()
+
+// Final Presentation Readiness Sprint 1 — backplan panel data.
+// Read-only fan-out subscription over deliverableOutputs for
+// studio-backed deliverables; reused by the readiness summary.
+const studioBackedIds = computed<string[]>(() =>
+  allDeliverables.value
+    .filter((d) => Boolean(getTemplateStudio(d.id)))
+    .map((d) => d.id)
+)
+const { data: outputsByDeliverableId } = outputs.watchManyOutputs(studioBackedIds)
+
+const presentationReadiness = computed(() =>
+  buildPresentationReadiness({
+    deliverables: allDeliverables.value,
+    tasks: allTasks.value,
+    outputs: outputsByDeliverableId.value,
+    studioResolver: (d) => getTemplateStudio(d.id)
+  })
+)
+const backplanSummary = computed(() => presentationReadiness.value.summary)
 
 // Mirrors Firestore: admin, Co-CEO, or any chief may create/edit planning.
 const canPlan = computed(
@@ -346,6 +373,103 @@ const dependencyCandidates = computed<Task[]>(() =>
         @click="builderOpen = !builderOpen"
       >{{ builderOpen ? 'Close builder' : '+ Plan a task' }}</button>
     </header>
+
+    <!-- Final Presentation Backplan (Sprint 1) — read-only summary
+         that frames timeline planning around the May 12/15 final
+         presentation. Uses existing deliverable + task due dates
+         only; no global deadline model, no due-date editing. -->
+    <section class="card space-y-2 border-phoenix-200 bg-phoenix-50/40">
+      <header class="space-y-0.5">
+        <p class="text-xs font-semibold uppercase tracking-wide text-phoenix-700">
+          Final presentation backplan
+        </p>
+        <p class="text-sm text-neutral-800">
+          Frame your timeline against the final presentation. Read-only —
+          edit due dates from each task or deliverable.
+        </p>
+      </header>
+
+      <!-- Counts row, student-friendly labels mirroring the cockpit. -->
+      <ul class="flex flex-wrap gap-1.5 text-[11px]">
+        <li
+          :class="[
+            'rounded-full border px-2 py-0.5 uppercase tracking-wide',
+            backplanSummary.blockerCount > 0
+              ? 'border-rose-300 bg-rose-50 text-rose-800 font-semibold'
+              : 'border-neutral-300 bg-neutral-50 text-neutral-700'
+          ]"
+        >Stops / Blocked · {{ backplanSummary.blockerCount }}</li>
+        <li
+          :class="[
+            'rounded-full border px-2 py-0.5 uppercase tracking-wide',
+            backplanSummary.riskCount > 0
+              ? 'border-amber-300 bg-amber-50 text-amber-800 font-semibold'
+              : 'border-neutral-300 bg-neutral-50 text-neutral-700'
+          ]"
+        >Needs Action · {{ backplanSummary.riskCount }}</li>
+        <li
+          :class="[
+            'rounded-full border px-2 py-0.5 uppercase tracking-wide',
+            backplanSummary.dueSoonTaskCount > 0
+              ? 'border-amber-200 bg-amber-50 text-amber-800 font-semibold'
+              : 'border-neutral-300 bg-neutral-50 text-neutral-700'
+          ]"
+        >Due Soon (7d) · {{ backplanSummary.dueSoonTaskCount }}</li>
+        <li
+          :class="[
+            'rounded-full border px-2 py-0.5 uppercase tracking-wide',
+            backplanSummary.overdueTaskCount > 0
+              ? 'border-rose-300 bg-rose-50 text-rose-800 font-semibold'
+              : 'border-neutral-300 bg-neutral-50 text-neutral-700'
+          ]"
+        >Overdue tasks · {{ backplanSummary.overdueTaskCount }}</li>
+        <li
+          :class="[
+            'rounded-full border px-2 py-0.5 uppercase tracking-wide',
+            backplanSummary.blockedTaskCount > 0
+              ? 'border-rose-300 bg-rose-50 text-rose-800 font-semibold'
+              : 'border-neutral-300 bg-neutral-50 text-neutral-700'
+          ]"
+        >Blocked tasks · {{ backplanSummary.blockedTaskCount }}</li>
+        <li
+          :class="[
+            'rounded-full border px-2 py-0.5 uppercase tracking-wide',
+            backplanSummary.ownerlessTaskCount > 0
+              ? 'border-amber-200 bg-amber-50 text-amber-800 font-semibold'
+              : 'border-neutral-300 bg-neutral-50 text-neutral-700'
+          ]"
+        >Ownerless · {{ backplanSummary.ownerlessTaskCount }}</li>
+      </ul>
+
+      <!-- Process-order ladder. Display-only; reminds the team
+           which step blocks which next step. -->
+      <details class="rounded-md border border-neutral-200 bg-white p-2">
+        <summary class="cursor-pointer text-xs font-medium text-neutral-700">
+          Process order — what happens first
+        </summary>
+        <ol class="ml-4 mt-1 list-decimal space-y-0.5 text-xs text-neutral-800">
+          <li v-for="(step, i) in PROCESS_ORDER" :key="`backplan-${i}`">{{ step }}</li>
+        </ol>
+        <p class="mt-1 text-[11px] italic text-neutral-500">
+          Display-only sequence. Chiefs and instructor still decide what to push when.
+        </p>
+      </details>
+
+      <div class="flex flex-wrap gap-2 text-xs">
+        <NuxtLink
+          to="/presentation-readiness"
+          class="rounded border border-phoenix-300 bg-white px-2 py-1 text-phoenix-800 hover:bg-phoenix-50"
+        >Open Presentation Readiness →</NuxtLink>
+        <NuxtLink
+          to="/c-suite-advisor"
+          class="rounded border border-phoenix-300 bg-white px-2 py-1 text-phoenix-800 hover:bg-phoenix-50"
+        >Open C-Suite Advisor →</NuxtLink>
+        <NuxtLink
+          to="/export-center"
+          class="rounded border border-phoenix-300 bg-white px-2 py-1 text-phoenix-800 hover:bg-phoenix-50"
+        >Open Export Center →</NuxtLink>
+      </div>
+    </section>
 
     <!-- Task builder -->
     <section
