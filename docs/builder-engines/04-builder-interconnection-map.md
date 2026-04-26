@@ -1,6 +1,6 @@
 # Builder Interconnection Map
 
-Market Fit Builder and Brand Fit Builder should inform each other. The strongest student work will show how product, brand, price, market, channel, evidence, and revenue assumptions fit together.
+Market Fit Builder and Brand Fit Builder should inform each other. Product Positioning Intelligence sits between them: it scans product reality, comparable products, customer profiles, and source gaps so students do not jump from "we like this product" to "this is the target market" without evidence. The strongest student work will show how product, brand, price, market, channel, evidence, and revenue assumptions fit together.
 
 ## Shared Logic
 
@@ -9,11 +9,42 @@ The builders should connect these questions:
 - What are we selling?
 - What does it look and feel like?
 - What does it cost?
+- What kind of product does it behave like?
+- What comparable products are actually useful?
 - Who does it attract?
 - Who can pay for it?
 - Where can we reach them?
 - What evidence supports that fit?
 - What should change if the evidence is weak?
+
+## Product Positioning Intelligence Bridges Market And Brand
+
+Product Positioning Intelligence should translate product facts into market and brand questions.
+
+It should read:
+
+- Product specs.
+- Material, ingredients, or production method.
+- Made-in or local story.
+- Price and cost pressure.
+- Quality level.
+- Design/style direction.
+- Intended customer and channel.
+- Comparable products.
+- Source gaps.
+
+It should return:
+
+- Likely product category behavior.
+- Likely customer profiles.
+- Price expectation.
+- Quality proof needed.
+- Comp alignment notes.
+- Channel implications.
+- Risk flags.
+- Source requests.
+
+This layer should help students see that a $100 Detroit-made sweatshirt may behave more like premium local apparel, giftable identity apparel, or values-based apparel than basic school merch.
 
 ## Market Fit Informs Brand Fit
 
@@ -24,6 +55,7 @@ Market Fit Builder should give Brand Fit Builder a clear target:
 - Price tolerance.
 - Channel.
 - Comparable products.
+- Customer profile names.
 - Evidence strength.
 - Weakest assumption.
 
@@ -101,9 +133,12 @@ The builder outputs should reflect the channel, not just the product.
 Comparable products should shape both market and brand reasoning:
 
 - Market Fit Builder uses comparables to understand price, audience, and channel.
+- Product Positioning Intelligence checks whether a comp is strong for product, price, quality, story, customer, channel, style, or local-made signals.
 - Brand Fit Builder uses comparables to understand visual category, quality cues, and differentiation.
 
 Students should identify what they are borrowing as a category signal and what makes the Renni product distinct.
+
+Students should also separate "worn by" from "targeted by." A brand students wear can be useful as a style or premium-positioning reference, but that does not prove students are the strategic buyer.
 
 ## Evidence Flow Into Structured Evidence
 
@@ -113,6 +148,7 @@ Recommended mapping:
 
 - Segment recommendation -> claim.
 - Survey/interview/comparable -> evidence.
+- Product scan or customer profile -> assumption to validate.
 - Source name or link -> source.
 - Price tolerance or conversion expectation -> assumption.
 - Weak segment fit -> risk.
@@ -130,6 +166,7 @@ Builder outputs should feed these Playbook areas:
 - Ch. 8: revenue assumptions and pricing logic.
 - Ch. 10: customer insight and campaign implications.
 - Ch. 11: Phoenix Nest retail carry evidence, offer, and ask.
+- Ch. 12: unresolved source gaps, next validation tests, and next-semester recommendations.
 
 Students should still write the final Playbook text themselves.
 
@@ -153,3 +190,10 @@ Detroit-made product:
 - Market question: Which segment values local production enough to pay more?
 - Brand question: Does the identity make local quality visible?
 - Evidence needed: interviews, comparable local apparel, retail stakeholder feedback.
+
+Student-worn premium brand:
+
+- Product signal: premium reference, style aspiration, higher price expectation.
+- Market question: Who is the brand built to attract, and does that match the Renni buyer?
+- Brand question: Which visual signals are useful references without copying?
+- Evidence needed: comp notes, customer profile, affordability context, and willingness-to-pay interviews.

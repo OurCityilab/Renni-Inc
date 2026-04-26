@@ -6,10 +6,11 @@ This roadmap keeps the builder family lean. Each phase should ship a small, revi
 
 1. Market Fit Builder V1
 2. Revenue scenario connection
-3. Brand Fit Builder V1
-4. Builder interconnection refinement
-5. Decision Memo Builder
-6. Broader AI critique refinement
+3. Product Positioning Intelligence and Source Coach
+4. Brand Fit Builder V1
+5. Builder interconnection refinement
+6. Decision Memo Builder
+7. Broader AI critique refinement
 
 ## Phase 1: Market Fit Builder V1
 
@@ -82,7 +83,46 @@ Definition of done:
 - Empty state is clear.
 - Listener cleanup follows existing composable patterns.
 
-## Phase 3: Brand Fit Builder V1
+## Phase 3: Product Positioning Intelligence And Source Coach
+
+Build:
+
+- Product scan guidance inside Market Fit refinement.
+- Comp alignment notes that explain whether a comp is useful for category, price, quality, story, customer, channel, style, or local-made signals.
+- Customer profile naming support.
+- Source Coach prompts for surveys, interviews, public data, comparable products, retail observation, stakeholder feedback, pop-up feedback, and preorder tests.
+- Affordability vs demand warnings.
+- "Worn by" vs "targeted by" warnings.
+
+Do not build:
+
+- Paid data integration.
+- Automatic external data import.
+- Automatic market-size claims.
+- Automatic final text.
+- Any change to submit or readiness logic.
+
+Dependencies:
+
+- Market Fit Builder V1.
+- Revenue scenario connection.
+- Structured Evidence Standard.
+- Current no-write critique posture.
+
+Definition of done:
+
+- Students can identify what kind of product they have and what evidence they still need.
+- Comparable products are labeled by usefulness, not treated as proof.
+- Customer profiles remain student-friendly and evidence-bound.
+- Source prompts help students gather better data without inventing it.
+
+Manual smoke checks:
+
+- Add a premium apparel product and confirm the guidance points beyond basic school merch.
+- Add a weak comp and confirm the guidance asks for a better-aligned comp.
+- Confirm no output is required for submit or Playbook readiness.
+
+## Phase 4: Brand Fit Builder V1
 
 Build:
 
@@ -93,6 +133,7 @@ Build:
 - Production and accessibility checks.
 - Reference brand board notes.
 - Validation plan.
+- Reference-brand perception analysis that uses Product Positioning Intelligence rather than raw style preference.
 
 Do not build:
 
@@ -108,6 +149,7 @@ Dependencies:
 - Existing Output Workspace save pattern.
 - Structured Evidence Standard.
 - Market Fit Builder outputs if available.
+- Product Positioning Intelligence profile and comp guidance.
 
 Definition of done:
 
@@ -115,12 +157,13 @@ Definition of done:
 - Students can describe signals, tradeoffs, evidence, and validation steps.
 - Output supports Playbook writing without replacing it.
 
-## Phase 4: Builder Interconnection Refinement
+## Phase 5: Builder Interconnection Refinement
 
 Build:
 
 - Read-only reference panels between Market Fit and Brand Fit where useful.
 - Shared helper text for price, quality, brand signal, market, and channel fit.
+- Shared Product Positioning Intelligence summaries where they reduce duplicate student work.
 - Compact summaries that reduce duplicate student work.
 
 Do not build:
@@ -132,6 +175,7 @@ Do not build:
 Dependencies:
 
 - Stable Market Fit and Brand Fit entries.
+- Stable product scan, comp, and profile patterns.
 - Confirmed section IDs.
 - Manual milestone feedback.
 
@@ -141,7 +185,7 @@ Definition of done:
 - No builder requires another builder to submit work.
 - Existing data remains valid.
 
-## Phase 5: Decision Memo Builder
+## Phase 6: Decision Memo Builder
 
 Build:
 
@@ -169,12 +213,13 @@ Definition of done:
 - The memo links to evidence.
 - Chiefs and instructor remain final reviewers.
 
-## Phase 6: Broader AI Critique Refinement
+## Phase 7: Broader AI Critique Refinement
 
 Build:
 
 - Carefully scoped critique for additional builder outputs.
 - Prompt updates that reference new builder data.
+- Critique of product specs, comp quality, customer profiles, source gaps, and positioning claims.
 - Clear student-facing safety copy.
 
 Do not build:
@@ -202,8 +247,9 @@ Definition of done:
 | --- | --- | --- | --- | --- | --- |
 | Market Fit Builder V1 | Strategy and Growth with CFO/CMO support | TBD before next milestone | Current Market Builder and Structured Evidence | Segment comparison saves safely and remains optional | Ch. 7, Ch. 10, Ch. 11 |
 | Revenue scenario connection | CFO with Strategy and Growth support | TBD after Market Fit V1 | Market Fit entries | Ch. 8 reads market-fit context without writing back | Ch. 8 |
-| Brand Fit Builder V1 | CMO with Strategy and Growth support | TBD after Market Fit review | Template Studio opt-in sections | Brand signals, tradeoffs, and validation plan save safely | Ch. 5, Ch. 6, Ch. 10 |
-| Builder interconnection refinement | Strategy and Growth with Co-CEO review | TBD after both builders stabilize | Market Fit and Brand Fit entries | Read-only connections clarify tradeoffs without creating gates | Ch. 7, Ch. 8, Ch. 10, Ch. 11 |
+| Product Positioning Intelligence and Source Coach | Strategy and Growth with CMO/CFO support | TBD before Brand Fit V1 | Market Fit V1 and revenue reference | Product scan, comp alignment, customer profiles, and source prompts are evidence-bound | Ch. 7, Ch. 8, Ch. 10, Ch. 11, Ch. 12 |
+| Brand Fit Builder V1 | CMO with Strategy and Growth support | TBD after positioning layer | Template Studio opt-in sections and product positioning guidance | Brand signals, tradeoffs, and validation plan save safely | Ch. 5, Ch. 6, Ch. 10 |
+| Builder interconnection refinement | Strategy and Growth with Co-CEO review | TBD after both builders stabilize | Market Fit, positioning, and Brand Fit entries | Read-only connections clarify tradeoffs without creating gates | Ch. 7, Ch. 8, Ch. 10, Ch. 11 |
 | Decision Memo Builder | Co-CEOs with department support | TBD later | Stable builder evidence patterns | Decisions show options, evidence, tradeoffs, and next action | Ch. 13 |
 | Broader AI critique refinement | Instructor/Admin with chiefs | TBD after manual testing | Stable prompts and provider monitoring | Critique remains temporary, no-write, and evidence-bound | Relevant chapters |
 

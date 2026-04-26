@@ -9,6 +9,7 @@ They are not simple forms. A form collects answers. A builder engine helps stude
 Builder engines should help students:
 
 - Connect brand identity, product quality, price point, target market, channel, and evidence.
+- Infer likely market and positioning from product reality instead of guessing a target audience.
 - See the cause/effect chain behind a business decision.
 - Compare options instead of assuming the first answer is correct.
 - Identify weak assumptions before they become final claims.
@@ -46,6 +47,7 @@ Builder engines should work inside the current Renni Command Center spine:
 - Deliverable Output Workspace is where students write source notes, draft responses, final Playbook text, evidence links, structured evidence, and builder entries.
 - Structured Evidence captures claims, evidence, assumptions, risks, confidence, and validation steps.
 - Market Builder and future builders provide deterministic student-authored reasoning support.
+- Product Positioning Intelligence and Source Coach guidance should help students connect product specs, comps, customer profiles, and source gaps before finalizing market or brand claims.
 - AI critique can review student-authored inputs, but it remains temporary, no-write, and non-authoritative.
 
 ## Guardrails
@@ -68,6 +70,7 @@ Builder engines must preserve the current system boundaries:
 The near-term builder family should stay small:
 
 - Market Fit Builder: helps students compare possible markets and evidence strength.
+- Product Positioning Intelligence and Source Coach: helps students scan product reality, compare useful comps, name likely customer profiles, and identify evidence sources before Brand Fit work gets too subjective.
 - Brand Fit Builder: helps students understand how identity choices send market signals.
 - Existing Market Builder: supports demand and scenario assumptions.
 - Future Decision Memo Builder: should come later, after market and brand reasoning are stable.

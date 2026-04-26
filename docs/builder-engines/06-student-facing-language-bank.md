@@ -56,6 +56,9 @@ Use this language when adding builder prompts, helper text, empty states, warnin
 - "A strong story still needs customer proof."
 - "A design that looks premium may not fit every audience."
 - "A design that students like may not be enough for retail carry."
+- "People wearing a brand does not prove they are the strategic buyer for that brand."
+- "Affordability data can support context, but it does not prove demand."
+- "Total market is not the same as reachable market or likely buyers."
 
 ## AI Critique Guardrail Language
 
@@ -92,6 +95,54 @@ For donations:
 - "A donation is not the same as a product sale."
 - "People need to understand the mission and trust where the money goes."
 - "Parents, alumni, staff, and supporters may be stronger donation audiences than students."
+
+## Product Scan Copy
+
+- "What kind of product does this behave like: basic merch, premium merch, streetwear, local-made apparel, giftable product, food impulse buy, or supporter ask?"
+- "What product facts make the price believable?"
+- "What quality proof would a customer need before paying this price?"
+- "What does the made-in or local story change about the likely buyer?"
+- "What channel makes this product easiest to understand and buy?"
+- "What production constraint could change the market or price?"
+
+## Comparable Product Scan Copy
+
+- "This comp is useful for product category, but weak for price."
+- "This comp is useful for premium positioning, but weak for school connection."
+- "Find one comp that matches the product and one comp that matches the customer."
+- "A basic school hoodie is not enough evidence for a premium Detroit-made sweatshirt."
+- "A brand students wear can be a style reference without proving students are the target buyer."
+- "Name what this comp proves and what it does not prove."
+
+## Source Coach Copy
+
+- "What source would make this claim stronger?"
+- "Use a survey when you need student preference or student price reaction."
+- "Use adult interviews when the price may be beyond regular student spending."
+- "Use Census or ACS data for affordability context, not proof of demand."
+- "Use comparable products to test whether the price and positioning are realistic."
+- "Use retail observation when the product needs to work in Phoenix Nest or at a table."
+- "Use a preorder or interest test before making a high-risk inventory call."
+
+## Customer Profile Naming Copy
+
+- "This looks like a School Spirit Buyer if school identity is the main reason to buy."
+- "This looks like a Proud Parent Supporter if family pride and support are stronger than student spending power."
+- "This looks like an Alumni Legacy Buyer if school connection and giving back matter."
+- "This looks like a Civic Premium Buyer if Detroit-made quality and local pride support the price."
+- "This looks like a Gift Buyer if the product is purchased for someone else."
+- "This looks like a Premium Casualwear Buyer if quality, fit, and style matter more than school affiliation."
+- "This looks like a Mission Supporter / Donor if the purchase is mostly about supporting the student enterprise."
+
+## Affordability, Demand, And Market Size Copy
+
+- "Someone being able to afford the product does not prove they want it."
+- "Someone liking the product does not prove they will buy it at this price."
+- "Total market means everyone who might fit the profile."
+- "Reachable market means the people this team can actually reach through the channel."
+- "Interested market means the people likely to care after seeing the product and story."
+- "Likely buyers means the people expected to convert at the proposed price."
+- "Do not use total market as likely buyers."
 
 ## Brand Fit Builder Examples
 
