@@ -378,6 +378,149 @@ export interface MarketBuilderEntry {
   updatedAt?: IsoTimestamp | null
 }
 
+// Market Fit Builder V1 — broader than Market Builder. Where Market
+// Builder lets a student log demand for a single product/scenario, the
+// Fit Builder helps the team compare *which segment to target* given
+// brand identity, design, quality, price, and Detroit-made story.
+// Renaissance students might be the primary market, a launch market,
+// an awareness market, or a weaker buying market depending on price
+// and product. The Fit Builder supports all four.
+//
+// Stored alongside the existing fields on DeliverableOutputSection;
+// nothing is required, nothing migrates, nothing affects the submit
+// gate or Playbook readiness.
+export type MarketFitQualityLevel =
+  | 'budget'
+  | 'standard'
+  | 'premium'
+  | 'luxury'
+  | ''
+
+export type MarketFitSignal = 'low' | 'medium' | 'high' | ''
+
+export type MarketFitSegmentType =
+  | 'students'
+  | 'parents'
+  | 'alumni'
+  | 'staff'
+  | 'detroit_supporters'
+  | 'techtown_shoppers'
+  | 'gift_buyers'
+  | 'premium_apparel_buyers'
+  | 'custom'
+
+export type MarketFitSegmentRole =
+  | 'primary_market'
+  | 'secondary_market'
+  | 'launch_market'
+  | 'awareness_market'
+  | 'validation_market'
+  | ''
+
+export type MarketFitEvidenceSourceType =
+  | 'survey'
+  | 'interview'
+  | 'census_acs'
+  | 'school_data'
+  | 'comparable_products'
+  | 'retail_observation'
+  | 'stakeholder_feedback'
+  | 'custom'
+
+export type MarketFitEvidenceStatus =
+  | 'needed'
+  | 'in_progress'
+  | 'found'
+  | 'not_available'
+
+export interface MarketFitProductFacts {
+  productName?: string
+  productCategory?: string
+  price?: number | null
+  qualityLevel?: MarketFitQualityLevel
+  madeInStory?: string
+  brandStory?: string
+  styleDirection?: string
+  channel?: string
+  productionLimit?: number | null
+  notes?: string
+}
+
+export interface MarketFitSegment {
+  id: string
+  name: string
+  segmentType?: MarketFitSegmentType
+  whyItMightFit?: string
+  priceFit?: MarketFitSignal
+  storyFit?: MarketFitSignal
+  reachability?: MarketFitSignal
+  willingnessToPay?: MarketFitSignal
+  evidenceStrength?: MarketFitSignal
+  reachableAudience?: number | null
+  interestRatePct?: number | null
+  conversionRatePct?: number | null
+  evidenceSource?: string
+  risk?: string
+  nextValidationStep?: string
+  roleInStrategy?: MarketFitSegmentRole
+}
+
+export interface MarketFitComparable {
+  id: string
+  brandOrProduct: string
+  price?: number | null
+  qualityNotes?: string
+  styleNotes?: string
+  targetCustomer?: string
+  salesChannel?: string
+  similarity?: string
+  difference?: string
+  lessonForRenni?: string
+  source?: string
+}
+
+export interface MarketFitEvidenceRequest {
+  id: string
+  question: string
+  whyItMatters?: string
+  suggestedSourceType?: MarketFitEvidenceSourceType
+  assignedToRole?: string
+  status?: MarketFitEvidenceStatus
+  notes?: string
+}
+
+export interface MarketFitScenarioAssumptions {
+  selectedSegmentId?: string | null
+  conservativeInterestRatePct?: number | null
+  conservativeConversionRatePct?: number | null
+  baseInterestRatePct?: number | null
+  baseConversionRatePct?: number | null
+  ambitiousInterestRatePct?: number | null
+  ambitiousConversionRatePct?: number | null
+}
+
+export interface MarketFitRecommendation {
+  likelyPrimaryMarket?: string
+  likelySecondaryMarket?: string
+  launchOrValidationMarket?: string
+  positioningSummary?: string
+  strongestEvidence?: string
+  weakestAssumption?: string
+  recommendedNextValidation?: string
+}
+
+export interface MarketFitBuilder {
+  productFacts?: MarketFitProductFacts
+  segments?: MarketFitSegment[]
+  comparables?: MarketFitComparable[]
+  evidenceRequests?: MarketFitEvidenceRequest[]
+  scenarioAssumptions?: MarketFitScenarioAssumptions
+  recommendation?: MarketFitRecommendation
+  updatedAt?: IsoTimestamp | null
+  updatedByUid?: string | null
+  updatedByEmail?: string | null
+}
+
 export interface DeliverableOutputSection {
   sectionId: string
   sectionTitleSnapshot: string
@@ -391,6 +534,10 @@ export interface DeliverableOutputSection {
   // Optional Market Builder entries — demand estimates with scenarios.
   // Old output docs without this field render fine; we never migrate.
   marketBuilderEntries?: MarketBuilderEntry[]
+  // Optional Market Fit Builder — broader segment-comparison tool that
+  // helps decide *which* market to target. Co-exists with
+  // marketBuilderEntries; either, both, or neither may be present.
+  marketFit?: MarketFitBuilder
   status?: DeliverableOutputSectionStatus
   updatedAt?: IsoTimestamp | null
   updatedByUid?: string | null

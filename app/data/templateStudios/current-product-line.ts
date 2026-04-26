@@ -71,6 +71,11 @@ export const currentProductLine: TemplateStudio = {
         enabled: true,
         guidance:
           'For each product price, log the demand the price assumes — buyers per scenario at the proposed retail. The Phoenix Nest pitch and Chapter 8 revenue model both pull from this entry.'
+      },
+      marketFit: {
+        enabled: true,
+        guidance:
+          'Compare which segment (students, parents, alumni, Detroit supporters, gift buyers, premium apparel buyers) actually fits each product at the proposed price. Renaissance students may not be the primary market for premium items.'
       }
     },
     {
@@ -157,6 +162,11 @@ export const currentProductLine: TemplateStudio = {
         enabled: true,
         guidance:
           'Phoenix Nest will read this as the demand argument behind the carry ask. Conservative / base / ambitious is required; name the next validation step.'
+      },
+      marketFit: {
+        enabled: true,
+        guidance:
+          'For each recommended carry product, name the segment most likely to buy at retail and the segment most likely to be reached. They are not always the same.'
       }
     }
   ],

@@ -121,6 +121,11 @@ export const pricingBreakEven: TemplateStudio = {
         enabled: true,
         guidance:
           'Conservative / base / ambitious is required here because the rest of the pop-up plan keys off these numbers. Reconcile with the Chapter 7 demand entry for the same product.'
+      },
+      marketFit: {
+        enabled: true,
+        guidance:
+          'Pick the segment each scenario is keyed against. Revenue ranges that depend on which buyer the product is reaching (students vs parents vs Detroit supporters) need that buyer named explicitly.'
       }
     },
     {

@@ -41,6 +41,15 @@ export interface TemplateStudioSection {
     enabled: boolean
     guidance?: string
   }
+  // Market Fit Builder visibility metadata. Same opt-in pattern as
+  // marketBuilder: sections that don't set it default to off so the
+  // tool only appears in market/product-fit-relevant sections (Ch 7,
+  // 8, 10, 11). Independent of marketBuilder so a section can have
+  // one without the other.
+  marketFit?: {
+    enabled: boolean
+    guidance?: string
+  }
 }
 
 export interface TemplateStudioRequirement {

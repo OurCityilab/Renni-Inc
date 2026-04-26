@@ -76,6 +76,11 @@ export const phoenixNestPitch: TemplateStudio = {
         enabled: true,
         guidance:
           'For each SKU, log carry-volume scenarios at the wholesale price. Reorder cadence should reconcile with the conservative scenario.'
+      },
+      marketFit: {
+        enabled: true,
+        guidance:
+          'Phoenix Nest will read both who buys at retail and who buys at carry. Compare segments and name the strongest evidence; the buyer wants a defended pitch, not a single guess.'
       }
     },
     {

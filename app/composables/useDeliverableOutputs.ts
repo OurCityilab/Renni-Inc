@@ -23,6 +23,7 @@ import type {
   EvidenceLinkType,
   MarketBuilderEntry,
   MarketBuilderScenario,
+  MarketFitBuilder,
   MarketScenarioLevel,
   StructuredEvidenceEntry
 } from '~/types/models'
@@ -638,6 +639,46 @@ export function useDeliverableOutputs() {
     })
   }
 
+  // --- market fit builder (Market Fit Builder V1) ---
+  // Whole-section save: the builder's state lives as a single nested
+  // object on the section, and the editor writes the full state back
+  // each save. That's intentional — segments / comparables /
+  // evidence-requests are short lists with field-level interplay
+  // (e.g., recommendation references segments by id), so a per-list
+  // patch API would just expose the caller to merge bugs. The dotted
+  // path keeps sibling sections and other section fields (sourceNotes
+  // / draftText / finalText / evidenceLinks / structuredEvidence /
+  // marketBuilderEntries) untouched on every save. Output passed
+  // through stripUndefinedDeep so blank optional fields never reach
+  // Firestore as `undefined`.
+  async function saveMarketFitBuilder(
+    deliverableId: string,
+    sectionId: string,
+    sectionTitleSnapshot: string,
+    fit: MarketFitBuilder,
+    actor: DeliverableOutputActor
+  ): Promise<void> {
+    const now = new Date().toISOString()
+    const payload: MarketFitBuilder = stripUndefinedDeep({
+      ...fit,
+      updatedAt: now,
+      updatedByUid: actor.uid,
+      updatedByEmail: actor.email
+    })
+    const r = ref_(deliverableId)
+    await updateDoc(r, {
+      [`sections.${sectionId}.sectionId`]: sectionId,
+      [`sections.${sectionId}.sectionTitleSnapshot`]: sectionTitleSnapshot,
+      [`sections.${sectionId}.marketFit`]: payload,
+      [`sections.${sectionId}.updatedAt`]: now,
+      [`sections.${sectionId}.updatedByUid`]: actor.uid,
+      [`sections.${sectionId}.updatedByEmail`]: actor.email,
+      updatedAt: now,
+      updatedByUid: actor.uid,
+      updatedByEmail: actor.email
+    })
+  }
+
   return {
     watchOutput,
     createOutputIfMissing,
@@ -649,6 +690,7 @@ export function useDeliverableOutputs() {
     removeStructuredEvidence,
     addMarketBuilderEntry,
     updateMarketBuilderEntry,
-    removeMarketBuilderEntry
+    removeMarketBuilderEntry,
+    saveMarketFitBuilder
   }
 }

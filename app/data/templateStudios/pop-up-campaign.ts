@@ -38,6 +38,11 @@ export const popUpCampaign: TemplateStudio = {
         enabled: true,
         guidance:
           'Size each named group separately. School audience and broader Detroit-adjacent audience are different numbers; do not collapse them.'
+      },
+      marketFit: {
+        enabled: true,
+        guidance:
+          'Compare segments side-by-side before declaring a primary market. The school can be the primary market for some products and a launch / awareness market for others.'
       }
     },
     {

@@ -18,6 +18,8 @@ import type {
   EvidenceLinkType,
   MarketBuilderEntry,
   MarketBuilderScenario,
+  MarketFitBuilder as MarketFitBuilderState,
+  MarketFitSegment,
   MarketScenarioLevel,
   StructuredEvidenceEntry
 } from '~/types/models'
@@ -37,6 +39,7 @@ import MarketEvidenceReferencePanel, {
   type ReferencedMarketEntry
 } from '~/components/MarketEvidenceReferencePanel.vue'
 import MarketEvidenceCritiquePanel from '~/components/MarketEvidenceCritiquePanel.vue'
+import MarketFitBuilder from '~/components/MarketFitBuilder.vue'
 import type {
   AiCritiqueRequirementInput,
   MarketEvidenceCritiqueRequest
@@ -77,6 +80,19 @@ const isChapter11 = computed(
 // only handles the chapter scope so we can short-circuit cleanly.
 const aiCritiqueChapterEligible = computed(
   () => isChapter7.value || isChapter8.value || isChapter11.value
+)
+
+// Market Fit Builder V1 — broader segment-comparison tool. Visible
+// only on the four high-rigor market/product chapters and only on
+// sections that explicitly opt in via studio metadata.
+const MARKET_FIT_CHAPTER_IDS = new Set([
+  CH7_DELIVERABLE_ID,
+  CH8_DELIVERABLE_ID,
+  'ch-10-marketing-and-campaign-playbook',
+  CH11_DELIVERABLE_ID
+])
+const isMarketFitChapter = computed(() =>
+  MARKET_FIT_CHAPTER_IDS.has(props.deliverable.id)
 )
 // The watcher returns loading=false / data=null when the id is an
 // empty string, so each cross-chapter listener stays a no-op on every
@@ -906,6 +922,130 @@ function shouldShowAiCritique(s: TemplateStudioSection): boolean {
   return sectionHasAiInput(s)
 }
 
+function shouldShowMarketFit(s: TemplateStudioSection): boolean {
+  if (!isMarketFitChapter.value) return false
+  return s.marketFit?.enabled === true
+}
+
+function persistedMarketFit(s: TemplateStudioSection): MarketFitBuilderState | null {
+  return persistedSection(s)?.marketFit ?? null
+}
+
+// Synthesize MarketBuilderEntry rows from the section's Market Fit
+// Builder so the existing AI critique payload carries the segment-
+// comparison context without a schema change to the endpoint. Each
+// segment becomes one entry tagged "Market Fit:" so the model can
+// distinguish synthesized rows from the student's original Market
+// Builder entries. The selected segment gets the conservative / base
+// / ambitious split; non-selected segments get a single base scenario
+// derived from the segment's own interest/conversion pcts.
+function synthesizeMarketBuilderFromFit(
+  fit: MarketFitBuilderState | null
+): MarketBuilderEntry[] {
+  if (!fit) return []
+  const segments = fit.segments ?? []
+  if (segments.length === 0) return []
+  const product = fit.productFacts ?? {}
+  const sa = fit.scenarioAssumptions ?? {}
+  const selectedId = sa.selectedSegmentId ?? null
+  const productPrice =
+    typeof product.price === 'number' && Number.isFinite(product.price)
+      ? product.price
+      : null
+  const productNamePrefix = product.productName?.trim()
+    ? `Market Fit: ${product.productName.trim()}`
+    : 'Market Fit'
+
+  function buildScenario(
+    label: MarketScenarioLevel,
+    audience: number | null,
+    interestPct: number | null,
+    conversionPct: number | null,
+    price: number | null,
+    seg: MarketFitSegment
+  ): MarketBuilderScenario {
+    return {
+      id: `mfb-scn-${seg.id}-${label}`,
+      label,
+      reachableAudience: audience,
+      interestRatePercent: interestPct,
+      conversionRatePercent: conversionPct,
+      // Derived numbers are recomputed by the panel renderer; we ship
+      // null here so the model isn't shown a stale precomputed value.
+      estimatedBuyers: null,
+      price,
+      estimatedRevenue: null
+    }
+  }
+
+  return segments.map((seg) => {
+    const audience =
+      typeof seg.reachableAudience === 'number' &&
+      Number.isFinite(seg.reachableAudience)
+        ? seg.reachableAudience
+        : null
+    const isSelected = seg.id === selectedId
+    const scenarios: MarketBuilderScenario[] = isSelected
+      ? [
+          buildScenario(
+            'conservative',
+            audience,
+            sa.conservativeInterestRatePct ?? null,
+            sa.conservativeConversionRatePct ?? null,
+            productPrice,
+            seg
+          ),
+          buildScenario(
+            'base',
+            audience,
+            sa.baseInterestRatePct ?? null,
+            sa.baseConversionRatePct ?? null,
+            productPrice,
+            seg
+          ),
+          buildScenario(
+            'ambitious',
+            audience,
+            sa.ambitiousInterestRatePct ?? null,
+            sa.ambitiousConversionRatePct ?? null,
+            productPrice,
+            seg
+          )
+        ]
+      : [
+          buildScenario(
+            'base',
+            audience,
+            seg.interestRatePct ?? null,
+            seg.conversionRatePct ?? null,
+            productPrice,
+            seg
+          )
+        ]
+    return {
+      id: `mfb-${seg.id}`,
+      productName: `${productNamePrefix} · ${seg.name || 'segment'}`,
+      productStory: product.brandStory?.trim() || undefined,
+      primaryMarket: seg.name?.trim() || undefined,
+      secondaryMarket: seg.roleInStrategy
+        ? `Role in strategy: ${seg.roleInStrategy.replace(/_/g, ' ')}`
+        : undefined,
+      customerAssumption: seg.whyItMightFit?.trim() || undefined,
+      valueBasedFactor: product.madeInStory?.trim() || undefined,
+      schoolMarketSize: null,
+      broaderMarketSize: null,
+      evidenceSource: seg.evidenceSource?.trim() || undefined,
+      sourceType: undefined,
+      confidence: undefined,
+      weakestAssumption: seg.risk?.trim() || undefined,
+      strongestEvidence: undefined,
+      nextValidation: seg.nextValidationStep?.trim() || undefined,
+      scenarios,
+      linkedRequirementId: null
+    }
+  })
+}
+
 function sectionRequirementsForAi(
   s: TemplateStudioSection
 ): AiCritiqueRequirementInput[] {
@@ -954,7 +1094,15 @@ function buildAiRequest(s: TemplateStudioSection): MarketEvidenceCritiqueRequest
     risk: e.risk ?? null,
     nextValidation: e.nextValidation ?? null
   }))
-  const marketBuilderEntries = persisted?.marketBuilderEntries ?? []
+  // Merge real Market Builder entries with synthesized rows from the
+  // Market Fit Builder so the AI critique sees both layers without a
+  // schema change to the endpoint. Synthesized rows are clearly tagged
+  // in productName so the model can distinguish them.
+  const realMarketEntries = persisted?.marketBuilderEntries ?? []
+  const fitSynthesized = synthesizeMarketBuilderFromFit(
+    persisted?.marketFit ?? null
+  )
+  const marketBuilderEntries = [...realMarketEntries, ...fitSynthesized]
 
   // Cross-chapter context only travels with chapters that already
   // surface that context on screen. Ch 7 is self-contained.
@@ -2083,6 +2231,20 @@ watch(
           </div>
         </section>
 
+        <!-- Market Fit Builder V1 — broader segment-comparison tool.
+             Visible only on Ch 7 / 8 / 10 / 11 sections that opt in
+             via studio metadata. Independent of Market Builder and AI
+             Critique: a section can have any combination. -->
+        <MarketFitBuilder
+          v-if="shouldShowMarketFit(s)"
+          :deliverable-id="deliverable.id"
+          :section-id="s.id"
+          :section-title="s.title"
+          :initial="persistedMarketFit(s)"
+          :editing-enabled="editingEnabled"
+          :guidance="s.marketFit?.guidance ?? null"
+        />
+
         <!-- AI Critique V1 — read-only coach panel for the Market
              Evidence Suite. Visible only when:
                (a) the chapter is one of the three market-evidence
@@ -2260,6 +2422,75 @@ watch(
                 </p>
               </li>
             </ul>
+          </div>
+          <!-- Market Fit Builder roll-up. Compact on purpose: product +
+               price, named primary/launch markets, strongest evidence
+               and weakest assumption, plus the pinned tradeoff line so
+               the Playbook reads as a defended positioning statement
+               and not a single guess. -->
+          <div
+            v-if="s.marketFit?.enabled && persistedMarketFit(s)"
+            class="mt-2 space-y-1 text-xs"
+          >
+            <p class="font-medium uppercase tracking-wide text-neutral-500">
+              Market fit
+            </p>
+            <p
+              v-if="(persistedMarketFit(s)!.productFacts?.productName || '').trim() ||
+                    (persistedMarketFit(s)!.productFacts?.price != null)"
+              class="text-neutral-700"
+            >
+              <span class="font-medium text-neutral-600">Product:</span>
+              {{ persistedMarketFit(s)!.productFacts?.productName || '—' }}
+              <span v-if="persistedMarketFit(s)!.productFacts?.price != null">
+                · {{ fmtCurrency(persistedMarketFit(s)!.productFacts!.price ?? null) }}
+              </span>
+            </p>
+            <p
+              v-if="(persistedMarketFit(s)!.recommendation?.likelyPrimaryMarket || '').trim()"
+              class="text-neutral-700"
+            >
+              <span class="font-medium text-neutral-600">Primary market:</span>
+              {{ persistedMarketFit(s)!.recommendation!.likelyPrimaryMarket }}
+              <span v-if="(persistedMarketFit(s)!.recommendation?.likelySecondaryMarket || '').trim()">
+                · secondary: {{ persistedMarketFit(s)!.recommendation!.likelySecondaryMarket }}
+              </span>
+            </p>
+            <p
+              v-if="(persistedMarketFit(s)!.recommendation?.launchOrValidationMarket || '').trim()"
+              class="text-neutral-700"
+            >
+              <span class="font-medium text-neutral-600">Launch / validation market:</span>
+              {{ persistedMarketFit(s)!.recommendation!.launchOrValidationMarket }}
+            </p>
+            <p
+              v-if="(persistedMarketFit(s)!.recommendation?.positioningSummary || '').trim()"
+              class="whitespace-pre-wrap text-neutral-700"
+            >
+              <span class="font-medium text-neutral-600">Positioning:</span>
+              {{ persistedMarketFit(s)!.recommendation!.positioningSummary }}
+            </p>
+            <p
+              v-if="(persistedMarketFit(s)!.recommendation?.strongestEvidence || '').trim()"
+              class="text-neutral-700"
+            >
+              <span class="font-medium text-neutral-600">Strongest evidence:</span>
+              {{ persistedMarketFit(s)!.recommendation!.strongestEvidence }}
+            </p>
+            <p
+              v-if="(persistedMarketFit(s)!.recommendation?.weakestAssumption || '').trim()"
+              class="text-neutral-700"
+            >
+              <span class="font-medium text-neutral-600">Weakest assumption:</span>
+              {{ persistedMarketFit(s)!.recommendation!.weakestAssumption }}
+            </p>
+            <p
+              v-if="(persistedMarketFit(s)!.recommendation?.recommendedNextValidation || '').trim()"
+              class="text-neutral-700"
+            >
+              <span class="font-medium text-neutral-600">Next validation:</span>
+              {{ persistedMarketFit(s)!.recommendation!.recommendedNextValidation }}
+            </p>
           </div>
         </li>
       </ol>
