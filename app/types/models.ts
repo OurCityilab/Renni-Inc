@@ -772,6 +772,14 @@ export type PricingStrategyQualityLevel =
 
 export type PricingStrategyConfidence = 'low' | 'medium' | 'high' | ''
 
+// Comparable evidence about why a price is defensible. V1.1 expanded
+// the row to capture not just the comp itself but what the comp *proves*
+// and what it does *not* prove — students should be able to argue
+// "Detroit-made premium reads at $145 (Shinola)" without us claiming the
+// market value is $145. The added fields are all optional so V1 entries
+// without them keep rendering.
+export type PricingStrategyCompRelevance = 'low' | 'medium' | 'high' | ''
+
 export interface PricingStrategyComparable {
   id: string
   name: string
@@ -779,6 +787,16 @@ export interface PricingStrategyComparable {
   source?: string
   notes?: string
   alignment?: string
+  // V1.1 — optional comp evidence detail. Render-only; never fetched
+  // server-side, never used to scrape product data.
+  url?: string
+  sourceName?: string
+  sourceDate?: string
+  productType?: string
+  qualityTier?: string
+  relevance?: PricingStrategyCompRelevance
+  proves?: string
+  doesNotProve?: string
 }
 
 export interface PricingStrategyPriceTest {

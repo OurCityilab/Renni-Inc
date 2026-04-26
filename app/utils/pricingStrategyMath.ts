@@ -473,6 +473,256 @@ export function interpretSegment(
   }
 }
 
+// ---------- comp evidence band (V1.1) ----------
+
+// Comp evidence strength is a function of how many *valid* comps the
+// team has logged. Distinct from the comp position band, which only
+// asks "is the proposed price below / within / above what's on file?"
+// Evidence strength asks "is there enough on file to be making that
+// claim at all?"
+//
+// Bands are deliberately conservative: 2 valid comps is "usable but
+// light" rather than "strong". Renaissance students should not feel
+// licensed to declare market value from two store URLs.
+export type CompEvidenceBand =
+  | 'none' // 0 valid comps
+  | 'one' // 1 valid comp — needs at least one more
+  | 'usable' // 2 valid comps — usable but light
+  | 'strong' // 3+ valid comps
+
+export interface CompEvidenceInterpretation {
+  band: CompEvidenceBand
+  label: string
+  detail: string
+  validCompCount: number
+}
+
+export function interpretCompEvidence(
+  state: PricingStrategyBuilder | null
+): CompEvidenceInterpretation {
+  const comps = validComps(state?.comparablePrices)
+  const n = comps.length
+  if (n === 0) {
+    return {
+      band: 'none',
+      label: 'No comp evidence yet',
+      detail:
+        'Add at least one comparable product (name + price) before this builder can describe how the price compares with the market.',
+      validCompCount: 0
+    }
+  }
+  if (n === 1) {
+    return {
+      band: 'one',
+      label: 'Needs at least one more comp',
+      detail:
+        'One comp on file. Comp position only resolves once at least two valid comps exist. Add another comparable product so the price can be argued against a range, not a single point.',
+      validCompCount: 1
+    }
+  }
+  if (n === 2) {
+    return {
+      band: 'usable',
+      label: 'Usable but light comp evidence',
+      detail:
+        'Two comps on file. Usable for an initial read, but a third comp tightens the range and the team’s argument. This does not prove demand.',
+      validCompCount: 2
+    }
+  }
+  return {
+    band: 'strong',
+    label: 'Stronger comp evidence',
+    detail: `${n} comps on file — stronger evidence the price is in a defensible range. This still does not prove demand; preorder or interview validation is needed for that.`,
+    validCompCount: n
+  }
+}
+
+// Composite comp analysis — wraps interpretCompPosition with avg /
+// distance-from-average / distance-from-median for the analysis panel.
+// Caller can still use interpretCompPosition() directly for the
+// existing chip; this is the richer breakdown the V1.1 panel needs.
+export interface CompAnalysisResult extends CompPositionResult {
+  average: number | null
+  distanceFromAverage: number | null // proposed - avg, signed
+  distanceFromMedian: number | null
+  evidence: CompEvidenceInterpretation
+}
+
+export function analyzeComps(
+  state: PricingStrategyBuilder | null
+): CompAnalysisResult {
+  const position = interpretCompPosition(state)
+  const evidence = interpretCompEvidence(state)
+  const comps = validComps(state?.comparablePrices)
+  const proposed = safeNum(state?.proposedPrice)
+
+  let average: number | null = null
+  if (comps.length > 0) {
+    const sum = comps.reduce((acc, c) => acc + (c.price as number), 0)
+    average = sum / comps.length
+  }
+
+  const distanceFromAverage =
+    proposed != null && average != null ? proposed - average : null
+  const distanceFromMedian =
+    proposed != null && position.median != null ? proposed - position.median : null
+
+  return {
+    ...position,
+    average,
+    distanceFromAverage,
+    distanceFromMedian,
+    evidence
+  }
+}
+
+// ---------- safe URL surface (V1.1) ----------
+
+// Render-only URL guard. We do not fetch URLs and never render them
+// in any context that auto-loads them. The check keeps obviously
+// dangerous schemes (javascript:, data:, vbscript:, file:) out of the
+// preview so a saved comp can't smuggle a clickable XSS payload past
+// Vue's rendering. Anything that doesn't parse as http/https returns
+// null, which the caller renders as plain text.
+export function safeCompUrl(raw: string | null | undefined): string | null {
+  if (!raw) return null
+  const s = String(raw).trim()
+  if (!s) return null
+  let u: URL
+  try {
+    u = new URL(s)
+  } catch {
+    return null
+  }
+  if (u.protocol !== 'http:' && u.protocol !== 'https:') return null
+  return u.toString()
+}
+
+// ---------- composite "What this means" analysis (V1.1) ----------
+
+// Translates the math + bands into a deterministic student-facing
+// paragraph. Strict rules:
+//   - never claims demand is proven
+//   - never claims market value is X
+//   - never approves the price
+//   - returns a structured result so the panel can render each line
+//     with its own emphasis (cost / margin / comp / segment / risk /
+//     validation), not a single string blob the UI then re-parses
+export interface PricingAnalysisResult {
+  costRead: string
+  marginRead: string
+  compRead: string
+  segmentRead: string
+  risk: string
+  nextValidation: string
+}
+
+export function buildPricingAnalysis(
+  state: PricingStrategyBuilder | null
+): PricingAnalysisResult {
+  const derived = computeDerived(state)
+  const margin = interpretMargin(derived)
+  const comps = analyzeComps(state)
+  const segment = interpretSegment(state)
+  const evidence = interpretEvidence(state)
+
+  // ---- cost read ----
+  let costRead: string
+  if (derived.totalUnitCost <= 0) {
+    costRead = 'No cost components are entered yet, so the cost floor is unknown.'
+  } else {
+    costRead = `Total unit cost is $${formatMoney(derived.totalUnitCost)} based on the components entered. This is the floor; the price has to clear this plus a margin worth the team’s time.`
+  }
+
+  // ---- margin read ----
+  let marginRead: string
+  if (derived.unitMargin == null || derived.grossMarginPct == null) {
+    marginRead = 'Add a proposed price and at least one cost component to see margin guidance.'
+  } else if (derived.belowCost) {
+    marginRead =
+      'Warning: the proposed price is below total unit cost. This product would lose money before fixed costs.'
+  } else if (margin.band === 'weak') {
+    marginRead = `At a ${formatPct(derived.grossMarginPct)} gross margin, this is weak for a pop-up product. The team may need a higher price, lower cost, or a stronger volume plan.`
+  } else if (margin.band === 'tight') {
+    marginRead = `At a ${formatPct(derived.grossMarginPct)} gross margin, this is workable but tight. The team should watch cost creep and leftover inventory.`
+  } else if (margin.band === 'healthy') {
+    marginRead = `At a ${formatPct(derived.grossMarginPct)} gross margin, this is healthy for many student retail products, assuming the price is acceptable to the target buyer.`
+  } else {
+    marginRead = `At a ${formatPct(derived.grossMarginPct)} gross margin, this is a strong margin — but the team needs evidence that customers will accept the price.`
+  }
+
+  // ---- comp read ----
+  let compRead: string
+  if (comps.evidence.band === 'none') {
+    compRead =
+      'No comparable products on file yet. Add comps so the price can be argued against the market, not in isolation.'
+  } else if (comps.evidence.band === 'one') {
+    compRead =
+      'Only one comp on file. The builder cannot place this price against a range until at least two valid comps exist.'
+  } else if (comps.band === 'no_price') {
+    compRead = `Based on the comps entered, the comparable range is $${formatMoney(comps.min)}–$${formatMoney(comps.max)} (median $${formatMoney(comps.median)}). Enter a proposed price to see how it compares.`
+  } else {
+    const proposedTxt =
+      derived.unitMargin != null && state?.proposedPrice != null
+        ? `$${formatMoney(state.proposedPrice)}`
+        : 'the proposed price'
+    if (comps.band === 'within_range') {
+      compRead = `Based on the comps entered, the range is $${formatMoney(comps.min)}–$${formatMoney(comps.max)} (median $${formatMoney(comps.median)}). At ${proposedTxt}, this price is within the comp range. Market-aligned at face value; this does not prove demand.`
+    } else if (comps.band === 'below_range') {
+      compRead = `Based on the comps entered, the range is $${formatMoney(comps.min)}–$${formatMoney(comps.max)}. At ${proposedTxt}, this price is below every comp on file. This suggests value positioning, but check whether it reads as "not real" or compresses margin past what fixed costs allow.`
+    } else if (comps.band === 'above_range') {
+      compRead = `Based on the comps entered, the range is $${formatMoney(comps.min)}–$${formatMoney(comps.max)}. At ${proposedTxt}, this price sits above every comp on file. Defensible if the production story, materials, or limited-run scarcity supports premium positioning.`
+    } else if (comps.band === 'far_above_range') {
+      compRead = `Based on the comps entered, the range is $${formatMoney(comps.min)}–$${formatMoney(comps.max)}. At ${proposedTxt}, this price is far above every comp on file. Acceptance risk is high unless the product, story, or quality is exceptional.`
+    } else {
+      compRead = comps.detail
+    }
+  }
+
+  // ---- segment read ----
+  const segmentRead = segment.detail
+
+  // ---- risk read (composite — picks the most pressing) ----
+  let risk: string
+  if (derived.belowCost) {
+    risk =
+      'The product loses money on contribution alone. Locking this price in would mean every unit sold deepens the loss.'
+  } else if (margin.band === 'weak') {
+    risk =
+      'Margin is too thin to absorb extra costs (returns, packaging, transaction fees) or a slow-selling final hour.'
+  } else if (comps.band === 'far_above_range') {
+    risk =
+      'Price acceptance is the biggest risk — the proposed price sits well above the comp range without preorder evidence yet.'
+  } else if (comps.evidence.band === 'none' || comps.evidence.band === 'one') {
+    risk =
+      'Comparable evidence is too thin to argue this price is market-aligned. The team should not treat the price as proven on this evidence.'
+  } else if (evidence.band === 'low' || evidence.band === 'none') {
+    risk =
+      'Direct customer evidence (preorders, side-by-side tests, structured interviews) is still thin. Comps can be defensible without proving demand.'
+  } else {
+    risk =
+      'Soft risks remain — keep watching cost creep, leftover inventory, and any change in vendor quotes before TechTown.'
+  }
+
+  // ---- next validation ----
+  let nextValidation: string
+  const studentValidation = (state?.validationStep || '').trim()
+  if (studentValidation) {
+    nextValidation = studentValidation
+  } else if (comps.evidence.band === 'none' || comps.evidence.band === 'one') {
+    nextValidation =
+      'Add at least two real comparable products with name, price, and source. Then plan a small preorder or interview round to test acceptance at this price.'
+  } else if (evidence.band === 'low' || evidence.band === 'none') {
+    nextValidation =
+      'Run a small preorder or side-by-side test to convert assumptions into direct customer evidence before locking the price in.'
+  } else {
+    nextValidation =
+      'Document the validation plan that justifies high confidence — the post-event recap will compare against it.'
+  }
+
+  return { costRead, marginRead, compRead, segmentRead, risk, nextValidation }
+}
+
 // ---------- price-test summary ----------
 
 export interface PriceTestRowSummary {

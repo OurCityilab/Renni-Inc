@@ -33,6 +33,8 @@ import type {
   PricingStrategyQualityLevel
 } from '~/types/models'
 import {
+  analyzeComps,
+  buildPricingAnalysis,
   computeDerived,
   formatMoney,
   formatPct,
@@ -41,7 +43,9 @@ import {
   interpretEvidence,
   interpretMargin,
   interpretSegment,
+  safeCompUrl,
   summarizePriceTests,
+  type CompEvidenceBand,
   type CompPositionBand,
   type EvidenceBand,
   type MarginBand,
@@ -213,7 +217,17 @@ function addComparable() {
     price: null,
     source: '',
     notes: '',
-    alignment: ''
+    alignment: '',
+    // V1.1 — added evidence detail fields seeded blank so old comps
+    // and new comps share the same shape on save.
+    url: '',
+    sourceName: '',
+    sourceDate: '',
+    productType: '',
+    qualityTier: '',
+    relevance: '',
+    proves: '',
+    doesNotProve: ''
   })
   markDirty()
 }
@@ -245,6 +259,10 @@ const compPosition = computed(() => interpretCompPosition(form))
 const evidenceInterp = computed(() => interpretEvidence(form))
 const segmentInterp = computed(() => interpretSegment(form))
 const priceTests = computed(() => summarizePriceTests(form))
+// V1.1 — comp evidence strength chip + composite "What this means"
+// analysis. Both pure derivations from the form; no AI, no API calls.
+const compAnalysis = computed(() => analyzeComps(form))
+const pricingAnalysis = computed(() => buildPricingAnalysis(form))
 
 // Chip colors for each interpretation band. Tailwind classes only —
 // no inline styles. Mirrors the BrandFit/MarketFit chip vocabulary.
@@ -292,6 +310,18 @@ function evidenceChipClass(band: EvidenceBand): string {
       return 'border-neutral-300 bg-neutral-50 text-neutral-700'
   }
 }
+function compEvidenceChipClass(band: CompEvidenceBand): string {
+  switch (band) {
+    case 'strong':
+      return 'border-emerald-300 bg-emerald-50 text-emerald-800'
+    case 'usable':
+      return 'border-amber-200 bg-amber-50 text-amber-800'
+    case 'one':
+      return 'border-amber-300 bg-amber-50 text-amber-800'
+    default:
+      return 'border-neutral-300 bg-neutral-50 text-neutral-700'
+  }
+}
 function segmentChipClass(band: SegmentBand): string {
   switch (band) {
     case 'civic_premium':
@@ -306,12 +336,13 @@ function segmentChipClass(band: SegmentBand): string {
 }
 
 // --- recommendation scaffold (copyable; never auto-written) -------
+// V1.1 wording — emphasises the team's *reasoning* and explicitly notes
+// the price is not yet proven. Still student-authored: the scaffold is
+// only ever copy-pasted, never written into finalText automatically.
 const recommendationScaffold = computed(() => {
-  const product = (form.productName || '').trim() || '__'
   const price =
     form.proposedPrice != null ? `$${formatMoney(form.proposedPrice)}` : '__'
   const segment = (form.targetSegment || '').trim() || '__'
-  const story = (form.productionStory || '').trim() || '__'
   const cost = `$${formatMoney(derived.value.totalUnitCost)}`
   const marginPctText =
     derived.value.grossMarginPct != null
@@ -319,38 +350,44 @@ const recommendationScaffold = computed(() => {
       : '__'
 
   const compLine =
-    compPosition.value.band === 'needs_evidence'
-      ? 'comparable evidence is still needed'
-      : compPosition.value.band === 'within_range'
-        ? `comparable products in our research, this price is within the typical range ($${formatMoney(compPosition.value.min)}–$${formatMoney(compPosition.value.max)})`
-        : compPosition.value.band === 'below_range'
-          ? `our comparable set ($${formatMoney(compPosition.value.min)}–$${formatMoney(compPosition.value.max)}), this price is below the range`
-          : compPosition.value.band === 'above_range'
-            ? `our comparable set ($${formatMoney(compPosition.value.min)}–$${formatMoney(compPosition.value.max)}), this price sits above the range and is premium-positioned`
-            : compPosition.value.band === 'far_above_range'
-              ? `our comparable set ($${formatMoney(compPosition.value.min)}–$${formatMoney(compPosition.value.max)}), this price is significantly above the range and acceptance risk is high`
-              : `our comparable set ($${formatMoney(compPosition.value.min)}–$${formatMoney(compPosition.value.max)})`
+    compAnalysis.value.evidence.band === 'none'
+      ? 'we still need comparable evidence on file'
+      : compAnalysis.value.evidence.band === 'one'
+        ? 'we have one comp on file and need at least one more before placing this price against the market'
+        : compPosition.value.band === 'within_range'
+          ? `the comparable range we logged ($${formatMoney(compPosition.value.min)}–$${formatMoney(compPosition.value.max)}), this price is within range`
+          : compPosition.value.band === 'below_range'
+            ? `the comparable range we logged ($${formatMoney(compPosition.value.min)}–$${formatMoney(compPosition.value.max)}), this price is below the range`
+            : compPosition.value.band === 'above_range'
+              ? `the comparable range we logged ($${formatMoney(compPosition.value.min)}–$${formatMoney(compPosition.value.max)}), this price sits above the range and is premium-positioned`
+              : compPosition.value.band === 'far_above_range'
+                ? `the comparable range we logged ($${formatMoney(compPosition.value.min)}–$${formatMoney(compPosition.value.max)}), this price is well above the range and acceptance risk is high`
+                : `the comparable range we logged ($${formatMoney(compPosition.value.min)}–$${formatMoney(compPosition.value.max)})`
+
+  const segmentReason = segmentInterp.value.detail
 
   const riskLine =
     derived.value.belowCost
-      ? 'this price is below cost and the unit loses money before fixed costs'
+      ? 'the price is below cost — the unit loses money before fixed costs'
       : marginInterp.value.band === 'weak'
         ? 'margin is too thin to absorb surprises'
         : compPosition.value.band === 'far_above_range'
           ? 'price acceptance risk is high relative to comps'
-          : evidenceInterp.value.band === 'low' || evidenceInterp.value.band === 'none'
-            ? 'evidence supporting this price is still thin'
-            : '__'
+          : compAnalysis.value.evidence.band === 'none' || compAnalysis.value.evidence.band === 'one'
+            ? 'comparable evidence is too thin to argue this price is market-aligned'
+            : evidenceInterp.value.band === 'low' || evidenceInterp.value.band === 'none'
+              ? 'evidence supporting customer acceptance is still thin'
+              : '__'
 
   const validation = (form.validationStep || '').trim() || '__'
 
   return [
-    `Our recommended price for ${product} is ${price} because ${story}.`,
-    `The unit cost is ${cost}, which creates a gross margin of ${marginPctText}.`,
+    `Our recommended price is ${price}.`,
+    `Our estimated unit cost is ${cost}, which creates a gross margin of ${marginPctText}.`,
     `Compared with ${compLine}.`,
-    `The strongest customer segment is likely ${segment} (${segmentInterp.value.label}).`,
+    `We believe the strongest buyer is ${segment} because ${segmentReason}`,
     `The biggest risk is ${riskLine}.`,
-    `We should validate this by ${validation}.`
+    `This does not prove demand yet, so our next validation step is ${validation}.`
   ].join(' ')
 })
 
@@ -1003,7 +1040,7 @@ async function copyScaffold() {
                 />
               </label>
               <label class="text-xs">
-                <span class="font-medium text-neutral-700">Source</span>
+                <span class="font-medium text-neutral-700">Source / store</span>
                 <input
                   v-model="c.source"
                   :disabled="!editingEnabled"
@@ -1012,6 +1049,75 @@ async function copyScaffold() {
                   placeholder="Pure Detroit retail observation"
                   @input="markDirty"
                 />
+              </label>
+              <label class="text-xs">
+                <span class="font-medium text-neutral-700">Source name</span>
+                <input
+                  v-model="c.sourceName"
+                  :disabled="!editingEnabled"
+                  type="text"
+                  class="mt-0.5 w-full rounded border border-neutral-300 p-1.5 text-sm disabled:bg-neutral-100"
+                  placeholder="Shinola, Nordstrom, Detroit Pistons store…"
+                  @input="markDirty"
+                />
+              </label>
+              <label class="text-xs">
+                <span class="font-medium text-neutral-700">Product URL</span>
+                <input
+                  v-model="c.url"
+                  :disabled="!editingEnabled"
+                  type="url"
+                  class="mt-0.5 w-full rounded border border-neutral-300 p-1.5 text-sm disabled:bg-neutral-100"
+                  placeholder="https://example.com/product"
+                  @input="markDirty"
+                />
+              </label>
+              <label class="text-xs">
+                <span class="font-medium text-neutral-700">Source date</span>
+                <input
+                  v-model="c.sourceDate"
+                  :disabled="!editingEnabled"
+                  type="text"
+                  class="mt-0.5 w-full rounded border border-neutral-300 p-1.5 text-sm disabled:bg-neutral-100"
+                  placeholder="2026-04 or April 2026"
+                  @input="markDirty"
+                />
+              </label>
+              <label class="text-xs">
+                <span class="font-medium text-neutral-700">Product type</span>
+                <input
+                  v-model="c.productType"
+                  :disabled="!editingEnabled"
+                  type="text"
+                  class="mt-0.5 w-full rounded border border-neutral-300 p-1.5 text-sm disabled:bg-neutral-100"
+                  placeholder="Sweatshirt, baked good, beanie…"
+                  @input="markDirty"
+                />
+              </label>
+              <label class="text-xs">
+                <span class="font-medium text-neutral-700">Quality tier</span>
+                <input
+                  v-model="c.qualityTier"
+                  :disabled="!editingEnabled"
+                  type="text"
+                  class="mt-0.5 w-full rounded border border-neutral-300 p-1.5 text-sm disabled:bg-neutral-100"
+                  placeholder="Premium streetwear, mass school apparel…"
+                  @input="markDirty"
+                />
+              </label>
+              <label class="text-xs">
+                <span class="font-medium text-neutral-700">Relevance</span>
+                <select
+                  v-model="c.relevance"
+                  :disabled="!editingEnabled"
+                  class="mt-0.5 w-full rounded border border-neutral-300 p-1.5 text-sm disabled:bg-neutral-100"
+                  @change="markDirty"
+                >
+                  <option value="">— Not set —</option>
+                  <option value="low">Low — loose comparison</option>
+                  <option value="medium">Medium — partial overlap</option>
+                  <option value="high">High — strong comparable</option>
+                </select>
               </label>
               <label class="text-xs">
                 <span class="font-medium text-neutral-700">Alignment / lesson</span>
@@ -1025,16 +1131,51 @@ async function copyScaffold() {
                 />
               </label>
               <label class="text-xs sm:col-span-2">
+                <span class="font-medium text-neutral-700">What this comp proves</span>
+                <textarea
+                  v-model="c.proves"
+                  :disabled="!editingEnabled"
+                  rows="2"
+                  class="mt-0.5 w-full rounded border border-neutral-300 p-1.5 text-sm disabled:bg-neutral-100"
+                  placeholder="e.g. Detroit-made premium sweatshirts retail at $145 in regional stores."
+                  @input="markDirty"
+                />
+              </label>
+              <label class="text-xs sm:col-span-2">
+                <span class="font-medium text-neutral-700">What this comp does <em>not</em> prove</span>
+                <textarea
+                  v-model="c.doesNotProve"
+                  :disabled="!editingEnabled"
+                  rows="2"
+                  class="mt-0.5 w-full rounded border border-neutral-300 p-1.5 text-sm disabled:bg-neutral-100"
+                  placeholder="e.g. Does not prove students or parents will accept that price for a Renaissance product."
+                  @input="markDirty"
+                />
+              </label>
+              <label class="text-xs sm:col-span-2">
                 <span class="font-medium text-neutral-700">Notes</span>
                 <textarea
                   v-model="c.notes"
                   :disabled="!editingEnabled"
                   rows="2"
                   class="mt-0.5 w-full rounded border border-neutral-300 p-1.5 text-sm disabled:bg-neutral-100"
-                  placeholder="What this comp proves; what it does not."
+                  placeholder="Anything else worth recording about this comp."
                   @input="markDirty"
                 />
               </label>
+              <!-- Safe URL preview. Render-only — never auto-fetched.
+                   safeCompUrl drops anything that isn't http/https. -->
+              <p
+                v-if="safeCompUrl(c.url)"
+                class="text-xs sm:col-span-2"
+              >
+                <a
+                  :href="safeCompUrl(c.url) ?? undefined"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="text-phoenix-700 hover:underline"
+                >Open source ↗</a>
+              </p>
             </div>
             <div v-if="editingEnabled" class="flex justify-end">
               <button
@@ -1084,6 +1225,10 @@ async function copyScaffold() {
         >Comp · {{ compPosition.label }}</li>
         <li
           class="rounded-full border px-2 py-0.5 uppercase tracking-wide"
+          :class="compEvidenceChipClass(compAnalysis.evidence.band)"
+        >Comp evidence · {{ compAnalysis.evidence.label }}</li>
+        <li
+          class="rounded-full border px-2 py-0.5 uppercase tracking-wide"
           :class="segmentChipClass(segmentInterp.band)"
         >Segment fit · {{ segmentInterp.label }}</li>
         <li
@@ -1103,6 +1248,24 @@ async function copyScaffold() {
           <dd class="text-neutral-700">{{ compPosition.detail }}</dd>
         </div>
         <div>
+          <dt class="font-medium text-neutral-700">Comp evidence</dt>
+          <dd class="text-neutral-700">{{ compAnalysis.evidence.detail }}</dd>
+        </div>
+        <div v-if="compAnalysis.average != null">
+          <dt class="font-medium text-neutral-700">Comp average</dt>
+          <dd class="text-neutral-700">
+            ${{ formatMoney(compAnalysis.average) }}
+            <span v-if="compAnalysis.distanceFromAverage != null">
+              · proposed price is
+              <span :class="(compAnalysis.distanceFromAverage ?? 0) >= 0 ? 'text-sky-700 font-medium' : 'text-amber-700 font-medium'">
+                ${{ formatMoney(Math.abs(compAnalysis.distanceFromAverage)) }}
+                {{ (compAnalysis.distanceFromAverage ?? 0) >= 0 ? 'above' : 'below' }}
+              </span>
+              the average
+            </span>
+          </dd>
+        </div>
+        <div>
           <dt class="font-medium text-neutral-700">Segment fit</dt>
           <dd class="text-neutral-700">{{ segmentInterp.detail }}</dd>
         </div>
@@ -1111,6 +1274,42 @@ async function copyScaffold() {
           <dd class="text-neutral-700">{{ evidenceInterp.detail }}</dd>
         </div>
       </dl>
+
+      <!-- "What this means" composite analysis panel (V1.1).
+           Deterministic — never invokes AI, never claims demand is
+           proven, never approves the price. -->
+      <section class="space-y-1 rounded-md border border-amber-200 bg-amber-50/50 p-2 text-xs">
+        <h5 class="text-xs font-semibold text-amber-900">What this means</h5>
+        <p class="text-neutral-800">
+          <span class="font-medium text-neutral-700">Cost:</span>
+          {{ pricingAnalysis.costRead }}
+        </p>
+        <p class="text-neutral-800">
+          <span class="font-medium text-neutral-700">Margin:</span>
+          {{ pricingAnalysis.marginRead }}
+        </p>
+        <p class="text-neutral-800">
+          <span class="font-medium text-neutral-700">Comps:</span>
+          {{ pricingAnalysis.compRead }}
+        </p>
+        <p class="text-neutral-800">
+          <span class="font-medium text-neutral-700">Segment:</span>
+          {{ pricingAnalysis.segmentRead }}
+        </p>
+        <p class="text-neutral-800">
+          <span class="font-medium text-neutral-700">Risk:</span>
+          {{ pricingAnalysis.risk }}
+        </p>
+        <p class="text-neutral-800">
+          <span class="font-medium text-neutral-700">Next validation:</span>
+          {{ pricingAnalysis.nextValidation }}
+        </p>
+        <p class="italic text-amber-900">
+          This is guidance for the team's pricing recommendation, not a
+          final approval. The /pricing page remains the operational source
+          of truth.
+        </p>
+      </section>
 
       <div class="grid gap-2 sm:grid-cols-2">
         <label class="text-xs">

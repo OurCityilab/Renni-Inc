@@ -34,11 +34,14 @@ import {
 import { buildDemandSnapshot } from '~/utils/marketFitNarrative'
 import { buildBrandFitSnapshot } from '~/utils/brandFitNarrative'
 import {
+  analyzeComps as analyzePricingComps,
   computeDerived as computePricingDerived,
   formatMoney as fmtPricingMoney,
   formatPct as fmtPricingPct,
   formatUnits as fmtPricingUnits,
-  interpretCompPosition as interpretPricingCompPosition
+  interpretCompPosition as interpretPricingCompPosition,
+  interpretSegment as interpretPricingSegment,
+  safeCompUrl as safePricingCompUrl
 } from '~/utils/pricingStrategyMath'
 
 const props = defineProps<{
@@ -64,6 +67,19 @@ function pricingDerivedFor(s: TemplateStudioSection) {
 }
 function pricingCompFor(s: TemplateStudioSection) {
   return interpretPricingCompPosition(persistedPricingStrategy(s))
+}
+function pricingAnalysisFor(s: TemplateStudioSection) {
+  return analyzePricingComps(persistedPricingStrategy(s))
+}
+function pricingSegmentFor(s: TemplateStudioSection) {
+  return interpretPricingSegment(persistedPricingStrategy(s))
+}
+function pricingCompsWithUrls(s: TemplateStudioSection) {
+  const ps = persistedPricingStrategy(s)
+  if (!ps?.comparablePrices?.length) return []
+  return ps.comparablePrices
+    .map((c) => ({ ...c, _safeUrl: safePricingCompUrl(c.url) }))
+    .filter((c) => c._safeUrl)
 }
 </script>
 
@@ -432,11 +448,33 @@ function pricingCompFor(s: TemplateStudioSection) {
             ${{ fmtPricingMoney(pricingDerivedFor(s).targetMarginPrice) }}
           </p>
           <p
+            v-if="pricingCompFor(s).min != null && pricingCompFor(s).max != null"
+            class="text-neutral-700"
+          >
+            <span class="font-medium text-neutral-600">Comp range:</span>
+            ${{ fmtPricingMoney(pricingCompFor(s).min) }}–${{ fmtPricingMoney(pricingCompFor(s).max) }}
+            <span v-if="pricingCompFor(s).median != null">
+              · median ${{ fmtPricingMoney(pricingCompFor(s).median) }}
+            </span>
+          </p>
+          <p class="text-neutral-700">
+            <span class="font-medium text-neutral-600">Comp evidence:</span>
+            {{ pricingAnalysisFor(s).evidence.label }}
+            ({{ pricingAnalysisFor(s).evidence.validCompCount }})
+          </p>
+          <p
             v-if="pricingCompFor(s).band !== 'needs_evidence'"
             class="text-neutral-700"
           >
-            <span class="font-medium text-neutral-600">Comp position:</span>
+            <span class="font-medium text-neutral-600">Price position:</span>
             {{ pricingCompFor(s).label }}
+          </p>
+          <p
+            v-if="(persistedPricingStrategy(s)!.targetSegment || '').trim()"
+            class="text-neutral-700"
+          >
+            <span class="font-medium text-neutral-600">Best-fit segment:</span>
+            {{ pricingSegmentFor(s).label }}
           </p>
           <p
             v-if="persistedPricingStrategy(s)!.confidence"
@@ -452,6 +490,29 @@ function pricingCompFor(s: TemplateStudioSection) {
             <span class="font-medium text-neutral-600">Validation step:</span>
             {{ persistedPricingStrategy(s)!.validationStep }}
           </p>
+          <!-- V1.1 — render student-supplied source links if any. Pure
+               display; URLs are filtered through safeCompUrl so non
+               http/https schemes never reach an <a href>. -->
+          <ul
+            v-if="pricingCompsWithUrls(s).length > 0"
+            class="space-y-0.5"
+          >
+            <li
+              v-for="c in pricingCompsWithUrls(s)"
+              :key="`pricing-comp-link-${c.id}`"
+              class="text-neutral-700"
+            >
+              ↳
+              <a
+                :href="c._safeUrl ?? undefined"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="text-phoenix-700 hover:underline"
+              >{{ c.name || 'Comparable source' }}</a>
+              <span v-if="c.price != null"> · ${{ fmtPricingMoney(c.price) }}</span>
+              <span v-if="c.sourceName"> · {{ c.sourceName }}</span>
+            </li>
+          </ul>
         </div>
       </li>
     </ol>
