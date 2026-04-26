@@ -59,6 +59,14 @@ export interface TemplateStudioSection {
     enabled: boolean
     guidance?: string
   }
+  // Pricing Strategy Builder visibility metadata. Opt-in: sections
+  // default to off so the tool only appears in pricing-relevant
+  // sections. V1 enables this only on Ch. 8 Section 2 (sale-price).
+  // Independent of every other builder.
+  pricingStrategy?: {
+    enabled: boolean
+    guidance?: string
+  }
 }
 
 export interface TemplateStudioRequirement {

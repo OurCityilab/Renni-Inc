@@ -33,6 +33,13 @@ import {
 } from '~/utils/marketBuilderMath'
 import { buildDemandSnapshot } from '~/utils/marketFitNarrative'
 import { buildBrandFitSnapshot } from '~/utils/brandFitNarrative'
+import {
+  computeDerived as computePricingDerived,
+  formatMoney as fmtPricingMoney,
+  formatPct as fmtPricingPct,
+  formatUnits as fmtPricingUnits,
+  interpretCompPosition as interpretPricingCompPosition
+} from '~/utils/pricingStrategyMath'
 
 const props = defineProps<{
   studio: TemplateStudio
@@ -48,6 +55,15 @@ function persistedMarketFit(s: TemplateStudioSection) {
 }
 function persistedBrandFit(s: TemplateStudioSection) {
   return persistedSection(s)?.brandFit ?? null
+}
+function persistedPricingStrategy(s: TemplateStudioSection) {
+  return persistedSection(s)?.pricingStrategy ?? null
+}
+function pricingDerivedFor(s: TemplateStudioSection) {
+  return computePricingDerived(persistedPricingStrategy(s))
+}
+function pricingCompFor(s: TemplateStudioSection) {
+  return interpretPricingCompPosition(persistedPricingStrategy(s))
 }
 </script>
 
@@ -353,6 +369,88 @@ function persistedBrandFit(s: TemplateStudioSection) {
           >
             <span class="font-medium text-neutral-600">Next best move:</span>
             {{ buildBrandFitSnapshot(persistedBrandFit(s))!.nextBestMove }}
+          </p>
+        </div>
+
+        <!-- Pricing Strategy roll-up (Ch. 8 Section 2 only). Compact
+             read-only summary of the pricing strategy builder state.
+             Pure display — never replaces finalText, never gates
+             Playbook readiness, never writes to pricingScenarios. -->
+        <div
+          v-if="s.pricingStrategy?.enabled && persistedPricingStrategy(s)"
+          class="mt-2 space-y-1 text-xs"
+        >
+          <p class="font-medium uppercase tracking-wide text-neutral-500">
+            Pricing strategy
+          </p>
+          <p
+            v-if="(persistedPricingStrategy(s)!.productName || '').trim()"
+            class="text-neutral-700"
+          >
+            <span class="font-medium text-neutral-600">Product:</span>
+            {{ persistedPricingStrategy(s)!.productName }}
+          </p>
+          <p
+            v-if="persistedPricingStrategy(s)!.proposedPrice != null"
+            class="text-neutral-700"
+          >
+            <span class="font-medium text-neutral-600">Proposed price:</span>
+            ${{ fmtPricingMoney(persistedPricingStrategy(s)!.proposedPrice) }}
+          </p>
+          <p class="text-neutral-700">
+            <span class="font-medium text-neutral-600">Total unit cost:</span>
+            ${{ fmtPricingMoney(pricingDerivedFor(s).totalUnitCost) }}
+          </p>
+          <p
+            v-if="pricingDerivedFor(s).unitMargin != null"
+            class="text-neutral-700"
+          >
+            <span class="font-medium text-neutral-600">Unit margin:</span>
+            <span :class="pricingDerivedFor(s).belowCost ? 'text-rose-700 font-medium' : ''">
+              ${{ fmtPricingMoney(pricingDerivedFor(s).unitMargin) }}
+            </span>
+          </p>
+          <p
+            v-if="pricingDerivedFor(s).grossMarginPct != null"
+            class="text-neutral-700"
+          >
+            <span class="font-medium text-neutral-600">Gross margin:</span>
+            {{ fmtPricingPct(pricingDerivedFor(s).grossMarginPct) }}
+          </p>
+          <p
+            v-if="pricingDerivedFor(s).breakEvenUnits != null"
+            class="text-neutral-700"
+          >
+            <span class="font-medium text-neutral-600">Break-even:</span>
+            {{ fmtPricingUnits(pricingDerivedFor(s).breakEvenUnits) }} units
+          </p>
+          <p
+            v-if="pricingDerivedFor(s).targetMarginPrice != null"
+            class="text-neutral-700"
+          >
+            <span class="font-medium text-neutral-600">Target-margin price:</span>
+            ${{ fmtPricingMoney(pricingDerivedFor(s).targetMarginPrice) }}
+          </p>
+          <p
+            v-if="pricingCompFor(s).band !== 'needs_evidence'"
+            class="text-neutral-700"
+          >
+            <span class="font-medium text-neutral-600">Comp position:</span>
+            {{ pricingCompFor(s).label }}
+          </p>
+          <p
+            v-if="persistedPricingStrategy(s)!.confidence"
+            class="text-neutral-700"
+          >
+            <span class="font-medium text-neutral-600">Confidence:</span>
+            {{ persistedPricingStrategy(s)!.confidence }}
+          </p>
+          <p
+            v-if="(persistedPricingStrategy(s)!.validationStep || '').trim()"
+            class="text-neutral-700"
+          >
+            <span class="font-medium text-neutral-600">Validation step:</span>
+            {{ persistedPricingStrategy(s)!.validationStep }}
           </p>
         </div>
       </li>

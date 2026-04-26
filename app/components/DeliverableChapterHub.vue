@@ -182,6 +182,12 @@ function fmtWhen(iso?: string | null): string {
             : {{ chapterProgress.brandFitEnabledStarted }}/{{ chapterProgress.brandFitEnabledTotal }}
           </dd>
         </div>
+        <div v-if="chapterProgress.pricingStrategyEnabledTotal > 0">
+          <dt class="inline font-medium text-neutral-600">Pricing strategy</dt>
+          <dd class="inline">
+            : {{ chapterProgress.pricingStrategyEnabledStarted }}/{{ chapterProgress.pricingStrategyEnabledTotal }}
+          </dd>
+        </div>
         <div v-if="chapterProgress.needsAttention > 0">
           <dt class="inline font-medium text-amber-700">Needs attention</dt>
           <dd class="inline text-amber-700">
@@ -295,6 +301,36 @@ function fmtWhen(iso?: string | null): string {
               Brand Fit
               {{ card.progress.brandFitStarted ? '✓' : '—' }}
             </li>
+            <!-- Pricing Strategy chips. Display-only — never feeds the
+                 submit gate or Playbook readiness. -->
+            <li
+              v-if="card.progress.pricingStrategyEnabled"
+              :class="[
+                'rounded-full border px-2 py-0.5 uppercase tracking-wide',
+                card.progress.pricingStrategyStarted
+                  ? 'border-amber-300 bg-amber-50 text-amber-800'
+                  : 'border-neutral-300 bg-neutral-50 text-neutral-600'
+              ]"
+            >
+              Pricing
+              {{ card.progress.pricingStrategyStarted ? '✓' : '—' }}
+            </li>
+            <li
+              v-if="card.progress.pricingStrategyEnabled && card.progress.pricingStrategyPriceSet"
+              class="rounded-full border border-emerald-300 bg-emerald-50 px-2 py-0.5 uppercase tracking-wide text-emerald-800"
+            >Price set</li>
+            <li
+              v-if="card.progress.pricingStrategyEnabled && card.progress.pricingStrategyMarginWarning"
+              class="rounded-full border border-rose-300 bg-rose-50 px-2 py-0.5 uppercase tracking-wide text-rose-800"
+            >Margin warning</li>
+            <li
+              v-if="card.progress.pricingStrategyEnabled && card.progress.pricingStrategyStarted && card.progress.pricingStrategyNeedsComps"
+              class="rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 uppercase tracking-wide text-amber-800"
+            >Needs comps</li>
+            <li
+              v-if="card.progress.pricingStrategyEnabled && card.progress.pricingStrategyStarted && card.progress.pricingStrategyNeedsValidation"
+              class="rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 uppercase tracking-wide text-amber-800"
+            >Needs validation</li>
             <li
               v-if="card.progress.needsAttention"
               class="rounded-full border border-amber-300 bg-amber-50 px-2 py-0.5 uppercase tracking-wide text-amber-800"

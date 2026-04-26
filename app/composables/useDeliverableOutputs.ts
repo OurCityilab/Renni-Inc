@@ -26,6 +26,7 @@ import type {
   MarketBuilderScenario,
   MarketFitBuilder,
   MarketScenarioLevel,
+  PricingStrategyBuilder,
   StructuredEvidenceEntry
 } from '~/types/models'
 import type { TemplateStudio } from '~/types/templateStudio'
@@ -717,6 +718,45 @@ export function useDeliverableOutputs() {
     })
   }
 
+  // --- pricing strategy builder (Pricing Strategy Engine V1) ---
+  // Same whole-section save pattern that Market Fit and Brand Fit use:
+  // the editor sends the full builder state and we write it as one
+  // nested map at sections.${sectionId}.pricingStrategy. Sibling
+  // fields (sourceNotes, draftText, finalText, evidenceLinks,
+  // structuredEvidence, marketBuilderEntries, marketFit, brandFit)
+  // are untouched on every save. This composable NEVER writes to
+  // pricingScenarios — that collection stays the /pricing operational
+  // source of truth and is governed by its own Firestore rule.
+  // stripUndefinedDeep guards against the same Firestore-undefined
+  // payload risk every other builder save handles.
+  async function savePricingStrategyBuilder(
+    deliverableId: string,
+    sectionId: string,
+    sectionTitleSnapshot: string,
+    pricing: PricingStrategyBuilder,
+    actor: DeliverableOutputActor
+  ): Promise<void> {
+    const now = new Date().toISOString()
+    const payload: PricingStrategyBuilder = stripUndefinedDeep({
+      ...pricing,
+      updatedAt: now,
+      updatedByUid: actor.uid,
+      updatedByEmail: actor.email
+    })
+    const r = ref_(deliverableId)
+    await updateDoc(r, {
+      [`sections.${sectionId}.sectionId`]: sectionId,
+      [`sections.${sectionId}.sectionTitleSnapshot`]: sectionTitleSnapshot,
+      [`sections.${sectionId}.pricingStrategy`]: payload,
+      [`sections.${sectionId}.updatedAt`]: now,
+      [`sections.${sectionId}.updatedByUid`]: actor.uid,
+      [`sections.${sectionId}.updatedByEmail`]: actor.email,
+      updatedAt: now,
+      updatedByUid: actor.uid,
+      updatedByEmail: actor.email
+    })
+  }
+
   return {
     watchOutput,
     createOutputIfMissing,
@@ -730,6 +770,7 @@ export function useDeliverableOutputs() {
     updateMarketBuilderEntry,
     removeMarketBuilderEntry,
     saveMarketFitBuilder,
-    saveBrandFitBuilder
+    saveBrandFitBuilder,
+    savePricingStrategyBuilder
   }
 }

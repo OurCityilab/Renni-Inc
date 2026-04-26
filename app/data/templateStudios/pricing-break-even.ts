@@ -49,6 +49,11 @@ export const pricingBreakEven: TemplateStudio = {
         enabled: true,
         guidance:
           'For each price, log the demand it assumes — buyers per scenario at the proposed sale price. The Phoenix Nest pitch will read this same entry.'
+      },
+      pricingStrategy: {
+        enabled: true,
+        guidance:
+          'Use this builder to compare cost, margin, market comps, and customer fit before writing your final price recommendation. The /pricing page is still the operational source of truth — this builder informs your sale-price recommendation, it does not replace it.'
       }
     },
     {

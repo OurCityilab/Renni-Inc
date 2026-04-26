@@ -22,6 +22,7 @@ import type {
   MarketFitBuilder as MarketFitBuilderState,
   MarketFitSegment,
   MarketScenarioLevel,
+  PricingStrategyBuilder as PricingStrategyBuilderState,
   StructuredEvidenceEntry
 } from '~/types/models'
 import type {
@@ -47,6 +48,7 @@ import MarketFitReferencePanel, {
   type ReferencedMarketFitRow
 } from '~/components/MarketFitReferencePanel.vue'
 import BrandFitBuilder from '~/components/BrandFitBuilder.vue'
+import PricingStrategyBuilder from '~/components/PricingStrategyBuilder.vue'
 import {
   buildBrandFitSnapshot,
   type BrandFitSnapshot
@@ -1041,6 +1043,39 @@ function shouldShowBrandFit(s: TemplateStudioSection): boolean {
 function persistedBrandFit(s: TemplateStudioSection): BrandFitBuilderState | null {
   return persistedSection(s)?.brandFit ?? null
 }
+
+// Pricing Strategy Builder gate. Independent of every other builder.
+// Studio sections opt in via `s.pricingStrategy?.enabled` (V1 enables
+// only on Ch. 8 Section 2 / sale-price). The mount also reads the
+// already-fetched Ch. 7 marketFit + marketBuilder entries as
+// read-only context — those listeners only fire on Ch. 8 anyway, so
+// non-Ch.8 sections that opt in (none in V1) would simply receive
+// nulls.
+function shouldShowPricingStrategy(s: TemplateStudioSection): boolean {
+  return s.pricingStrategy?.enabled === true
+}
+
+function persistedPricingStrategy(
+  s: TemplateStudioSection
+): PricingStrategyBuilderState | null {
+  return persistedSection(s)?.pricingStrategy ?? null
+}
+
+// First Ch. 7 Market Fit row (if any). The Pricing Strategy Builder
+// only needs one upstream context; flattening keeps the prop scalar.
+const ch7MarketFitForPricing = computed<MarketFitBuilderState | null>(() => {
+  const rows = ch7MarketFitRows.value
+  if (rows.length === 0) return null
+  return rows[0].fit
+})
+// Flatten the ReferencedMarketEntry rows down to plain MarketBuilderEntry
+// records — the Pricing Strategy Builder only needs the entries, not
+// the source-section metadata that the cross-chapter reference panel
+// needs. Empty when this workspace isn't on Ch. 8 (the listener
+// returns no rows in that case).
+const ch7MarketEntriesForPricing = computed<MarketBuilderEntry[]>(() =>
+  ch7MarketEntries.value.map((r) => r.entry)
+)
 
 // Synthesize MarketBuilderEntry rows from the section's Market Fit
 // Builder so the existing AI critique payload carries the segment-
@@ -2569,6 +2604,23 @@ watch(
           :editing-enabled="editingEnabled"
           :guidance="s.brandFit?.guidance ?? null"
           :market-fit-context="persistedMarketFit(s)"
+        />
+
+        <!-- Pricing Strategy Builder V1 — Ch. 8 Section 2 only.
+             Deterministic pricing decision tool. Reads Ch. 7 market
+             fit + demand entries as read-only context but never
+             writes upstream and never writes to pricingScenarios.
+             /pricing remains the operational source of truth. -->
+        <PricingStrategyBuilder
+          v-if="shouldShowPricingStrategy(s)"
+          :deliverable-id="deliverable.id"
+          :section-id="s.id"
+          :section-title="s.title"
+          :initial="persistedPricingStrategy(s)"
+          :editing-enabled="editingEnabled"
+          :guidance="s.pricingStrategy?.guidance ?? null"
+          :ch7-market-fit="ch7MarketFitForPricing"
+          :ch7-market-entries="ch7MarketEntriesForPricing"
         />
 
         <!-- AI Critique V1 — read-only coach panel for the Market

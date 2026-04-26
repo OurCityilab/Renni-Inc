@@ -16,6 +16,10 @@ import type {
   TemplateStudio,
   TemplateStudioSection
 } from '~/types/templateStudio'
+import {
+  computeDerived as computePricingDerived,
+  interpretCompPosition as interpretPricingCompPosition
+} from '~/utils/pricingStrategyMath'
 
 export interface SectionProgress {
   sectionId: string
@@ -34,6 +38,19 @@ export interface SectionProgress {
   marketBuilderEnabled: boolean
   marketFitEnabled: boolean
   brandFitEnabled: boolean
+  // Pricing Strategy Builder display-only flags (Ch. 8 Section 2 only
+  // in V1). Never feed submit gate or Playbook readiness — pure
+  // display chips for the chapter hub. "Started" = any pricing
+  // builder content saved; "priceSet" = a proposed price exists;
+  // "marginWarning" = price below cost OR weak margin (under 30%);
+  // "needsComps" = fewer than 2 valid comparable prices;
+  // "needsValidation" = confidence is low or unset.
+  pricingStrategyEnabled: boolean
+  pricingStrategyStarted: boolean
+  pricingStrategyPriceSet: boolean
+  pricingStrategyMarginWarning: boolean
+  pricingStrategyNeedsComps: boolean
+  pricingStrategyNeedsValidation: boolean
   // Last-saved timestamp for the section (if any). Surfaced as a
   // small subtitle on each card.
   updatedAt: string | null
@@ -83,6 +100,47 @@ function computeNeedsAttention(
       Boolean(fit?.recommendation?.brandSignalSummary?.trim())
     if (!populated) return true
   }
+  if (section.pricingStrategy?.enabled) {
+    const ps = persisted?.pricingStrategy
+    const populated =
+      Boolean(ps?.productName?.trim()) ||
+      ps?.proposedPrice != null ||
+      (ps?.priceTests?.length ?? 0) > 0 ||
+      (ps?.comparablePrices?.length ?? 0) > 0
+    if (!populated) return true
+  }
+  return false
+}
+
+// Pricing strategy "started" = any meaningful builder content saved.
+// We don't gate on the price alone — adding cost components, comps,
+// or price tests is enough to read as "the team is working on this".
+function isPricingStarted(
+  ps: DeliverableOutputSection['pricingStrategy'] | null | undefined
+): boolean {
+  if (!ps) return false
+  if (
+    Boolean(ps.productName?.trim()) ||
+    Boolean(ps.productionStory?.trim()) ||
+    Boolean(ps.targetSegment?.trim()) ||
+    Boolean(ps.positioningMode?.trim()) ||
+    Boolean(ps.validationStep?.trim()) ||
+    Boolean(ps.confidence)
+  ) return true
+  if (
+    ps.proposedPrice != null ||
+    ps.baseProductCost != null ||
+    ps.decorationCost != null ||
+    ps.laborCost != null ||
+    ps.packagingCost != null ||
+    ps.transactionFee != null ||
+    ps.otherUnitCost != null ||
+    ps.fixedCosts != null ||
+    ps.expectedUnitsSold != null ||
+    ps.desiredGrossMarginPct != null
+  ) return true
+  if ((ps.priceTests?.length ?? 0) > 0) return true
+  if ((ps.comparablePrices?.length ?? 0) > 0) return true
   return false
 }
 
@@ -93,6 +151,21 @@ export function summarizeSectionProgress(
   const persisted = persistedFor(output, section.id)
   const fit = persisted?.marketFit
   const brand = persisted?.brandFit
+  const pricing = persisted?.pricingStrategy ?? null
+  // Pricing chips run through the same math helper the builder UI
+  // uses, so a "Margin warning" chip on the hub means the same thing
+  // the in-builder chip means — single source of truth, no drift.
+  const pricingDerived = computePricingDerived(pricing)
+  const pricingComp = interpretPricingCompPosition(pricing)
+  const pricingStarted = isPricingStarted(pricing)
+  const pricingPriceSet = pricing?.proposedPrice != null
+  const pricingMarginWarning =
+    pricingDerived.belowCost ||
+    (pricingDerived.grossMarginPct != null &&
+      pricingDerived.grossMarginPct < 30 &&
+      pricingDerived.unitMargin != null)
+  const pricingNeedsComps = pricingComp.validCompCount < 2
+  const pricingNeedsValidation = !pricing?.confidence || pricing.confidence === 'low'
   return {
     sectionId: section.id,
     sectionTitle: section.title,
@@ -115,6 +188,12 @@ export function summarizeSectionProgress(
     marketBuilderEnabled: section.marketBuilder?.enabled === true,
     marketFitEnabled: section.marketFit?.enabled === true,
     brandFitEnabled: section.brandFit?.enabled === true,
+    pricingStrategyEnabled: section.pricingStrategy?.enabled === true,
+    pricingStrategyStarted: pricingStarted,
+    pricingStrategyPriceSet: pricingPriceSet,
+    pricingStrategyMarginWarning: pricingMarginWarning,
+    pricingStrategyNeedsComps: pricingNeedsComps,
+    pricingStrategyNeedsValidation: pricingNeedsValidation,
     updatedAt: persisted?.updatedAt ?? null,
     needsAttention: computeNeedsAttention(section, persisted)
   }
@@ -132,6 +211,8 @@ export interface ChapterProgress {
   marketFitEnabledTotal: number
   brandFitEnabledStarted: number
   brandFitEnabledTotal: number
+  pricingStrategyEnabledStarted: number
+  pricingStrategyEnabledTotal: number
   needsAttention: number
   perSection: SectionProgress[]
 }
@@ -153,6 +234,8 @@ export function summarizeChapterProgress(
   let mfTotal = 0
   let bfStarted = 0
   let bfTotal = 0
+  let psStarted = 0
+  let psTotal = 0
   let needsAttention = 0
   for (const sp of perSection) {
     if (sp.hasFinal) finalDone += 1
@@ -173,6 +256,10 @@ export function summarizeChapterProgress(
       bfTotal += 1
       if (sp.brandFitStarted) bfStarted += 1
     }
+    if (sp.pricingStrategyEnabled) {
+      psTotal += 1
+      if (sp.pricingStrategyStarted) psStarted += 1
+    }
     if (sp.needsAttention) needsAttention += 1
   }
   return {
@@ -187,6 +274,8 @@ export function summarizeChapterProgress(
     marketFitEnabledTotal: mfTotal,
     brandFitEnabledStarted: bfStarted,
     brandFitEnabledTotal: bfTotal,
+    pricingStrategyEnabledStarted: psStarted,
+    pricingStrategyEnabledTotal: psTotal,
     needsAttention,
     perSection
   }

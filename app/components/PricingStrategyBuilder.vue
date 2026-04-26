@@ -1,0 +1,1304 @@
+<script setup lang="ts">
+// Pricing Strategy Engine V1 — section-level pricing decision tool.
+//
+// Helps Renaissance students connect cost, margin, market comps,
+// customer segment, brand positioning, and validation into a single
+// transparent recommendation for one product. Mounted only on Ch. 8
+// Section 2 (sale-price) when the studio metadata enables it. The
+// /pricing page remains the operational source of truth — this
+// builder NEVER writes to pricingScenarios and never approves a
+// price.
+//
+// Posture (do not relax in V1):
+//   - additive layer on the existing deliverableOutputs document
+//   - never gates submit / never gates Playbook readiness
+//   - read-only when the deliverable is in_review / approved
+//   - feedback is deterministic (no AI); refreshes live as inputs change
+//   - Save button writes the whole PricingStrategyBuilder object back
+//     via the composable; sibling fields are untouched
+//   - never invents comp prices, never auto-writes the recommendation
+//     scaffold into finalText
+
+import { computed, reactive, ref, watch } from 'vue'
+import { useAuthStore } from '~/stores/auth'
+import { useDeliverableOutputs } from '~/composables/useDeliverableOutputs'
+import type {
+  MarketBuilderEntry,
+  MarketFitBuilder,
+  PricingStrategyBuilder,
+  PricingStrategyComparable,
+  PricingStrategyConfidence,
+  PricingStrategyPriceTest,
+  PricingStrategyProductType,
+  PricingStrategyQualityLevel
+} from '~/types/models'
+import {
+  computeDerived,
+  formatMoney,
+  formatPct,
+  formatUnits,
+  interpretCompPosition,
+  interpretEvidence,
+  interpretMargin,
+  interpretSegment,
+  summarizePriceTests,
+  type CompPositionBand,
+  type EvidenceBand,
+  type MarginBand,
+  type SegmentBand
+} from '~/utils/pricingStrategyMath'
+
+const props = defineProps<{
+  deliverableId: string
+  sectionId: string
+  sectionTitle: string
+  // Pre-existing student-saved pricing data, if any. Cloned into a
+  // local reactive form so editing doesn't mutate the snapshot.
+  initial: PricingStrategyBuilder | null
+  editingEnabled: boolean
+  // Optional studio-provided guidance string shown above the editor.
+  guidance?: string | null
+  // Optional read-only Ch. 7 context. The component renders these as
+  // pure references — never overwrites Ch. 7, never copies values
+  // into local state. Pass null arrays / null objects when there's
+  // no upstream data.
+  ch7MarketFit?: MarketFitBuilder | null
+  ch7MarketEntries?: MarketBuilderEntry[] | null
+}>()
+
+const auth = useAuthStore()
+const outputs = useDeliverableOutputs()
+
+const PRODUCT_TYPES: Array<{ value: PricingStrategyProductType; label: string }> = [
+  { value: '', label: '— Not set —' },
+  { value: 'sweatshirt', label: 'Sweatshirt' },
+  { value: 't-shirt', label: 'T-shirt' },
+  { value: 'beanie', label: 'Beanie' },
+  { value: 'baked-good', label: 'Baked good' },
+  { value: 'donation', label: 'Donation' },
+  { value: 'other', label: 'Other' }
+]
+
+const QUALITY_LEVELS: Array<{ value: PricingStrategyQualityLevel; label: string }> = [
+  { value: '', label: '— Not set —' },
+  { value: 'basic', label: 'Basic' },
+  { value: 'standard', label: 'Standard' },
+  { value: 'premium', label: 'Premium' },
+  { value: 'limited-run', label: 'Limited run' }
+]
+
+const CONFIDENCE_OPTIONS: Array<{ value: PricingStrategyConfidence; label: string }> = [
+  { value: '', label: '— Not set —' },
+  { value: 'low', label: 'Low — assumptions only' },
+  { value: 'medium', label: 'Medium — some evidence' },
+  { value: 'high', label: 'High — preorder / direct customer evidence' }
+]
+
+const positioningOptions = [
+  '',
+  'Value play',
+  'Market-aligned',
+  'Premium / story-led',
+  'Limited run',
+  'Civic / mission-led',
+  'Loss leader (intentionally below margin)'
+]
+
+// --- form state ----------------------------------------------------
+// Whole-form reactive object so the deterministic feedback updates
+// live as inputs change. Cloned from props.initial on mount and on
+// re-mount-with-different-id (section change).
+function emptyForm(): PricingStrategyBuilder {
+  return {
+    linkedPricingScenarioId: null,
+    productName: '',
+    productType: '',
+    qualityLevel: '',
+    productionStory: '',
+    materialNotes: '',
+    packagingNotes: '',
+    brandStoryNotes: '',
+    targetSegment: '',
+    positioningMode: '',
+    baseProductCost: null,
+    decorationCost: null,
+    laborCost: null,
+    packagingCost: null,
+    transactionFee: null,
+    otherUnitCost: null,
+    fixedCosts: null,
+    expectedUnitsSold: null,
+    proposedPrice: null,
+    desiredGrossMarginPct: null,
+    comparablePrices: [],
+    priceTests: [],
+    confidence: '',
+    validationStep: ''
+  }
+}
+
+function cloneInitial(initial: PricingStrategyBuilder | null): PricingStrategyBuilder {
+  if (!initial) return emptyForm()
+  const base = emptyForm()
+  return {
+    ...base,
+    ...initial,
+    comparablePrices:
+      initial.comparablePrices?.map((c) => ({ ...c })) ?? [],
+    priceTests: initial.priceTests?.map((t) => ({ ...t })) ?? []
+  }
+}
+
+const form = reactive<PricingStrategyBuilder>(cloneInitial(props.initial))
+const dirty = ref(false)
+const saving = ref(false)
+const saveError = ref<string | null>(null)
+const justSavedAt = ref<string | null>(null)
+const activeStep = ref<1 | 2 | 3 | 4>(1)
+const showRecommendationScaffold = ref(false)
+
+// Re-clone when a different section's snapshot lands (e.g. parent
+// section change). Watching by reference is fine — the parent passes
+// a new object via props each time the watcher fires.
+watch(
+  () => props.initial,
+  (next) => {
+    Object.assign(form, cloneInitial(next))
+    dirty.value = false
+    saveError.value = null
+  }
+)
+
+function markDirty() {
+  dirty.value = true
+}
+
+// Numeric form helpers — input.type=number returns "" for blank,
+// which we coerce to null. NaN/Infinity get coerced to null too so
+// the math layer never sees them.
+function parseNumberInput(v: unknown): number | null {
+  if (v === null || v === undefined) return null
+  if (typeof v === 'string') {
+    const trimmed = v.trim()
+    if (trimmed === '') return null
+    const n = Number(trimmed)
+    return Number.isFinite(n) ? n : null
+  }
+  if (typeof v === 'number') {
+    return Number.isFinite(v) ? v : null
+  }
+  return null
+}
+
+function setNumber(key: keyof PricingStrategyBuilder, v: unknown) {
+  // The numeric fields below are number | null on the type. The cast
+  // is safe because we only call setNumber for those keys.
+  ;(form as Record<string, unknown>)[key as string] = parseNumberInput(v)
+  markDirty()
+}
+
+// --- comparables ---------------------------------------------------
+function genId(): string {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID()
+  }
+  return `ps-${Date.now()}-${Math.floor(Math.random() * 1e6)}`
+}
+
+function addComparable() {
+  if (!form.comparablePrices) form.comparablePrices = []
+  form.comparablePrices.push({
+    id: genId(),
+    name: '',
+    price: null,
+    source: '',
+    notes: '',
+    alignment: ''
+  })
+  markDirty()
+}
+function removeComparable(id: string) {
+  form.comparablePrices = (form.comparablePrices ?? []).filter((c) => c.id !== id)
+  markDirty()
+}
+
+// --- price tests ---------------------------------------------------
+function addPriceTest() {
+  if (!form.priceTests) form.priceTests = []
+  form.priceTests.push({
+    id: genId(),
+    price: null,
+    expectedUnitsSold: null,
+    notes: ''
+  })
+  markDirty()
+}
+function removePriceTest(id: string) {
+  form.priceTests = (form.priceTests ?? []).filter((t) => t.id !== id)
+  markDirty()
+}
+
+// --- live deterministic feedback ----------------------------------
+const derived = computed(() => computeDerived(form))
+const marginInterp = computed(() => interpretMargin(derived.value))
+const compPosition = computed(() => interpretCompPosition(form))
+const evidenceInterp = computed(() => interpretEvidence(form))
+const segmentInterp = computed(() => interpretSegment(form))
+const priceTests = computed(() => summarizePriceTests(form))
+
+// Chip colors for each interpretation band. Tailwind classes only —
+// no inline styles. Mirrors the BrandFit/MarketFit chip vocabulary.
+function marginChipClass(band: MarginBand): string {
+  switch (band) {
+    case 'below_cost':
+      return 'border-rose-300 bg-rose-50 text-rose-800'
+    case 'weak':
+      return 'border-amber-300 bg-amber-50 text-amber-800'
+    case 'tight':
+      return 'border-amber-200 bg-amber-50 text-amber-800'
+    case 'healthy':
+      return 'border-emerald-300 bg-emerald-50 text-emerald-800'
+    case 'strong':
+      return 'border-sky-300 bg-sky-50 text-sky-800'
+    default:
+      return 'border-neutral-300 bg-neutral-50 text-neutral-700'
+  }
+}
+function compChipClass(band: CompPositionBand): string {
+  switch (band) {
+    case 'within_range':
+      return 'border-emerald-300 bg-emerald-50 text-emerald-800'
+    case 'below_range':
+      return 'border-amber-300 bg-amber-50 text-amber-800'
+    case 'above_range':
+      return 'border-sky-300 bg-sky-50 text-sky-800'
+    case 'far_above_range':
+      return 'border-rose-300 bg-rose-50 text-rose-800'
+    case 'needs_evidence':
+      return 'border-neutral-300 bg-neutral-50 text-neutral-700'
+    default:
+      return 'border-neutral-300 bg-neutral-50 text-neutral-700'
+  }
+}
+function evidenceChipClass(band: EvidenceBand): string {
+  switch (band) {
+    case 'high':
+      return 'border-emerald-300 bg-emerald-50 text-emerald-800'
+    case 'medium':
+      return 'border-amber-200 bg-amber-50 text-amber-800'
+    case 'low':
+      return 'border-amber-300 bg-amber-50 text-amber-800'
+    default:
+      return 'border-neutral-300 bg-neutral-50 text-neutral-700'
+  }
+}
+function segmentChipClass(band: SegmentBand): string {
+  switch (band) {
+    case 'civic_premium':
+    case 'alumni':
+    case 'parent':
+      return 'border-violet-300 bg-violet-50 text-violet-800'
+    case 'student':
+      return 'border-sky-300 bg-sky-50 text-sky-800'
+    default:
+      return 'border-neutral-300 bg-neutral-50 text-neutral-700'
+  }
+}
+
+// --- recommendation scaffold (copyable; never auto-written) -------
+const recommendationScaffold = computed(() => {
+  const product = (form.productName || '').trim() || '__'
+  const price =
+    form.proposedPrice != null ? `$${formatMoney(form.proposedPrice)}` : '__'
+  const segment = (form.targetSegment || '').trim() || '__'
+  const story = (form.productionStory || '').trim() || '__'
+  const cost = `$${formatMoney(derived.value.totalUnitCost)}`
+  const marginPctText =
+    derived.value.grossMarginPct != null
+      ? formatPct(derived.value.grossMarginPct)
+      : '__'
+
+  const compLine =
+    compPosition.value.band === 'needs_evidence'
+      ? 'comparable evidence is still needed'
+      : compPosition.value.band === 'within_range'
+        ? `comparable products in our research, this price is within the typical range ($${formatMoney(compPosition.value.min)}–$${formatMoney(compPosition.value.max)})`
+        : compPosition.value.band === 'below_range'
+          ? `our comparable set ($${formatMoney(compPosition.value.min)}–$${formatMoney(compPosition.value.max)}), this price is below the range`
+          : compPosition.value.band === 'above_range'
+            ? `our comparable set ($${formatMoney(compPosition.value.min)}–$${formatMoney(compPosition.value.max)}), this price sits above the range and is premium-positioned`
+            : compPosition.value.band === 'far_above_range'
+              ? `our comparable set ($${formatMoney(compPosition.value.min)}–$${formatMoney(compPosition.value.max)}), this price is significantly above the range and acceptance risk is high`
+              : `our comparable set ($${formatMoney(compPosition.value.min)}–$${formatMoney(compPosition.value.max)})`
+
+  const riskLine =
+    derived.value.belowCost
+      ? 'this price is below cost and the unit loses money before fixed costs'
+      : marginInterp.value.band === 'weak'
+        ? 'margin is too thin to absorb surprises'
+        : compPosition.value.band === 'far_above_range'
+          ? 'price acceptance risk is high relative to comps'
+          : evidenceInterp.value.band === 'low' || evidenceInterp.value.band === 'none'
+            ? 'evidence supporting this price is still thin'
+            : '__'
+
+  const validation = (form.validationStep || '').trim() || '__'
+
+  return [
+    `Our recommended price for ${product} is ${price} because ${story}.`,
+    `The unit cost is ${cost}, which creates a gross margin of ${marginPctText}.`,
+    `Compared with ${compLine}.`,
+    `The strongest customer segment is likely ${segment} (${segmentInterp.value.label}).`,
+    `The biggest risk is ${riskLine}.`,
+    `We should validate this by ${validation}.`
+  ].join(' ')
+})
+
+// --- read-only Ch. 7 context derivations --------------------------
+// Pure pass-through summaries — we never copy values into form state
+// or invoke any backend. If Ch. 7 has nothing, the panel renders the
+// "Add Ch. 7 evidence" advisory line.
+const ch7HasContent = computed<boolean>(() => {
+  if (props.ch7MarketFit) {
+    const f = props.ch7MarketFit
+    if (
+      Boolean(f.productFacts?.productName?.trim()) ||
+      (f.segments?.length ?? 0) > 0 ||
+      (f.comparables?.length ?? 0) > 0 ||
+      Boolean(f.recommendation?.likelyPrimaryMarket?.trim())
+    ) {
+      return true
+    }
+  }
+  if ((props.ch7MarketEntries?.length ?? 0) > 0) return true
+  return false
+})
+
+// --- save -----------------------------------------------------------
+async function save() {
+  if (!props.editingEnabled || saving.value) return
+  if (!auth.user || !auth.profile) return
+  saveError.value = null
+
+  // Light validation. Negative cost / negative price / non-finite
+  // values are blocked here; the math helper would coerce them to
+  // null but we prefer surfacing the error to the student so they
+  // know their input wasn't accepted.
+  const errs: string[] = []
+  function checkNonNeg(label: string, v: number | null | undefined) {
+    if (v === null || v === undefined) return
+    if (!Number.isFinite(v)) {
+      errs.push(`${label} is not a valid number.`)
+      return
+    }
+    if (v < 0) errs.push(`${label} cannot be negative.`)
+  }
+  checkNonNeg('Base product cost', form.baseProductCost)
+  checkNonNeg('Decoration cost', form.decorationCost)
+  checkNonNeg('Labor cost', form.laborCost)
+  checkNonNeg('Packaging cost', form.packagingCost)
+  checkNonNeg('Transaction fee', form.transactionFee)
+  checkNonNeg('Other unit cost', form.otherUnitCost)
+  checkNonNeg('Fixed costs', form.fixedCosts)
+  checkNonNeg('Expected units sold', form.expectedUnitsSold)
+  checkNonNeg('Proposed price', form.proposedPrice)
+  if (
+    form.desiredGrossMarginPct != null &&
+    Number.isFinite(form.desiredGrossMarginPct) &&
+    (form.desiredGrossMarginPct < 0 || form.desiredGrossMarginPct >= 100)
+  ) {
+    errs.push('Desired gross margin must be between 0 and 99%.')
+  }
+  for (const c of form.comparablePrices ?? []) {
+    if (c.price != null && Number.isFinite(c.price) && c.price < 0) {
+      errs.push(`Comparable "${c.name || 'unnamed'}" price cannot be negative.`)
+    }
+  }
+  for (const t of form.priceTests ?? []) {
+    if (t.price != null && Number.isFinite(t.price) && t.price < 0) {
+      errs.push(`Price test cannot be negative.`)
+    }
+    if (
+      t.expectedUnitsSold != null &&
+      Number.isFinite(t.expectedUnitsSold) &&
+      t.expectedUnitsSold < 0
+    ) {
+      errs.push(`Price test expected units cannot be negative.`)
+    }
+  }
+  if (errs.length) {
+    saveError.value = errs[0]
+    return
+  }
+
+  saving.value = true
+  try {
+    const payload: PricingStrategyBuilder = {
+      linkedPricingScenarioId: form.linkedPricingScenarioId ?? null,
+      productName: form.productName,
+      productType: form.productType,
+      qualityLevel: form.qualityLevel,
+      productionStory: form.productionStory,
+      materialNotes: form.materialNotes,
+      packagingNotes: form.packagingNotes,
+      brandStoryNotes: form.brandStoryNotes,
+      targetSegment: form.targetSegment,
+      positioningMode: form.positioningMode,
+      baseProductCost: form.baseProductCost,
+      decorationCost: form.decorationCost,
+      laborCost: form.laborCost,
+      packagingCost: form.packagingCost,
+      transactionFee: form.transactionFee,
+      otherUnitCost: form.otherUnitCost,
+      fixedCosts: form.fixedCosts,
+      expectedUnitsSold: form.expectedUnitsSold,
+      proposedPrice: form.proposedPrice,
+      desiredGrossMarginPct: form.desiredGrossMarginPct,
+      comparablePrices: (form.comparablePrices ?? []).map((c) => ({ ...c })),
+      priceTests: (form.priceTests ?? []).map((t) => ({ ...t })),
+      confidence: form.confidence,
+      validationStep: form.validationStep
+    }
+    await outputs.savePricingStrategyBuilder(
+      props.deliverableId,
+      props.sectionId,
+      props.sectionTitle,
+      payload,
+      {
+        uid: auth.user.uid,
+        email: auth.profile.email || auth.user.email || ''
+      }
+    )
+    dirty.value = false
+    justSavedAt.value = new Date().toISOString()
+  } catch (e) {
+    saveError.value = e instanceof Error ? e.message : String(e)
+  } finally {
+    saving.value = false
+  }
+}
+
+async function copyScaffold() {
+  if (typeof navigator === 'undefined' || !navigator.clipboard) return
+  try {
+    await navigator.clipboard.writeText(recommendationScaffold.value)
+  } catch {
+    // Silently ignore — copy is best-effort. Users can still
+    // select the text manually.
+  }
+}
+</script>
+
+<template>
+  <section class="space-y-3 rounded-md border border-amber-200 bg-amber-50/30 p-3">
+    <header class="space-y-0.5">
+      <p class="text-xs uppercase tracking-wide text-neutral-500">
+        Pricing Strategy Builder
+      </p>
+      <h4 class="text-sm font-semibold text-neutral-900">
+        Connect cost, margin, comps, and customer fit
+      </h4>
+      <p class="text-xs text-neutral-600">
+        {{
+          guidance ||
+          'Use this builder to compare cost, margin, market comps, and customer fit before writing your final price recommendation.'
+        }}
+      </p>
+      <p class="text-[11px] italic text-neutral-500">
+        This is guidance for your pricing recommendation, not a final approval.
+        The /pricing page remains the operational source of truth — this builder
+        does not write to it.
+      </p>
+    </header>
+
+    <!-- Step nav. Wraps on small screens. -->
+    <nav class="flex flex-wrap gap-1.5 text-xs" aria-label="Pricing strategy steps">
+      <button
+        v-for="(label, idx) in [
+          'Product & story',
+          'Cost & margin',
+          'Price tests & comps',
+          'Positioning & recommendation'
+        ]"
+        :key="`ps-step-${idx}`"
+        type="button"
+        :class="[
+          'rounded-full border px-2.5 py-1',
+          activeStep === idx + 1
+            ? 'border-amber-400 bg-amber-100 font-semibold text-amber-900'
+            : 'border-neutral-300 bg-white text-neutral-700 hover:bg-neutral-50'
+        ]"
+        @click="activeStep = (idx + 1) as 1 | 2 | 3 | 4"
+      >
+        {{ idx + 1 }}. {{ label }}
+      </button>
+    </nav>
+
+    <!-- ============================================================
+         Step 1 — Product and story
+         ============================================================ -->
+    <fieldset v-if="activeStep === 1" class="space-y-2 rounded-md border border-neutral-200 bg-white p-3">
+      <legend class="px-1 text-xs font-semibold uppercase tracking-wide text-neutral-600">
+        Step 1 — Product &amp; story
+      </legend>
+      <div class="grid gap-2 sm:grid-cols-2">
+        <label class="text-xs">
+          <span class="font-medium text-neutral-700">Product name</span>
+          <input
+            v-model="form.productName"
+            :disabled="!editingEnabled"
+            type="text"
+            class="mt-0.5 w-full rounded border border-neutral-300 p-1.5 text-sm disabled:bg-neutral-50"
+            placeholder="House Phoenix sweatshirt"
+            @input="markDirty"
+          />
+        </label>
+        <label class="text-xs">
+          <span class="font-medium text-neutral-700">Product type</span>
+          <select
+            v-model="form.productType"
+            :disabled="!editingEnabled"
+            class="mt-0.5 w-full rounded border border-neutral-300 p-1.5 text-sm disabled:bg-neutral-50"
+            @change="markDirty"
+          >
+            <option v-for="opt in PRODUCT_TYPES" :key="opt.value" :value="opt.value">
+              {{ opt.label }}
+            </option>
+          </select>
+        </label>
+        <label class="text-xs">
+          <span class="font-medium text-neutral-700">Quality level</span>
+          <select
+            v-model="form.qualityLevel"
+            :disabled="!editingEnabled"
+            class="mt-0.5 w-full rounded border border-neutral-300 p-1.5 text-sm disabled:bg-neutral-50"
+            @change="markDirty"
+          >
+            <option v-for="opt in QUALITY_LEVELS" :key="opt.value" :value="opt.value">
+              {{ opt.label }}
+            </option>
+          </select>
+        </label>
+        <label class="text-xs">
+          <span class="font-medium text-neutral-700">Target segment</span>
+          <input
+            v-model="form.targetSegment"
+            :disabled="!editingEnabled"
+            type="text"
+            class="mt-0.5 w-full rounded border border-neutral-300 p-1.5 text-sm disabled:bg-neutral-50"
+            placeholder="Civic Premium Buyer"
+            @input="markDirty"
+          />
+        </label>
+        <label class="text-xs sm:col-span-2">
+          <span class="font-medium text-neutral-700">Production story</span>
+          <textarea
+            v-model="form.productionStory"
+            :disabled="!editingEnabled"
+            rows="2"
+            class="mt-0.5 w-full rounded border border-neutral-300 p-1.5 text-sm disabled:bg-neutral-50"
+            placeholder="100% made in Detroit; embroidered locally; limited run of 75 units."
+            @input="markDirty"
+          />
+        </label>
+        <label class="text-xs">
+          <span class="font-medium text-neutral-700">Material notes</span>
+          <textarea
+            v-model="form.materialNotes"
+            :disabled="!editingEnabled"
+            rows="2"
+            class="mt-0.5 w-full rounded border border-neutral-300 p-1.5 text-sm disabled:bg-neutral-50"
+            placeholder="Heavyweight 12oz fleece, locally sourced cotton blend."
+            @input="markDirty"
+          />
+        </label>
+        <label class="text-xs">
+          <span class="font-medium text-neutral-700">Packaging notes</span>
+          <textarea
+            v-model="form.packagingNotes"
+            :disabled="!editingEnabled"
+            rows="2"
+            class="mt-0.5 w-full rounded border border-neutral-300 p-1.5 text-sm disabled:bg-neutral-50"
+            placeholder="Branded hangtag, recyclable poly bag, House Phoenix sticker."
+            @input="markDirty"
+          />
+        </label>
+        <label class="text-xs sm:col-span-2">
+          <span class="font-medium text-neutral-700">Brand / story notes</span>
+          <textarea
+            v-model="form.brandStoryNotes"
+            :disabled="!editingEnabled"
+            rows="2"
+            class="mt-0.5 w-full rounded border border-neutral-300 p-1.5 text-sm disabled:bg-neutral-50"
+            placeholder="Anchors House Phoenix's flagship Detroit-made narrative for TechTown."
+            @input="markDirty"
+          />
+        </label>
+        <label class="text-xs sm:col-span-2">
+          <span class="font-medium text-neutral-700">Positioning mode</span>
+          <select
+            v-model="form.positioningMode"
+            :disabled="!editingEnabled"
+            class="mt-0.5 w-full rounded border border-neutral-300 p-1.5 text-sm disabled:bg-neutral-50"
+            @change="markDirty"
+          >
+            <option v-for="m in positioningOptions" :key="`pos-${m}`" :value="m">
+              {{ m || '— Not set —' }}
+            </option>
+          </select>
+        </label>
+      </div>
+    </fieldset>
+
+    <!-- ============================================================
+         Step 2 — Cost and margin
+         ============================================================ -->
+    <fieldset v-if="activeStep === 2" class="space-y-3 rounded-md border border-neutral-200 bg-white p-3">
+      <legend class="px-1 text-xs font-semibold uppercase tracking-wide text-neutral-600">
+        Step 2 — Cost &amp; margin
+      </legend>
+      <div class="grid gap-2 sm:grid-cols-2">
+        <label class="text-xs">
+          <span class="font-medium text-neutral-700">Base product cost ($)</span>
+          <input
+            :value="form.baseProductCost ?? ''"
+            :disabled="!editingEnabled"
+            type="number"
+            step="0.01"
+            min="0"
+            class="mt-0.5 w-full rounded border border-neutral-300 p-1.5 text-sm disabled:bg-neutral-50"
+            @input="setNumber('baseProductCost', ($event.target as HTMLInputElement).value)"
+          />
+        </label>
+        <label class="text-xs">
+          <span class="font-medium text-neutral-700">Decoration / printing / patch cost ($)</span>
+          <input
+            :value="form.decorationCost ?? ''"
+            :disabled="!editingEnabled"
+            type="number"
+            step="0.01"
+            min="0"
+            class="mt-0.5 w-full rounded border border-neutral-300 p-1.5 text-sm disabled:bg-neutral-50"
+            @input="setNumber('decorationCost', ($event.target as HTMLInputElement).value)"
+          />
+        </label>
+        <label class="text-xs">
+          <span class="font-medium text-neutral-700">Labor / vendor cost ($)</span>
+          <input
+            :value="form.laborCost ?? ''"
+            :disabled="!editingEnabled"
+            type="number"
+            step="0.01"
+            min="0"
+            class="mt-0.5 w-full rounded border border-neutral-300 p-1.5 text-sm disabled:bg-neutral-50"
+            @input="setNumber('laborCost', ($event.target as HTMLInputElement).value)"
+          />
+        </label>
+        <label class="text-xs">
+          <span class="font-medium text-neutral-700">Packaging cost ($)</span>
+          <input
+            :value="form.packagingCost ?? ''"
+            :disabled="!editingEnabled"
+            type="number"
+            step="0.01"
+            min="0"
+            class="mt-0.5 w-full rounded border border-neutral-300 p-1.5 text-sm disabled:bg-neutral-50"
+            @input="setNumber('packagingCost', ($event.target as HTMLInputElement).value)"
+          />
+        </label>
+        <label class="text-xs">
+          <span class="font-medium text-neutral-700">Transaction / platform fee ($)</span>
+          <input
+            :value="form.transactionFee ?? ''"
+            :disabled="!editingEnabled"
+            type="number"
+            step="0.01"
+            min="0"
+            class="mt-0.5 w-full rounded border border-neutral-300 p-1.5 text-sm disabled:bg-neutral-50"
+            @input="setNumber('transactionFee', ($event.target as HTMLInputElement).value)"
+          />
+        </label>
+        <label class="text-xs">
+          <span class="font-medium text-neutral-700">Other unit cost ($)</span>
+          <input
+            :value="form.otherUnitCost ?? ''"
+            :disabled="!editingEnabled"
+            type="number"
+            step="0.01"
+            min="0"
+            class="mt-0.5 w-full rounded border border-neutral-300 p-1.5 text-sm disabled:bg-neutral-50"
+            @input="setNumber('otherUnitCost', ($event.target as HTMLInputElement).value)"
+          />
+        </label>
+        <label class="text-xs">
+          <span class="font-medium text-neutral-700">Fixed costs allocated to this product ($)</span>
+          <input
+            :value="form.fixedCosts ?? ''"
+            :disabled="!editingEnabled"
+            type="number"
+            step="0.01"
+            min="0"
+            class="mt-0.5 w-full rounded border border-neutral-300 p-1.5 text-sm disabled:bg-neutral-50"
+            @input="setNumber('fixedCosts', ($event.target as HTMLInputElement).value)"
+          />
+        </label>
+        <label class="text-xs">
+          <span class="font-medium text-neutral-700">Expected units sold</span>
+          <input
+            :value="form.expectedUnitsSold ?? ''"
+            :disabled="!editingEnabled"
+            type="number"
+            step="1"
+            min="0"
+            class="mt-0.5 w-full rounded border border-neutral-300 p-1.5 text-sm disabled:bg-neutral-50"
+            @input="setNumber('expectedUnitsSold', ($event.target as HTMLInputElement).value)"
+          />
+        </label>
+        <label class="text-xs">
+          <span class="font-medium text-neutral-700">Proposed price ($)</span>
+          <input
+            :value="form.proposedPrice ?? ''"
+            :disabled="!editingEnabled"
+            type="number"
+            step="0.01"
+            min="0"
+            class="mt-0.5 w-full rounded border border-neutral-300 p-1.5 text-sm disabled:bg-neutral-50"
+            @input="setNumber('proposedPrice', ($event.target as HTMLInputElement).value)"
+          />
+        </label>
+        <label class="text-xs">
+          <span class="font-medium text-neutral-700">Desired gross margin %</span>
+          <input
+            :value="form.desiredGrossMarginPct ?? ''"
+            :disabled="!editingEnabled"
+            type="number"
+            step="1"
+            min="0"
+            max="99"
+            class="mt-0.5 w-full rounded border border-neutral-300 p-1.5 text-sm disabled:bg-neutral-50"
+            @input="setNumber('desiredGrossMarginPct', ($event.target as HTMLInputElement).value)"
+          />
+        </label>
+      </div>
+
+      <!-- Live derived numbers -->
+      <dl class="grid grid-cols-2 gap-x-4 gap-y-1 rounded-md border border-neutral-200 bg-neutral-50 p-2 text-xs sm:grid-cols-3">
+        <div>
+          <dt class="text-neutral-500">Total unit cost</dt>
+          <dd class="font-medium text-neutral-900">
+            ${{ formatMoney(derived.totalUnitCost) }}
+          </dd>
+        </div>
+        <div>
+          <dt class="text-neutral-500">Unit margin</dt>
+          <dd
+            class="font-medium"
+            :class="derived.belowCost ? 'text-rose-700' : 'text-neutral-900'"
+          >
+            <span v-if="derived.unitMargin != null">${{ formatMoney(derived.unitMargin) }}</span>
+            <span v-else>—</span>
+          </dd>
+        </div>
+        <div>
+          <dt class="text-neutral-500">Gross margin %</dt>
+          <dd class="font-medium text-neutral-900">
+            {{ formatPct(derived.grossMarginPct) }}
+          </dd>
+        </div>
+        <div>
+          <dt class="text-neutral-500">Break-even units</dt>
+          <dd class="font-medium text-neutral-900">
+            {{ derived.breakEvenUnits != null ? formatUnits(derived.breakEvenUnits) : '—' }}
+          </dd>
+        </div>
+        <div>
+          <dt class="text-neutral-500">Estimated revenue</dt>
+          <dd class="font-medium text-neutral-900">
+            <span v-if="derived.revenue != null">${{ formatMoney(derived.revenue) }}</span>
+            <span v-else>—</span>
+          </dd>
+        </div>
+        <div>
+          <dt class="text-neutral-500">Estimated gross profit</dt>
+          <dd
+            class="font-medium"
+            :class="(derived.grossProfit ?? 0) < 0 ? 'text-rose-700' : 'text-neutral-900'"
+          >
+            <span v-if="derived.grossProfit != null">${{ formatMoney(derived.grossProfit) }}</span>
+            <span v-else>—</span>
+          </dd>
+        </div>
+        <div class="sm:col-span-3">
+          <dt class="text-neutral-500">Target-margin price (at desired %)</dt>
+          <dd class="font-medium text-neutral-900">
+            <span v-if="derived.targetMarginPrice != null">${{ formatMoney(derived.targetMarginPrice) }}</span>
+            <span v-else>—</span>
+          </dd>
+        </div>
+      </dl>
+    </fieldset>
+
+    <!-- ============================================================
+         Step 3 — Price tests + comps
+         ============================================================ -->
+    <fieldset v-if="activeStep === 3" class="space-y-3 rounded-md border border-neutral-200 bg-white p-3">
+      <legend class="px-1 text-xs font-semibold uppercase tracking-wide text-neutral-600">
+        Step 3 — Price tests &amp; comps
+      </legend>
+
+      <!-- Price tests -->
+      <div class="space-y-2">
+        <header class="flex items-center justify-between">
+          <h5 class="text-xs font-semibold text-neutral-800">Price test rows</h5>
+          <button
+            v-if="editingEnabled"
+            type="button"
+            class="text-xs text-phoenix-700 hover:underline"
+            @click="addPriceTest"
+          >+ Add price test</button>
+        </header>
+        <p class="text-xs text-neutral-600">
+          Try a few candidate prices side-by-side. The estimated revenue and
+          margin update from the unit cost in Step 2 — no extra entry needed.
+        </p>
+        <p
+          v-if="(form.priceTests?.length ?? 0) === 0"
+          class="text-xs italic text-neutral-500"
+        >
+          No price tests added yet. Add candidate prices like $75, $90, $100, $120.
+        </p>
+        <ul v-else class="space-y-2">
+          <li
+            v-for="(t, idx) in form.priceTests"
+            :key="t.id"
+            class="space-y-2 rounded-md border border-neutral-200 bg-neutral-50 p-2"
+          >
+            <div class="grid gap-2 sm:grid-cols-3">
+              <label class="text-xs">
+                <span class="font-medium text-neutral-700">Price ($)</span>
+                <input
+                  :value="t.price ?? ''"
+                  :disabled="!editingEnabled"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  class="mt-0.5 w-full rounded border border-neutral-300 p-1.5 text-sm disabled:bg-neutral-100"
+                  @input="t.price = parseNumberInput(($event.target as HTMLInputElement).value); markDirty()"
+                />
+              </label>
+              <label class="text-xs">
+                <span class="font-medium text-neutral-700">Expected units</span>
+                <input
+                  :value="t.expectedUnitsSold ?? ''"
+                  :disabled="!editingEnabled"
+                  type="number"
+                  step="1"
+                  min="0"
+                  class="mt-0.5 w-full rounded border border-neutral-300 p-1.5 text-sm disabled:bg-neutral-100"
+                  @input="t.expectedUnitsSold = parseNumberInput(($event.target as HTMLInputElement).value); markDirty()"
+                />
+              </label>
+              <label class="text-xs">
+                <span class="font-medium text-neutral-700">Notes</span>
+                <input
+                  v-model="t.notes"
+                  :disabled="!editingEnabled"
+                  type="text"
+                  class="mt-0.5 w-full rounded border border-neutral-300 p-1.5 text-sm disabled:bg-neutral-100"
+                  placeholder="e.g. parent-friendly anchor"
+                  @input="markDirty"
+                />
+              </label>
+            </div>
+            <div
+              v-if="priceTests.rows[idx]"
+              class="flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-neutral-700"
+            >
+              <span>
+                Margin:
+                <span :class="(priceTests.rows[idx].estUnitMargin ?? 0) < 0 ? 'text-rose-700 font-medium' : 'font-medium text-neutral-900'">
+                  {{ priceTests.rows[idx].estUnitMargin != null ? '$' + formatMoney(priceTests.rows[idx].estUnitMargin) : '—' }}
+                </span>
+              </span>
+              <span>
+                Revenue:
+                <span class="font-medium text-neutral-900">
+                  {{ priceTests.rows[idx].estRevenue != null ? '$' + formatMoney(priceTests.rows[idx].estRevenue) : '—' }}
+                </span>
+              </span>
+              <span>
+                Gross profit:
+                <span :class="(priceTests.rows[idx].estGrossProfit ?? 0) < 0 ? 'text-rose-700 font-medium' : 'font-medium text-neutral-900'">
+                  {{ priceTests.rows[idx].estGrossProfit != null ? '$' + formatMoney(priceTests.rows[idx].estGrossProfit) : '—' }}
+                </span>
+              </span>
+            </div>
+            <div v-if="editingEnabled" class="flex justify-end">
+              <button
+                type="button"
+                class="text-xs text-rose-700 hover:underline"
+                @click="removePriceTest(t.id)"
+              >Remove</button>
+            </div>
+          </li>
+        </ul>
+      </div>
+
+      <!-- Comparables -->
+      <div class="space-y-2">
+        <header class="flex items-center justify-between">
+          <h5 class="text-xs font-semibold text-neutral-800">Comparable prices</h5>
+          <button
+            v-if="editingEnabled"
+            type="button"
+            class="text-xs text-phoenix-700 hover:underline"
+            @click="addComparable"
+          >+ Add comparable</button>
+        </header>
+        <p class="text-xs text-neutral-600">
+          Real comparables from the team's research — name, price, source. Two or
+          more are needed before the comp position chip can read the market.
+        </p>
+        <p
+          v-if="(form.comparablePrices?.length ?? 0) === 0"
+          class="text-xs italic text-neutral-500"
+        >
+          No comparable prices added yet. Add at least two so the builder can
+          place this price against the market.
+        </p>
+        <ul v-else class="space-y-2">
+          <li
+            v-for="c in form.comparablePrices"
+            :key="c.id"
+            class="space-y-2 rounded-md border border-neutral-200 bg-neutral-50 p-2"
+          >
+            <div class="grid gap-2 sm:grid-cols-2">
+              <label class="text-xs">
+                <span class="font-medium text-neutral-700">Name</span>
+                <input
+                  v-model="c.name"
+                  :disabled="!editingEnabled"
+                  type="text"
+                  class="mt-0.5 w-full rounded border border-neutral-300 p-1.5 text-sm disabled:bg-neutral-100"
+                  placeholder="Detroit-made premium sweatshirt"
+                  @input="markDirty"
+                />
+              </label>
+              <label class="text-xs">
+                <span class="font-medium text-neutral-700">Price ($)</span>
+                <input
+                  :value="c.price ?? ''"
+                  :disabled="!editingEnabled"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  class="mt-0.5 w-full rounded border border-neutral-300 p-1.5 text-sm disabled:bg-neutral-100"
+                  @input="c.price = parseNumberInput(($event.target as HTMLInputElement).value); markDirty()"
+                />
+              </label>
+              <label class="text-xs">
+                <span class="font-medium text-neutral-700">Source</span>
+                <input
+                  v-model="c.source"
+                  :disabled="!editingEnabled"
+                  type="text"
+                  class="mt-0.5 w-full rounded border border-neutral-300 p-1.5 text-sm disabled:bg-neutral-100"
+                  placeholder="Pure Detroit retail observation"
+                  @input="markDirty"
+                />
+              </label>
+              <label class="text-xs">
+                <span class="font-medium text-neutral-700">Alignment / lesson</span>
+                <input
+                  v-model="c.alignment"
+                  :disabled="!editingEnabled"
+                  type="text"
+                  class="mt-0.5 w-full rounded border border-neutral-300 p-1.5 text-sm disabled:bg-neutral-100"
+                  placeholder="Detroit-made premium feel; older customer"
+                  @input="markDirty"
+                />
+              </label>
+              <label class="text-xs sm:col-span-2">
+                <span class="font-medium text-neutral-700">Notes</span>
+                <textarea
+                  v-model="c.notes"
+                  :disabled="!editingEnabled"
+                  rows="2"
+                  class="mt-0.5 w-full rounded border border-neutral-300 p-1.5 text-sm disabled:bg-neutral-100"
+                  placeholder="What this comp proves; what it does not."
+                  @input="markDirty"
+                />
+              </label>
+            </div>
+            <div v-if="editingEnabled" class="flex justify-end">
+              <button
+                type="button"
+                class="text-xs text-rose-700 hover:underline"
+                @click="removeComparable(c.id)"
+              >Remove</button>
+            </div>
+          </li>
+        </ul>
+      </div>
+    </fieldset>
+
+    <!-- ============================================================
+         Step 4 — Positioning + recommendation
+         ============================================================ -->
+    <fieldset v-if="activeStep === 4" class="space-y-3 rounded-md border border-neutral-200 bg-white p-3">
+      <legend class="px-1 text-xs font-semibold uppercase tracking-wide text-neutral-600">
+        Step 4 — Positioning &amp; recommendation
+      </legend>
+
+      <!-- Deterministic chips -->
+      <ul class="flex flex-wrap gap-1.5 text-[11px]">
+        <li
+          class="rounded-full border px-2 py-0.5 uppercase tracking-wide"
+          :class="marginChipClass('healthy')"
+        >Cost floor: ${{ formatMoney(derived.totalUnitCost) }}</li>
+        <li
+          class="rounded-full border px-2 py-0.5 uppercase tracking-wide"
+          :class="marginChipClass(marginInterp.band)"
+        >Margin · {{ marginInterp.label }}</li>
+        <li
+          v-if="derived.grossMarginPct != null"
+          class="rounded-full border border-neutral-300 bg-white px-2 py-0.5 uppercase tracking-wide text-neutral-700"
+        >Gross margin: {{ formatPct(derived.grossMarginPct) }}</li>
+        <li
+          v-if="derived.breakEvenUnits != null"
+          class="rounded-full border border-neutral-300 bg-white px-2 py-0.5 uppercase tracking-wide text-neutral-700"
+        >Break-even: {{ formatUnits(derived.breakEvenUnits) }} units</li>
+        <li
+          v-if="derived.targetMarginPrice != null"
+          class="rounded-full border border-neutral-300 bg-white px-2 py-0.5 uppercase tracking-wide text-neutral-700"
+        >Target-margin price: ${{ formatMoney(derived.targetMarginPrice) }}</li>
+        <li
+          class="rounded-full border px-2 py-0.5 uppercase tracking-wide"
+          :class="compChipClass(compPosition.band)"
+        >Comp · {{ compPosition.label }}</li>
+        <li
+          class="rounded-full border px-2 py-0.5 uppercase tracking-wide"
+          :class="segmentChipClass(segmentInterp.band)"
+        >Segment fit · {{ segmentInterp.label }}</li>
+        <li
+          class="rounded-full border px-2 py-0.5 uppercase tracking-wide"
+          :class="evidenceChipClass(evidenceInterp.band)"
+        >Evidence · {{ evidenceInterp.label }}</li>
+      </ul>
+
+      <!-- Detail lines for each chip -->
+      <dl class="space-y-1 text-xs">
+        <div>
+          <dt class="font-medium text-neutral-700">Margin</dt>
+          <dd class="text-neutral-700">{{ marginInterp.detail }}</dd>
+        </div>
+        <div>
+          <dt class="font-medium text-neutral-700">Comp position</dt>
+          <dd class="text-neutral-700">{{ compPosition.detail }}</dd>
+        </div>
+        <div>
+          <dt class="font-medium text-neutral-700">Segment fit</dt>
+          <dd class="text-neutral-700">{{ segmentInterp.detail }}</dd>
+        </div>
+        <div>
+          <dt class="font-medium text-neutral-700">Evidence</dt>
+          <dd class="text-neutral-700">{{ evidenceInterp.detail }}</dd>
+        </div>
+      </dl>
+
+      <div class="grid gap-2 sm:grid-cols-2">
+        <label class="text-xs">
+          <span class="font-medium text-neutral-700">Confidence in this price</span>
+          <select
+            v-model="form.confidence"
+            :disabled="!editingEnabled"
+            class="mt-0.5 w-full rounded border border-neutral-300 p-1.5 text-sm disabled:bg-neutral-50"
+            @change="markDirty"
+          >
+            <option v-for="opt in CONFIDENCE_OPTIONS" :key="opt.value" :value="opt.value">
+              {{ opt.label }}
+            </option>
+          </select>
+        </label>
+        <label class="text-xs">
+          <span class="font-medium text-neutral-700">Validation step</span>
+          <input
+            v-model="form.validationStep"
+            :disabled="!editingEnabled"
+            type="text"
+            class="mt-0.5 w-full rounded border border-neutral-300 p-1.5 text-sm disabled:bg-neutral-50"
+            placeholder="Run a 10-person preorder test at $100 before locking the price"
+            @input="markDirty"
+          />
+        </label>
+      </div>
+
+      <!-- Copyable recommendation scaffold. Never auto-written into
+           finalText — students copy it deliberately. -->
+      <div class="space-y-1 rounded-md border border-amber-200 bg-amber-50 p-2">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <h5 class="text-xs font-semibold text-amber-900">
+            Recommendation scaffold
+          </h5>
+          <div class="flex flex-wrap gap-2 text-[11px]">
+            <button
+              type="button"
+              class="rounded border border-amber-300 bg-white px-2 py-0.5 text-amber-900 hover:bg-amber-100"
+              @click="showRecommendationScaffold = !showRecommendationScaffold"
+            >{{ showRecommendationScaffold ? 'Hide' : 'Show' }}</button>
+            <button
+              v-if="showRecommendationScaffold"
+              type="button"
+              class="rounded border border-amber-300 bg-white px-2 py-0.5 text-amber-900 hover:bg-amber-100"
+              @click="copyScaffold"
+            >Copy</button>
+          </div>
+        </div>
+        <p class="text-[11px] italic text-amber-900">
+          Copy this scaffold into your draft or final Playbook text when you're
+          ready. Never auto-written — your final wording stays yours.
+        </p>
+        <p
+          v-if="showRecommendationScaffold"
+          class="whitespace-pre-wrap rounded border border-amber-200 bg-white p-2 text-xs text-neutral-800"
+        >{{ recommendationScaffold }}</p>
+      </div>
+    </fieldset>
+
+    <!-- ============================================================
+         Read-only Ch. 7 context (always visible at the bottom)
+         ============================================================ -->
+    <details class="rounded-md border border-violet-200 bg-violet-50/40 p-2 text-xs">
+      <summary class="cursor-pointer font-semibold text-violet-900">
+        Read-only Chapter 7 context
+      </summary>
+      <div v-if="!ch7HasContent" class="mt-2 space-y-1 text-neutral-700">
+        <p>No Chapter 7 market or comparable evidence is on file yet.</p>
+        <p class="italic text-neutral-500">
+          Add Ch. 7 market and comparable evidence to strengthen this pricing
+          recommendation.
+        </p>
+      </div>
+      <div v-else class="mt-2 space-y-2 text-neutral-800">
+        <!-- Market Fit context -->
+        <div v-if="props.ch7MarketFit" class="space-y-1">
+          <p class="font-medium text-neutral-700">Chapter 7 — Market Fit</p>
+          <p v-if="props.ch7MarketFit.productFacts?.productName">
+            <span class="text-neutral-500">Product:</span>
+            {{ props.ch7MarketFit.productFacts.productName }}
+            <span v-if="props.ch7MarketFit.productFacts.price != null">
+              · ${{ formatMoney(props.ch7MarketFit.productFacts.price) }}
+            </span>
+            <span v-if="props.ch7MarketFit.productFacts.qualityLevel">
+              · {{ props.ch7MarketFit.productFacts.qualityLevel }}
+            </span>
+            <span v-if="props.ch7MarketFit.productFacts.madeInStory">
+              · {{ props.ch7MarketFit.productFacts.madeInStory }}
+            </span>
+            <span v-if="props.ch7MarketFit.productFacts.channel">
+              · channel: {{ props.ch7MarketFit.productFacts.channel }}
+            </span>
+          </p>
+          <ul
+            v-if="(props.ch7MarketFit.segments?.length ?? 0) > 0"
+            class="ml-4 list-disc space-y-0.5"
+          >
+            <li v-for="seg in props.ch7MarketFit.segments" :key="`ps-ctx-seg-${seg.id}`">
+              <span class="font-medium">{{ seg.name }}</span>
+              <span v-if="seg.profile?.profileName">
+                · {{ seg.profile.profileName }}
+              </span>
+              <span v-if="seg.priceFit"> · price fit: {{ seg.priceFit }}</span>
+              <span v-if="seg.storyFit"> · story fit: {{ seg.storyFit }}</span>
+              <span v-if="seg.willingnessToPay">
+                · willingness: {{ seg.willingnessToPay }}
+              </span>
+              <span v-if="seg.evidenceStrength">
+                · evidence: {{ seg.evidenceStrength }}
+              </span>
+              <span v-if="seg.roleInStrategy"> · role: {{ seg.roleInStrategy }}</span>
+            </li>
+          </ul>
+          <ul
+            v-if="(props.ch7MarketFit.comparables?.length ?? 0) > 0"
+            class="ml-4 list-disc space-y-0.5"
+          >
+            <li v-for="c in props.ch7MarketFit.comparables" :key="`ps-ctx-cmp-${c.id}`">
+              <span class="font-medium">{{ c.brandOrProduct }}</span>
+              <span v-if="c.price != null"> · ${{ formatMoney(c.price) }}</span>
+              <span v-if="c.compAlignment"> · {{ c.compAlignment }}</span>
+              <span v-if="c.lessonForRenni"> · lesson: {{ c.lessonForRenni }}</span>
+            </li>
+          </ul>
+          <p v-if="props.ch7MarketFit.recommendation?.likelyPrimaryMarket">
+            <span class="text-neutral-500">Primary market:</span>
+            {{ props.ch7MarketFit.recommendation.likelyPrimaryMarket }}
+            <span v-if="props.ch7MarketFit.recommendation.likelySecondaryMarket">
+              · secondary: {{ props.ch7MarketFit.recommendation.likelySecondaryMarket }}
+            </span>
+          </p>
+          <p v-if="props.ch7MarketFit.recommendation?.positioningSummary">
+            <span class="text-neutral-500">Positioning:</span>
+            {{ props.ch7MarketFit.recommendation.positioningSummary }}
+          </p>
+          <p v-if="props.ch7MarketFit.recommendation?.weakestAssumption">
+            <span class="text-neutral-500">Weakest assumption:</span>
+            {{ props.ch7MarketFit.recommendation.weakestAssumption }}
+          </p>
+          <p v-if="props.ch7MarketFit.recommendation?.recommendedNextValidation">
+            <span class="text-neutral-500">Next validation:</span>
+            {{ props.ch7MarketFit.recommendation.recommendedNextValidation }}
+          </p>
+        </div>
+        <!-- Market Builder demand context -->
+        <div
+          v-if="(props.ch7MarketEntries?.length ?? 0) > 0"
+          class="space-y-1"
+        >
+          <p class="font-medium text-neutral-700">Chapter 7 — Demand entries</p>
+          <ul class="ml-4 list-disc space-y-0.5">
+            <li v-for="e in props.ch7MarketEntries" :key="`ps-ctx-mbe-${e.id}`">
+              <span class="font-medium">{{ e.productName }}</span>
+              <span v-if="e.primaryMarket"> · {{ e.primaryMarket }}</span>
+              <span v-if="e.confidence"> · confidence: {{ e.confidence }}</span>
+              <span v-if="e.strongestEvidence"> · {{ e.strongestEvidence }}</span>
+            </li>
+          </ul>
+        </div>
+        <p
+          v-if="(compPosition.validCompCount ?? 0) < 2"
+          class="italic text-neutral-500"
+        >
+          Add at least two comparable prices in Step 3 — comp position cannot be
+          inferred from Chapter 7 alone.
+        </p>
+      </div>
+    </details>
+
+    <!-- ============================================================
+         Save row
+         ============================================================ -->
+    <div class="flex flex-wrap items-center justify-end gap-2 text-xs">
+      <p
+        v-if="!editingEnabled"
+        class="text-neutral-500"
+      >Read-only in this status.</p>
+      <p
+        v-else-if="dirty"
+        class="text-neutral-700"
+      >Unsaved changes.</p>
+      <p
+        v-else-if="justSavedAt"
+        class="text-neutral-500"
+      >Saved.</p>
+      <button
+        v-if="editingEnabled"
+        type="button"
+        class="btn-primary text-xs"
+        :disabled="!dirty || saving"
+        @click="save"
+      >{{ saving ? 'Saving…' : 'Save pricing strategy' }}</button>
+    </div>
+    <p v-if="saveError" class="text-xs text-rose-700">{{ saveError }}</p>
+  </section>
+</template>

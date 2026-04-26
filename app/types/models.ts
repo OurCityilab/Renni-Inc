@@ -743,6 +743,90 @@ export interface BrandFitBuilder {
   updatedByEmail?: string | null
 }
 
+// Pricing Strategy Builder V1 — Ch. 8 Section 2 only ("sale-price").
+// Deterministic pricing strategy worksheet that connects cost, margin,
+// market comps, customer segment, brand positioning, and validation.
+// Posture (do not relax in V1):
+//   - additive layer on the existing deliverableOutputs document
+//   - never gates submit / never gates Playbook readiness
+//   - read-only when the deliverable is in_review / approved
+//   - Save button writes the whole PricingStrategyBuilder object back
+//     via the composable; sibling fields are untouched
+//   - never writes to pricingScenarios; never writes to Ch. 7 / Ch. 11
+//   - no AI; no automatic market value scraping; no final approval
+export type PricingStrategyProductType =
+  | 'sweatshirt'
+  | 'beanie'
+  | 't-shirt'
+  | 'baked-good'
+  | 'donation'
+  | 'other'
+  | ''
+
+export type PricingStrategyQualityLevel =
+  | 'basic'
+  | 'standard'
+  | 'premium'
+  | 'limited-run'
+  | ''
+
+export type PricingStrategyConfidence = 'low' | 'medium' | 'high' | ''
+
+export interface PricingStrategyComparable {
+  id: string
+  name: string
+  price: number | null
+  source?: string
+  notes?: string
+  alignment?: string
+}
+
+export interface PricingStrategyPriceTest {
+  id: string
+  price: number | null
+  expectedUnitsSold?: number | null
+  notes?: string
+}
+
+export interface PricingStrategyBuilder {
+  // Optional reference to a /pricing scenario for traceability only.
+  // The builder NEVER writes to pricingScenarios; this id is read-only
+  // metadata so the team can name which scenario this strategy informs.
+  linkedPricingScenarioId?: string | null
+
+  productName?: string
+  productType?: PricingStrategyProductType
+  qualityLevel?: PricingStrategyQualityLevel
+  productionStory?: string
+  materialNotes?: string
+  packagingNotes?: string
+  brandStoryNotes?: string
+  targetSegment?: string
+  positioningMode?: string
+
+  baseProductCost?: number | null
+  decorationCost?: number | null
+  laborCost?: number | null
+  packagingCost?: number | null
+  transactionFee?: number | null
+  otherUnitCost?: number | null
+  fixedCosts?: number | null
+  expectedUnitsSold?: number | null
+
+  proposedPrice?: number | null
+  desiredGrossMarginPct?: number | null
+
+  comparablePrices?: PricingStrategyComparable[]
+  priceTests?: PricingStrategyPriceTest[]
+
+  confidence?: PricingStrategyConfidence
+  validationStep?: string
+
+  updatedAt?: IsoTimestamp | null
+  updatedByUid?: string | null
+  updatedByEmail?: string | null
+}
+
 export interface DeliverableOutputSection {
   sectionId: string
   sectionTitleSnapshot: string
@@ -764,6 +848,11 @@ export interface DeliverableOutputSection {
   // signal tool. Independent of marketFit so a section can have
   // either, both, or neither.
   brandFit?: BrandFitBuilder
+  // Optional Pricing Strategy Builder V1 — Ch. 8 Section 2 only.
+  // Deterministic pricing decision tool. Co-exists with everything
+  // else; never required, never migrates, never affects submit gate
+  // or Playbook readiness, never writes to pricingScenarios.
+  pricingStrategy?: PricingStrategyBuilder
   status?: DeliverableOutputSectionStatus
   updatedAt?: IsoTimestamp | null
   updatedByUid?: string | null
