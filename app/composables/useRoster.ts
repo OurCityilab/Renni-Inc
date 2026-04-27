@@ -6,7 +6,8 @@ import {
   type Unsubscribe
 } from 'firebase/firestore'
 import { onMounted, onScopeDispose, ref } from 'vue'
-import type { Department, RosterEntry, Role } from '~/types/models'
+import { useAuthStore } from '~/stores/auth'
+import type { Department, EmailStatus, RosterEntry, Role } from '~/types/models'
 
 // Roles that are chiefs by convention. Mirrors config/role-map.json on the
 // server so Team-page edits land with a consistent isChief flag. Admin is a
@@ -22,6 +23,12 @@ export type RosterPatch = {
   department?: Department
   isChief?: boolean
   displayName?: string
+  // V1 access manager — admin-only access fields. Empty strings clear
+  // the field for the provision fallback (alternateEmail) or for the
+  // display-only admin labels.
+  alternateEmail?: string
+  emailStatus?: EmailStatus | ''
+  accessNotes?: string
 }
 
 export function useRoster() {
@@ -53,10 +60,19 @@ export function useRoster() {
   }
 
   // Admin-only per Firestore rules. If a non-admin calls this, the write is
-  // rejected server-side. The Team page gates the UI on auth.isAdmin.
+  // rejected server-side. The Team and /admin/users pages gate the UI on
+  // auth.isAdmin and the admin middleware. Audit fields (updatedByUid /
+  // updatedByEmail / updatedAt) are stamped here so callers don't have to
+  // remember.
   async function update(email: string, patch: RosterPatch) {
+    const auth = useAuthStore()
     const ref = doc(db(), 'roster', email.toLowerCase())
-    await updateDoc(ref, { ...patch, updatedAt: new Date().toISOString() })
+    await updateDoc(ref, {
+      ...patch,
+      updatedAt: new Date().toISOString(),
+      updatedByUid: auth.user?.uid ?? null,
+      updatedByEmail: auth.profile?.email ?? auth.user?.email ?? null
+    })
   }
 
   return { watchAll, update }

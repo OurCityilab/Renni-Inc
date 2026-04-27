@@ -61,6 +61,17 @@ export type IsoTimestamp = string
 // -------- shared roster --------
 // roster/{email} — seeded from CSV, read by the auth provisioning endpoint
 // to decide whether a signed-in Google account is allowed in.
+//
+// V1 access manager added optional fields below so an instructor/admin can
+// approve a second login email for a student whose LTU Google account is
+// blocked. The roster doc id remains the primary email; alternateEmail is
+// only consulted on the provision fallback path.
+export type EmailStatus =
+  | 'active'
+  | 'pending-signup'
+  | 'email-issue'
+  | 'needs-review'
+
 export interface RosterEntry {
   email: string
   displayName: string
@@ -68,7 +79,18 @@ export interface RosterEntry {
   title: string
   department: Department
   isChief: boolean
+  // Instructor/admin-approved alternate login email (lowercased). When
+  // a sign-in's Google account email matches this field on any roster
+  // row, provision treats that row as the match. Empty string means
+  // "no alternate set" and is ignored at provision time.
+  alternateEmail?: string
+  // Display-only label admins use to flag access issues. Never gates
+  // provision, never affects /pricing, advisor, or readiness.
+  emailStatus?: EmailStatus | ''
+  accessNotes?: string
   updatedAt?: IsoTimestamp
+  updatedByUid?: string
+  updatedByEmail?: string
 }
 
 // -------- users/{uid} --------
@@ -82,6 +104,12 @@ export interface AppUser {
   isChief: boolean
   createdAt: IsoTimestamp
   updatedAt?: IsoTimestamp
+  // V1 access manager — populated on provision so we can trace whether
+  // a user signed in through their roster primary email or through an
+  // instructor-approved alternateEmail. Both fields are optional so
+  // legacy users/{uid} docs without them keep rendering.
+  rosterEmail?: string
+  alternateLoginUsed?: boolean
 }
 
 // -------- deliverables/{id} --------
