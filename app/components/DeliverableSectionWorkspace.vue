@@ -19,6 +19,12 @@
 // affordances (orientation, readiness, navigation, Playbook-ready
 // preview) while keeping the per-section editor + cross-chapter
 // reference panels live.
+//
+// Independent Student Mode: forwards the workspace's `anyDirty`
+// computed via defineExpose so the section route page can install
+// its own onBeforeRouteLeave guard for in-app navigation. Browser-
+// level beforeunload is still installed inside the workspace.
+import { computed, ref } from 'vue'
 import type { Deliverable } from '~/types/models'
 import type { TemplateStudio } from '~/types/templateStudio'
 import DeliverableOutputWorkspace from '~/components/DeliverableOutputWorkspace.vue'
@@ -33,10 +39,24 @@ defineProps<{
   // read-only gate handled inside the workspace.
   canEdit: boolean
 }>()
+
+// Forward anyDirty up to the page so onBeforeRouteLeave can prompt.
+const innerRef = ref<InstanceType<typeof DeliverableOutputWorkspace> | null>(null)
+const anyDirty = computed<boolean>(() => {
+  const inner = innerRef.value
+  if (!inner) return false
+  // The workspace exposes a Vue ref. Reading it here gives us the
+  // boolean snapshot the route guard needs.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const v = (inner as any).anyDirty
+  return typeof v === 'boolean' ? v : Boolean(v?.value)
+})
+defineExpose({ anyDirty })
 </script>
 
 <template>
   <DeliverableOutputWorkspace
+    ref="innerRef"
     :deliverable="deliverable"
     :studio="studio"
     :can-edit="canEdit"

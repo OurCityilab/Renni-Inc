@@ -188,6 +188,33 @@ const phoenixNestStatusLabel = computed<string | null>(() => {
   if (!d) return null
   return PHOENIX_NEST_STATUS_LABEL[d.status] ?? d.status
 })
+
+// --- Independent Student Mode: If-stuck affordance --------------------
+// Generic prefilled help message a member can paste into wherever
+// their team already chats. Display-only — no email, no Slack, no
+// Firestore writes. Mirrors the per-section copy in
+// PlaybookWritingScaffold so the pattern stays consistent.
+const memberHelpMessage = computed<string>(() => {
+  const dept = myDept.value && myDept.value !== 'admin' ? myDept.value : 'my team'
+  return (
+    `I'm working on the Renni Inc. project but I'm stuck. ` +
+    `My department is ${dept}. ` +
+    `Can someone tell me which section to help with, or point me to the next thing to do?`
+  )
+})
+const memberHelpCopied = ref(false)
+async function copyMemberHelpMessage(): Promise<void> {
+  if (typeof navigator === 'undefined' || !navigator.clipboard) return
+  try {
+    await navigator.clipboard.writeText(memberHelpMessage.value)
+    memberHelpCopied.value = true
+    setTimeout(() => {
+      memberHelpCopied.value = false
+    }, 1500)
+  } catch {
+    // Best-effort. The message is selectable manually too.
+  }
+}
 </script>
 
 <template>
@@ -401,7 +428,16 @@ const phoenixNestStatusLabel = computed<string | null>(() => {
       </div>
     </section>
 
-    <div class="grid gap-3 sm:grid-cols-3">
+    <!-- Owner / approver KPI row.
+         Independent Student Mode: hidden for regular members. Members
+         do not own deliverables (see "Your deliverables" empty-state)
+         and rarely approve. Showing these zeros pushed the actionable
+         "Your tasks" list and the if-stuck card below the fold.
+         Chiefs / Co-CEOs / COO / admin keep the row unchanged. -->
+    <div
+      v-if="audience !== 'member'"
+      class="grid gap-3 sm:grid-cols-3"
+    >
       <KpiCard
         label="In progress"
         :value="myPending.length"
@@ -469,7 +505,54 @@ const phoenixNestStatusLabel = computed<string | null>(() => {
       </ul>
     </div>
 
-    <div class="grid gap-4 md:grid-cols-2">
+    <!-- If stuck card. Independent Student Mode: appears between
+         "Your tasks" and the reference tools so a regular member who
+         has run out of obvious moves has three clear options before
+         the page ends — open their department, copy a generic help
+         message into team chat, or open Tasks to mark a task stuck.
+         Hidden for chiefs / admin (they have richer cockpits). -->
+    <section
+      v-if="audience === 'member'"
+      class="card space-y-2 border-rose-200 bg-rose-50/40"
+    >
+      <header class="space-y-0.5">
+        <p class="text-xs font-semibold uppercase tracking-wide text-rose-800">
+          If stuck
+        </p>
+        <p class="text-sm text-neutral-800">
+          You don't have to figure this out alone. Pick one of these.
+        </p>
+      </header>
+      <div class="flex flex-wrap items-center gap-2 text-xs">
+        <NuxtLink
+          :to="myDeptHref"
+          class="rounded border border-rose-300 bg-white px-2 py-1 font-medium text-rose-900 hover:bg-rose-50"
+        >Open my department</NuxtLink>
+        <button
+          type="button"
+          class="rounded border border-rose-300 bg-white px-2 py-1 font-medium text-rose-900 hover:bg-rose-50"
+          @click="copyMemberHelpMessage"
+        >{{ memberHelpCopied ? 'Copied ✓' : 'Copy help message' }}</button>
+        <NuxtLink
+          to="/tasks"
+          class="rounded border border-rose-300 bg-white px-2 py-1 font-medium text-rose-900 hover:bg-rose-50"
+        >Mark a task stuck</NuxtLink>
+      </div>
+      <p class="text-[11px] italic text-neutral-700">
+        “{{ memberHelpMessage }}”
+      </p>
+    </section>
+
+    <!-- Owner / approver two-column block.
+         Independent Student Mode: hidden for regular members. The
+         empty-state on "Your deliverables" already says students
+         don't usually own deliverables; rendering the empty state
+         on every login made the page feel like an admin dashboard.
+         Chiefs / Co-CEOs / COO / admin keep the block unchanged. -->
+    <div
+      v-if="audience !== 'member'"
+      class="grid gap-4 md:grid-cols-2"
+    >
       <div class="space-y-2">
         <h2 class="text-sm font-semibold text-neutral-700">Your deliverables</h2>
         <p v-if="loading" class="text-sm text-neutral-500">Loading…</p>
@@ -514,9 +597,152 @@ const phoenixNestStatusLabel = computed<string | null>(() => {
       </div>
     </div>
 
-    <ApprovalRubric />
+    <!-- Approval rubric. Independent Student Mode: shown only to chiefs
+         and admin. For a regular member it reads as "you are being
+         graded right now" before they have started, and pushes the
+         action surfaces below the fold. The rubric still renders on
+         the deliverable detail page (always) and on review surfaces. -->
+    <ApprovalRubric v-if="auth.isChief || auth.isAdmin" />
 
-    <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+    <!-- Phoenix Nest tile — one of the three final outputs. Always
+         visible to every audience because it represents a real outcome
+         the cohort is working toward. Pulled out of the link grid so
+         it stays above the disclosure for members. -->
+    <NuxtLink
+      :to="phoenixNestDeliverable
+        ? `/deliverables/${phoenixNestDeliverable.id}`
+        : '/playbook'"
+      class="card group block hover:border-phoenix-300 border-amber-200 bg-amber-50/30"
+    >
+      <div class="flex items-baseline justify-between gap-2">
+        <p class="text-xs uppercase tracking-wide text-amber-700">
+          Final output · Retail carry
+        </p>
+        <span
+          v-if="phoenixNestStatusLabel"
+          class="shrink-0 rounded-full border border-amber-300 bg-white px-2 py-0.5 text-[10px] uppercase tracking-wide text-amber-800"
+        >{{ phoenixNestStatusLabel }}</span>
+      </div>
+      <p class="mt-1 text-sm font-medium text-neutral-900">
+        Phoenix Nest carry pitch →
+      </p>
+      <p class="mt-1 text-xs text-neutral-700">
+        Help prove which products are ready for the school store.
+      </p>
+    </NuxtLink>
+
+    <!-- Reference & support tools.
+         Independent Student Mode: collapsed by default for regular
+         members so Home reads as a student cockpit, not an admin
+         dashboard. Chiefs / Co-CEOs / COO / admin see the grid open
+         (no <details>) — leadership relies on these surfaces daily.
+         No tool is removed; this is progressive disclosure. -->
+    <details
+      v-if="audience === 'member'"
+      class="rounded-md border border-neutral-200 bg-white"
+    >
+      <summary class="cursor-pointer select-none p-3">
+        <span class="text-sm font-medium text-neutral-800">Reference &amp; support tools</span>
+        <span class="ml-1 text-xs text-neutral-500">
+          — Playbook status, Goals, Pricing, Revenue, Canvas, Timeline. Open when you need them.
+        </span>
+      </summary>
+      <div class="border-t border-neutral-200 p-3">
+        <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <NuxtLink
+            to="/playbook"
+            class="card group block hover:border-phoenix-300"
+          >
+            <p class="text-xs uppercase tracking-wide text-neutral-500">Chapter status</p>
+            <p class="mt-1 text-sm font-medium text-neutral-900">
+              View Playbook status →
+            </p>
+            <p class="mt-1 text-xs text-neutral-600">
+              Every chapter's approval progress, rolled up from its deliverables.
+            </p>
+          </NuxtLink>
+          <NuxtLink
+            to="/goals"
+            class="card group block hover:border-phoenix-300"
+          >
+            <p class="text-xs uppercase tracking-wide text-neutral-500">Targets</p>
+            <p class="mt-1 text-sm font-medium text-neutral-900">
+              View Goals →
+            </p>
+            <p class="mt-1 text-xs text-neutral-600">
+              Department targets: revenue, donations, inventory, brand readiness, and more.
+            </p>
+          </NuxtLink>
+          <NuxtLink
+            to="/pricing"
+            class="card group block hover:border-phoenix-300"
+          >
+            <p class="text-xs uppercase tracking-wide text-neutral-500">Finance · plan vs. actual</p>
+            <p class="mt-1 text-sm font-medium text-neutral-900">
+              View Pricing →
+            </p>
+            <p class="mt-1 text-xs text-neutral-600">
+              Per-product projections reconciled against live pop-up sales and donations.
+            </p>
+          </NuxtLink>
+          <NuxtLink
+            to="/revenue"
+            class="card group block hover:border-phoenix-300"
+          >
+            <p class="text-xs uppercase tracking-wide text-neutral-500">Finance · actual</p>
+            <p class="mt-1 text-sm font-medium text-neutral-900">
+              Pop-Up Revenue →
+            </p>
+            <p class="mt-1 text-xs text-neutral-600">
+              Record sales and donations as they happen; track toward the donation goal.
+            </p>
+          </NuxtLink>
+          <NuxtLink
+            to="/departments"
+            class="card group block hover:border-phoenix-300"
+          >
+            <p class="text-xs uppercase tracking-wide text-neutral-500">Teams</p>
+            <p class="mt-1 text-sm font-medium text-neutral-900">
+              Departments →
+            </p>
+            <p class="mt-1 text-xs text-neutral-600">
+              See who's on each team, what they own, and what's due next.
+            </p>
+          </NuxtLink>
+          <NuxtLink
+            to="/canvas"
+            class="card group block hover:border-phoenix-300"
+          >
+            <p class="text-xs uppercase tracking-wide text-neutral-500">Strategy</p>
+            <p class="mt-1 text-sm font-medium text-neutral-900">
+              Business Model Canvas →
+            </p>
+            <p class="mt-1 text-xs text-neutral-600">
+              Nine blocks describing how Renni Inc. and House Phoenix deliver value.
+            </p>
+          </NuxtLink>
+          <NuxtLink
+            to="/timeline"
+            class="card group block hover:border-phoenix-300"
+          >
+            <p class="text-xs uppercase tracking-wide text-neutral-500">Planning</p>
+            <p class="mt-1 text-sm font-medium text-neutral-900">
+              Timeline Planner →
+            </p>
+            <p class="mt-1 text-xs text-neutral-600">
+              Plain-language task assignment with a generated Gantt-style dashboard.
+            </p>
+          </NuxtLink>
+        </div>
+      </div>
+    </details>
+
+    <!-- Chief / admin link grid stays open and unchanged so leadership
+         keeps the cockpit they already use. -->
+    <div
+      v-if="audience !== 'member'"
+      class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4"
+    >
       <NuxtLink
         to="/playbook"
         class="card group block hover:border-phoenix-300"
@@ -565,34 +791,11 @@ const phoenixNestStatusLabel = computed<string | null>(() => {
           Record sales and donations as they happen; track toward the donation goal.
         </p>
       </NuxtLink>
-      <!-- Phoenix Nest carry pitch — one of the three final outputs.
-           Visible to every audience so students and chiefs can find
-           it from Home without hunting through Playbook chapters.
-           Status chip mirrors the chapter-11 deliverable status when
-           the watcher has resolved; otherwise the card shows just
-           the link copy. -->
-      <NuxtLink
-        :to="phoenixNestDeliverable
-          ? `/deliverables/${phoenixNestDeliverable.id}`
-          : '/playbook'"
-        class="card group block hover:border-phoenix-300 border-amber-200 bg-amber-50/30"
-      >
-        <div class="flex items-baseline justify-between gap-2">
-          <p class="text-xs uppercase tracking-wide text-amber-700">
-            Final output · Retail carry
-          </p>
-          <span
-            v-if="phoenixNestStatusLabel"
-            class="shrink-0 rounded-full border border-amber-300 bg-white px-2 py-0.5 text-[10px] uppercase tracking-wide text-amber-800"
-          >{{ phoenixNestStatusLabel }}</span>
-        </div>
-        <p class="mt-1 text-sm font-medium text-neutral-900">
-          Phoenix Nest carry pitch →
-        </p>
-        <p class="mt-1 text-xs text-neutral-700">
-          Help prove which products are ready for the school store.
-        </p>
-      </NuxtLink>
+      <!-- Phoenix Nest tile is rendered above the link grid as a
+           standalone card so it stays visible for every audience,
+           including members who see the rest of this grid only when
+           they expand "Reference & support tools." Removed from this
+           grid to avoid duplication. -->
       <NuxtLink
         to="/departments"
         class="card group block hover:border-phoenix-300"

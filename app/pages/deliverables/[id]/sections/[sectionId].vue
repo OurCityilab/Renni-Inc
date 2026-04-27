@@ -17,8 +17,8 @@
 //   - canEdit folds in admin / Co-CEO / COO / owner / department-
 //     chief access, layered with status (draft / needs_revision)
 //     inside the workspace itself
-import { computed, watch } from 'vue'
-import { useRoute } from 'vue-router'
+import { computed, ref, watch } from 'vue'
+import { useRoute, onBeforeRouteLeave } from 'vue-router'
 import { useAuthStore } from '~/stores/auth'
 import { useDeliverables } from '~/composables/useDeliverables'
 import { getTemplateStudio } from '~/data/templateStudios'
@@ -63,6 +63,28 @@ const sectionIndex = computed(() => {
 // the previous one.
 watch(sectionId, () => {
   if (typeof window !== 'undefined') window.scrollTo({ top: 0 })
+})
+
+// --- Independent Student Mode: in-app route-leave guard -------------
+// The workspace itself sets up `beforeunload` to catch tab close /
+// reload. In-app navigation (clicking a NuxtLink, the back button,
+// or the section nav) doesn't fire `beforeunload`, so we install a
+// router guard here that reads the same `anyDirty` flag forwarded
+// up from DeliverableSectionWorkspace via defineExpose. Plain
+// `window.confirm` keeps this dependency-free; the message wording
+// matches the inline banner the workspace renders.
+const workspaceRef = ref<InstanceType<typeof DeliverableSectionWorkspace> | null>(null)
+onBeforeRouteLeave(() => {
+  const inner = workspaceRef.value
+  if (!inner) return true
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const dirty = Boolean((inner as any).anyDirty)
+  if (!dirty) return true
+  if (typeof window === 'undefined') return true
+  return window.confirm(
+    'You have unsaved changes. Save before leaving the page?\n\n' +
+      'OK = leave anyway · Cancel = stay and save first'
+  )
 })
 </script>
 
@@ -173,6 +195,7 @@ watch(sectionId, () => {
       </header>
 
       <DeliverableSectionWorkspace
+        ref="workspaceRef"
         :deliverable="deliverable"
         :studio="studio"
         :section-id="validSection.id"

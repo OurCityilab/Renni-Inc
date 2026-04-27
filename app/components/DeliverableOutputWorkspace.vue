@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useAuthStore } from '~/stores/auth'
 import {
   useDeliverableOutputs,
@@ -44,12 +44,18 @@ import MarketEvidenceCritiquePanel from '~/components/MarketEvidenceCritiquePane
 import SectionGuidanceSummary from '~/components/SectionGuidanceSummary.vue'
 import ExpertGuidanceCard from '~/components/ExpertGuidanceCard.vue'
 import PlaybookWritingScaffold from '~/components/PlaybookWritingScaffold.vue'
+import HelpMeUnderstand from '~/components/HelpMeUnderstand.vue'
 import MarketFitBuilder from '~/components/MarketFitBuilder.vue'
 import MarketFitReferencePanel, {
   type ReferencedMarketFitRow
 } from '~/components/MarketFitReferencePanel.vue'
 import BrandFitBuilder from '~/components/BrandFitBuilder.vue'
 import PricingStrategyBuilder from '~/components/PricingStrategyBuilder.vue'
+import {
+  getSectionWarnings,
+  isHighRigorChapter,
+  type SectionMismatchWarning
+} from '~/utils/sectionMismatch'
 import {
   buildBrandFitSnapshot,
   type BrandFitSnapshot
@@ -327,6 +333,32 @@ const dirty = ref<Record<string, boolean>>({})
 const savingSectionId = ref<string | null>(null)
 const sectionError = ref<Record<string, string>>({})
 
+// --- Independent Student Mode: save confidence + stuck UI -----------
+// Per-section "saved at HH:MM" stamp. Set immediately after a
+// successful save() so the student sees confirmation. Cleared when
+// the section becomes dirty again.
+const lastSavedAt = ref<Record<string, string>>({})
+// Per-section "show me the next-step hint" flag. Auto-clears so a
+// student who saved 10 minutes ago doesn't keep seeing the same
+// "Next: add a working draft" line forever; the persisted progress
+// chips above still surface the same state.
+const recentlySaved = ref<Record<string, boolean>>({})
+// Per-section "I'm stuck" panel toggle. Display-only. The panel
+// instructs the student to open the linked task and mark it stuck —
+// section-level stuckness is not a separate Firestore field, and
+// this sprint deliberately keeps the task as the source of truth
+// (per the brief: "Keep task-level stuck flow as the actual source
+// of truth.").
+const stuckPanelOpen = ref<Record<string, boolean>>({})
+
+function fmtSavedTime(): string {
+  const d = new Date()
+  return d.toLocaleTimeString(undefined, {
+    hour: 'numeric',
+    minute: '2-digit'
+  })
+}
+
 function persistedSection(s: TemplateStudioSection): DeliverableOutputSection | null {
   return output.value?.sections?.[s.id] ?? null
 }
@@ -386,6 +418,12 @@ watch(
 
 function markDirty(s: TemplateStudioSection) {
   dirty.value[s.id] = true
+  // A new edit invalidates the prior save success — don't keep
+  // showing "Saved at 3:14pm" once the student is typing again.
+  if (lastSavedAt.value[s.id]) {
+    lastSavedAt.value[s.id] = ''
+    recentlySaved.value[s.id] = false
+  }
 }
 
 function hasChanges(s: TemplateStudioSection): boolean {
@@ -421,12 +459,127 @@ async function save(s: TemplateStudioSection) {
       email: auth.profile.email || auth.user.email || ''
     })
     dirty.value[s.id] = false
+    // Independent Student Mode: confirm the save inline so a student
+    // working at home can trust their work landed. The next-step
+    // hint stays visible until the next edit (markDirty clears it).
+    lastSavedAt.value[s.id] = fmtSavedTime()
+    recentlySaved.value[s.id] = true
   } catch (e) {
     sectionError.value[s.id] = e instanceof Error ? e.message : String(e)
   } finally {
     savingSectionId.value = null
   }
 }
+
+// --- Independent Student Mode: status quick-actions ----------------
+// Three-button row replaces the inline status <select> in the Draft
+// accordion. Each button sets the local draft status and marks the
+// section dirty so the existing Save handler persists exactly the
+// same status field as before. We do NOT auto-save and we do NOT
+// submit — approval flow is unchanged.
+function setSectionStatus(
+  s: TemplateStudioSection,
+  next: DeliverableOutputSectionStatus
+) {
+  if (!editingEnabled.value) return
+  const d = drafts.value[s.id]
+  if (!d) return
+  if (d.status === next) return
+  d.status = next
+  markDirty(s)
+}
+
+function toggleStuckPanel(s: TemplateStudioSection) {
+  stuckPanelOpen.value[s.id] = !stuckPanelOpen.value[s.id]
+}
+
+// --- Independent Student Mode: section warnings -------------------
+// Surface non-blocking false-progress warnings inside the section
+// editor itself. Pure helper from app/utils/sectionMismatch.ts; no
+// task context here (we don't have it on the workspace), so the
+// task-aware warnings render on /tasks instead.
+function sectionWarningsFor(
+  s: TemplateStudioSection
+): SectionMismatchWarning[] {
+  return getSectionWarnings({
+    deliverableId: props.deliverable.id,
+    section: persistedSection(s)
+  })
+}
+
+// --- Independent Student Mode: navigation between sections --------
+// "Open next section →" CTA after save. Returns the studio section
+// after the current one or null when at the end. Falls back to the
+// chapter overview link in template.
+function nextSectionAfter(
+  s: TemplateStudioSection
+): TemplateStudioSection | null {
+  const idx = props.studio.sections.findIndex((x) => x.id === s.id)
+  if (idx < 0) return null
+  return props.studio.sections[idx + 1] ?? null
+}
+
+// --- Independent Student Mode: next-step hint ---------------------
+// Plain-language coach line shown immediately after save. Reads the
+// just-persisted section state so the hint matches what the chip
+// row also shows.
+function nextStepHint(s: TemplateStudioSection): string {
+  const persisted = persistedSection(s)
+  if (!persisted) return 'Saved.'
+  const hasNotes = (persisted.sourceNotes ?? '').trim().length > 0
+  const hasDraft = (persisted.draftText ?? '').trim().length > 0
+  const hasFinal = (persisted.finalText ?? '').trim().length > 0
+  const high = isHighRigorChapter(props.deliverable.id)
+  const hasEvidence =
+    (persisted.evidenceLinks?.length ?? 0) > 0 ||
+    (persisted.structuredEvidence?.length ?? 0) > 0 ||
+    (persisted.marketBuilderEntries?.length ?? 0) > 0
+  if (!hasNotes && !hasDraft && !hasFinal) return 'Saved. Add your team\'s thinking next.'
+  if (hasNotes && !hasDraft) return 'Next: add a working draft.'
+  if (hasDraft && !hasFinal) return 'Next: polish into Final Playbook text.'
+  if (hasFinal && high && !hasEvidence) {
+    return 'Next: add proof in Defend if this section makes a claim.'
+  }
+  if (hasFinal) return 'Strong progress. This may be ready for chief review.'
+  return 'Saved.'
+}
+
+// --- Independent Student Mode: unsaved-changes guard --------------
+// "Any section dirty?" — drives the inline unsaved banner per
+// section AND a global beforeunload warning. Tab close / refresh
+// triggers the browser's native confirmation; in-app navigation
+// guards live on the section route page so the workspace stays
+// composable in both chapter and section mode.
+const anyDirty = computed<boolean>(() =>
+  Object.values(dirty.value).some(Boolean)
+)
+
+function beforeUnloadHandler(e: BeforeUnloadEvent) {
+  if (!anyDirty.value) return
+  // Modern browsers ignore custom strings but require preventDefault
+  // + returnValue assignment to actually prompt. Both are safe to
+  // set unconditionally when we know there's dirty state.
+  e.preventDefault()
+  e.returnValue = ''
+}
+
+onMounted(() => {
+  if (typeof window !== 'undefined') {
+    window.addEventListener('beforeunload', beforeUnloadHandler)
+  }
+})
+onBeforeUnmount(() => {
+  if (typeof window !== 'undefined') {
+    window.removeEventListener('beforeunload', beforeUnloadHandler)
+  }
+})
+
+// Expose the dirty-state to parents (e.g. the section route page's
+// onBeforeRouteLeave guard). defineExpose is a no-op in chapter mode
+// since the page mounts the chapter hub instead.
+defineExpose({
+  anyDirty
+})
 
 // --- evidence link form state ---
 const linkForms = ref<Record<string, NewEvidenceLinkInput>>({})
@@ -1483,14 +1636,20 @@ function shouldOpenDefend(s: TemplateStudioSection): boolean {
          8 fields, never participates in submit/Playbook readiness.
          Visible only when this workspace is rendering the Chapter 8
          deliverable so the cross-chapter listener is a no-op
-         elsewhere. -->
-    <section
+         elsewhere.
+         Independent Student Mode: in section-filter mode this
+         collapses by default so a student opening one Ch 8 section
+         sees the writing path before earlier-chapter context. In
+         chapter mode :open stays true so the existing layout is
+         unchanged. -->
+    <details
       v-if="isChapter8"
+      :open="!sectionMode"
       class="card space-y-3 border-amber-200 bg-amber-50/40"
     >
-      <header class="space-y-0.5">
+      <summary class="cursor-pointer space-y-0.5 list-none [&::-webkit-details-marker]:hidden">
         <p class="text-xs uppercase tracking-wide text-neutral-500">
-          Cross-chapter reference
+          Show context from earlier chapters · Cross-chapter reference
         </p>
         <h3 class="font-medium text-neutral-900">
           Demand assumptions from Chapter 7
@@ -1500,14 +1659,14 @@ function shouldOpenDefend(s: TemplateStudioSection): boolean {
           revenue scenarios. Do not treat estimates as facts. Name the
           assumption and confidence level.
         </p>
-      </header>
+      </summary>
       <MarketEvidenceReferencePanel
         source-label="Chapter 7"
         :entries="ch7MarketEntries"
         :loading="ch7Loading"
         empty-message="No Chapter 7 demand estimates have been saved yet."
       />
-    </section>
+    </details>
 
     <!-- Chapter 8 Market Fit cross-section panel.
          Surfaces the segment / scenario thinking from Chapter 7's
@@ -1517,13 +1676,14 @@ function shouldOpenDefend(s: TemplateStudioSection): boolean {
          between demand-side estimates and the CFO pricing/break-even
          engine. Visible only on Chapter 8 and only when there's at
          least one populated Chapter 7 fit row. -->
-    <section
+    <details
       v-if="isChapter8 && ch7MarketFitRows.length > 0"
+      :open="!sectionMode"
       class="card space-y-3 border-violet-200 bg-violet-50/40"
     >
-      <header class="space-y-0.5">
+      <summary class="cursor-pointer space-y-0.5 list-none [&::-webkit-details-marker]:hidden">
         <p class="text-xs uppercase tracking-wide text-neutral-500">
-          Cross-chapter reference
+          Show context from earlier chapters · Cross-chapter reference
         </p>
         <h3 class="font-medium text-neutral-900">
           Demand model from Chapter 7 (Market Fit)
@@ -1534,7 +1694,7 @@ function shouldOpenDefend(s: TemplateStudioSection): boolean {
           and revenue. Pricing/break-even still controls cost, margin, and
           break-even decisions.
         </p>
-      </header>
+      </summary>
       <MarketFitReferencePanel
         :rows="ch7MarketFitRows"
         :loading="ch7Loading"
@@ -1557,7 +1717,7 @@ function shouldOpenDefend(s: TemplateStudioSection): boolean {
           </p>
         </div>
       </div>
-    </section>
+    </details>
 
     <!-- Chapter 11 retail-carry evidence reference panel.
          Combines Chapter 7 demand entries with a Chapter 8 finalText
@@ -1566,14 +1726,17 @@ function shouldOpenDefend(s: TemplateStudioSection): boolean {
          Read-only end-to-end: no writes, no copies, no summarization
          beyond a length-capped excerpt of the revenue-scenarios final
          text. The cross-chapter listeners only fire when this section
-         is the active deliverable. -->
-    <section
+         is the active deliverable.
+         Independent Student Mode: collapses by default in section
+         mode (see twin Ch 8 panels above). -->
+    <details
       v-if="isChapter11"
+      :open="!sectionMode"
       class="card space-y-3 border-amber-200 bg-amber-50/40"
     >
-      <header class="space-y-0.5">
+      <summary class="cursor-pointer space-y-0.5 list-none [&::-webkit-details-marker]:hidden">
         <p class="text-xs uppercase tracking-wide text-neutral-500">
-          Cross-chapter reference
+          Show context from earlier chapters · Cross-chapter reference
         </p>
         <h3 class="font-medium text-neutral-900">
           Retail carry evidence from Chapters 7 and 8
@@ -1583,7 +1746,7 @@ function shouldOpenDefend(s: TemplateStudioSection): boolean {
           treat estimates as facts. Name the buyer, scenario, price,
           weakest assumption, and next validation step.
         </p>
-      </header>
+      </summary>
       <div>
         <p class="text-xs font-semibold uppercase tracking-wide text-neutral-600">
           Chapter 7 demand assumptions
@@ -1631,7 +1794,7 @@ function shouldOpenDefend(s: TemplateStudioSection): boolean {
           </p>
         </div>
       </div>
-    </section>
+    </details>
 
     <!-- Chapter 11 Phoenix Nest carry-readiness panel.
          Surfaces every Chapter 7 / Chapter 8 Market Fit row alongside
@@ -1639,14 +1802,17 @@ function shouldOpenDefend(s: TemplateStudioSection): boolean {
          carry / awareness or test / stronger pitch / no clear signal).
          Each call is advisory: the headline + bulleted reasoning lets
          the pitch author read both the recommendation and why. Read-
-         only — no writes, no AI involvement, no final decision. -->
-    <section
+         only — no writes, no AI involvement, no final decision.
+         Independent Student Mode: collapses by default in section
+         mode (see twin Ch 8 panels above). -->
+    <details
       v-if="isChapter11 && ch11MarketFitRows.length > 0"
+      :open="!sectionMode"
       class="card space-y-3 border-violet-200 bg-violet-50/40"
     >
-      <header class="space-y-0.5">
+      <summary class="cursor-pointer space-y-0.5 list-none [&::-webkit-details-marker]:hidden">
         <p class="text-xs uppercase tracking-wide text-neutral-500">
-          Cross-chapter reference
+          Show context from earlier chapters · Cross-chapter reference
         </p>
         <h3 class="font-medium text-neutral-900">
           Phoenix Nest carry readiness from Market Fit
@@ -1656,7 +1822,7 @@ function shouldOpenDefend(s: TemplateStudioSection): boolean {
           the carry pitch. The Co-CEO and Phoenix Nest stakeholders still
           own the final call.
         </p>
-      </header>
+      </summary>
       <MarketFitReferencePanel
         :rows="ch11MarketFitRows"
         :loading="ch7Loading || ch8Loading"
@@ -1686,7 +1852,7 @@ function shouldOpenDefend(s: TemplateStudioSection): boolean {
           </ul>
         </article>
       </div>
-    </section>
+    </details>
 
     <p v-if="loading" class="text-sm text-neutral-500">Loading workspace…</p>
 
@@ -1781,6 +1947,44 @@ function shouldOpenDefend(s: TemplateStudioSection): boolean {
           >Defend {{ isDefendStarted(s) ? '✓' : '—' }}</li>
         </ul>
 
+        <!-- Independent Student Mode: Help me understand this.
+             Deterministic Q&A panel built from existing curriculum
+             metadata. No AI, no Firestore, no save path. Sits above
+             the writing accordions so a student opening the section
+             at home gets the five-question explainer before they
+             scroll past the writing surface to find help. -->
+        <HelpMeUnderstand
+          :studio="studio"
+          :section="s"
+          :deliverable-id="deliverable.id"
+        />
+
+        <!-- Independent Student Mode: section-level mismatch warnings.
+             Surfaces "false progress" cases (Think only, draft without
+             final, final without evidence on high-rigor chapters).
+             Non-blocking; never gates save, status, submit, or
+             approval. Pure helper from app/utils/sectionMismatch.ts. -->
+        <ul
+          v-if="sectionWarningsFor(s).length"
+          class="space-y-1"
+          aria-label="Section progress warnings"
+        >
+          <li
+            v-for="(warning, wi) in sectionWarningsFor(s)"
+            :key="`warn-${s.id}-${wi}`"
+            :class="[
+              'rounded-md border p-2 text-xs',
+              warning.severity === 'stuck'
+                ? 'border-rose-300 bg-rose-50 text-rose-900'
+                : warning.severity === 'action-today'
+                  ? 'border-amber-300 bg-amber-50 text-amber-900'
+                  : 'border-sky-200 bg-sky-50 text-sky-900'
+            ]"
+          >
+            {{ warning.message }}
+          </li>
+        </ul>
+
         <!-- THINK — guidance + your team's thinking (rough notes). -->
         <details open class="rounded-md border border-emerald-200 bg-emerald-50/30">
           <summary class="cursor-pointer select-none p-3">
@@ -1855,40 +2059,130 @@ function shouldOpenDefend(s: TemplateStudioSection): boolean {
                 can polish later.
               </p>
             </div>
-            <div>
-              <label class="block text-xs font-medium text-neutral-800">
+            <!-- Independent Student Mode: PUBLISHABLE Final Playbook
+                 text container. Gold border + tag + helper copy make
+                 the publishable surface visually distinct from the
+                 plain Working draft above. The textarea, v-model,
+                 disabled state, and save path are unchanged — only
+                 the wrapping. -->
+            <div class="rounded-md border-2 border-amber-300 bg-amber-50/40 p-3">
+              <div class="flex flex-wrap items-baseline justify-between gap-2">
+                <span
+                  class="rounded-full border border-amber-400 bg-white px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-amber-800"
+                >Publishable</span>
+                <span class="text-[11px] italic text-amber-900">
+                  Final Playbook text — visible to another cohort
+                </span>
+              </div>
+              <label class="mt-2 block text-xs font-medium text-neutral-800">
                 Final Playbook text
                 <textarea
                   v-model="drafts[s.id].finalText"
                   rows="5"
                   :disabled="!editingEnabled"
-                  class="mt-1 w-full rounded border border-neutral-300 p-2 text-sm disabled:bg-neutral-50"
+                  class="mt-1 w-full rounded border border-amber-300 bg-white p-2 text-sm disabled:bg-neutral-50"
                   placeholder="The polished version another team could use next semester."
                   @input="markDirty(s)"
                 />
               </label>
-              <p class="mt-1 text-xs text-neutral-500">
-                This is the version that can be published. Polish it so another
-                cohort could use it next semester.
+              <p class="mt-1 text-xs text-amber-900/90">
+                This is the version another team could use next semester. Polish
+                the wording, name the claim, and only paste content you have read
+                end-to-end.
               </p>
             </div>
 
-            <div class="flex flex-wrap items-center justify-between gap-2">
-              <label
-                v-if="editingEnabled"
-                class="text-xs text-neutral-700"
+            <!-- Independent Student Mode: status quick-action row.
+                 Replaces the inline <select> so a student understands
+                 the I'm-not-done / I'm-done / I'm-stuck choice without
+                 instructor explanation. The status field on the local
+                 draft is unchanged; clicking a button sets the same
+                 value the <select> used to set, and Save persists it
+                 exactly as before. Approval workflow is unchanged. -->
+            <div
+              v-if="editingEnabled"
+              class="space-y-2"
+            >
+              <p class="text-xs font-medium text-neutral-700">How is this section going?</p>
+              <div class="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  :class="[
+                    'rounded border px-3 py-1 text-xs',
+                    drafts[s.id].status === 'in_progress'
+                      ? 'border-sky-400 bg-sky-50 text-sky-900 font-semibold'
+                      : 'border-neutral-300 bg-white text-neutral-700 hover:bg-neutral-50'
+                  ]"
+                  @click="setSectionStatus(s, 'in_progress')"
+                >Still working</button>
+                <button
+                  type="button"
+                  :class="[
+                    'rounded border px-3 py-1 text-xs',
+                    drafts[s.id].status === 'ready'
+                      ? 'border-emerald-400 bg-emerald-50 text-emerald-900 font-semibold'
+                      : 'border-neutral-300 bg-white text-neutral-700 hover:bg-neutral-50'
+                  ]"
+                  @click="setSectionStatus(s, 'ready')"
+                >Ready for review</button>
+                <button
+                  type="button"
+                  :class="[
+                    'rounded border px-3 py-1 text-xs',
+                    stuckPanelOpen[s.id]
+                      ? 'border-rose-400 bg-rose-50 text-rose-900 font-semibold'
+                      : 'border-neutral-300 bg-white text-neutral-700 hover:bg-neutral-50'
+                  ]"
+                  @click="toggleStuckPanel(s)"
+                >I'm stuck</button>
+              </div>
+              <!-- Stuck panel guidance. Section-level "stuck" is not
+                   a Firestore field today; the source of truth for a
+                   stuck student is the linked task's blocked state.
+                   Per the brief, we point the student back at the
+                   task instead of inventing a new field. -->
+              <div
+                v-if="stuckPanelOpen[s.id]"
+                class="rounded-md border border-rose-200 bg-rose-50 p-2 text-xs text-rose-900"
               >
-                Mark this section
-                <select
-                  v-model="drafts[s.id].status"
-                  class="ml-1 rounded border border-neutral-300 p-1 text-xs"
-                  @change="markDirty(s)"
-                >
-                  <option value="empty">Not started</option>
-                  <option value="in_progress">In progress</option>
-                  <option value="ready">Ready for review</option>
-                </select>
-              </label>
+                <p class="font-medium">If you're stuck, do this:</p>
+                <ol class="mt-1 list-decimal space-y-0.5 pl-5">
+                  <li>
+                    <NuxtLink to="/tasks" class="font-medium underline">
+                      Open Tasks
+                    </NuxtLink>
+                    and find the task that sent you here.
+                  </li>
+                  <li>Click "Mark stuck" on that task and add a one-sentence reason.</li>
+                  <li>
+                    Use the "Need help? Ask…" copy-message helper in the Think
+                    panel above to ping your chief in your team chat.
+                  </li>
+                </ol>
+                <p class="mt-1 italic">
+                  Marking the task stuck is the source of truth — it's how your
+                  chief sees the blocker.
+                </p>
+              </div>
+            </div>
+
+            <!-- Independent Student Mode: unsaved-changes inline banner.
+                 Rendered above the save button so a student who
+                 navigates back to the chapter after typing sees the
+                 "you have unsaved changes" cue before they leave. The
+                 browser-level beforeunload handler is set up in the
+                 script block. -->
+            <p
+              v-if="editingEnabled && hasChanges(s)"
+              class="rounded-md border border-amber-200 bg-amber-50 p-2 text-xs text-amber-900"
+            >
+              You have unsaved changes. Save before leaving the page.
+            </p>
+
+            <div class="flex flex-wrap items-center justify-between gap-2">
+              <span class="text-[11px] text-neutral-500">
+                Saving stores Think, Draft, and Final Playbook text together.
+              </span>
               <button
                 v-if="editingEnabled"
                 class="btn-primary text-xs"
@@ -1898,6 +2192,30 @@ function shouldOpenDefend(s: TemplateStudioSection): boolean {
                 {{ savingSectionId === s.id ? 'Saving…' : 'Save section' }}
               </button>
             </div>
+
+            <!-- Independent Student Mode: save success + next-step
+                 hint + Open next section / Back to chapter links.
+                 Renders only after a successful save until the next
+                 edit (markDirty clears lastSavedAt). -->
+            <div
+              v-if="recentlySaved[s.id] && lastSavedAt[s.id]"
+              class="rounded-md border border-emerald-200 bg-emerald-50 p-2 text-xs text-emerald-900"
+            >
+              <p class="font-medium">Saved at {{ lastSavedAt[s.id] }}.</p>
+              <p class="mt-0.5">{{ nextStepHint(s) }}</p>
+              <div class="mt-1 flex flex-wrap items-center gap-2">
+                <NuxtLink
+                  v-if="nextSectionAfter(s)"
+                  :to="`/deliverables/${deliverable.id}/sections/${nextSectionAfter(s)!.id}`"
+                  class="rounded border border-emerald-300 bg-white px-2 py-0.5 font-medium text-emerald-900 hover:bg-emerald-50"
+                >Open next section →</NuxtLink>
+                <NuxtLink
+                  :to="`/deliverables/${deliverable.id}`"
+                  class="rounded border border-neutral-300 bg-white px-2 py-0.5 text-neutral-700 hover:bg-neutral-50"
+                >Back to chapter</NuxtLink>
+              </div>
+            </div>
+
             <p v-if="sectionError[s.id]" class="text-xs text-rose-600">
               {{ sectionError[s.id] }}
             </p>
@@ -2721,16 +3039,34 @@ function shouldOpenDefend(s: TemplateStudioSection): boolean {
         <!-- Market Fit Builder V1 — broader segment-comparison tool.
              Visible only on Ch 7 / 8 / 10 / 11 sections that opt in
              via studio metadata. Independent of Market Builder and AI
-             Critique: a section can have any combination. -->
-        <MarketFitBuilder
+             Critique: a section can have any combination.
+             Independent Student Mode: collapsed by default with a
+             one-line student-friendly explainer above the click
+             target. The builder itself, the editing-enabled gate,
+             and every save path are unchanged. -->
+        <details
           v-if="shouldShowMarketFit(s)"
-          :deliverable-id="deliverable.id"
-          :section-id="s.id"
-          :section-title="s.title"
-          :initial="persistedMarketFit(s)"
-          :editing-enabled="editingEnabled"
-          :guidance="s.marketFit?.guidance ?? null"
-        />
+          class="rounded-md border border-violet-200 bg-violet-50/30"
+        >
+          <summary class="cursor-pointer p-3">
+            <span class="text-xs font-semibold uppercase tracking-wide text-violet-800">
+              Market Fit Builder
+            </span>
+            <span class="ml-1 text-xs text-neutral-700">
+              — use this if your section talks about customers or demand. Optional.
+            </span>
+          </summary>
+          <div class="border-t border-violet-200 p-3">
+            <MarketFitBuilder
+              :deliverable-id="deliverable.id"
+              :section-id="s.id"
+              :section-title="s.title"
+              :initial="persistedMarketFit(s)"
+              :editing-enabled="editingEnabled"
+              :guidance="s.marketFit?.guidance ?? null"
+            />
+          </div>
+        </details>
 
         <!-- Brand Fit Builder V1 — section-level identity-vs-market
              signal tool. Visible only on sections that opt in via
@@ -2739,34 +3075,64 @@ function shouldOpenDefend(s: TemplateStudioSection): boolean {
              AI Critique. We pass the same section's Market Fit state
              as a read-only context callout so the team can validate
              that brand identity signals the same target customer.
-             Brand Fit works without Market Fit data. -->
-        <BrandFitBuilder
+             Brand Fit works without Market Fit data.
+             Independent Student Mode: collapsed by default. -->
+        <details
           v-if="shouldShowBrandFit(s)"
-          :deliverable-id="deliverable.id"
-          :section-id="s.id"
-          :section-title="s.title"
-          :initial="persistedBrandFit(s)"
-          :editing-enabled="editingEnabled"
-          :guidance="s.brandFit?.guidance ?? null"
-          :market-fit-context="persistedMarketFit(s)"
-        />
+          class="rounded-md border border-rose-200 bg-rose-50/30"
+        >
+          <summary class="cursor-pointer p-3">
+            <span class="text-xs font-semibold uppercase tracking-wide text-rose-800">
+              Brand Fit Builder
+            </span>
+            <span class="ml-1 text-xs text-neutral-700">
+              — use this if your section talks about brand fit (identity, voice, references). Optional.
+            </span>
+          </summary>
+          <div class="border-t border-rose-200 p-3">
+            <BrandFitBuilder
+              :deliverable-id="deliverable.id"
+              :section-id="s.id"
+              :section-title="s.title"
+              :initial="persistedBrandFit(s)"
+              :editing-enabled="editingEnabled"
+              :guidance="s.brandFit?.guidance ?? null"
+              :market-fit-context="persistedMarketFit(s)"
+            />
+          </div>
+        </details>
 
         <!-- Pricing Strategy Builder V1 — Ch. 8 Section 2 only.
              Deterministic pricing decision tool. Reads Ch. 7 market
              fit + demand entries as read-only context but never
              writes upstream and never writes to pricingScenarios.
-             /pricing remains the operational source of truth. -->
-        <PricingStrategyBuilder
+             /pricing remains the operational source of truth.
+             Independent Student Mode: collapsed by default. -->
+        <details
           v-if="shouldShowPricingStrategy(s)"
-          :deliverable-id="deliverable.id"
-          :section-id="s.id"
-          :section-title="s.title"
-          :initial="persistedPricingStrategy(s)"
-          :editing-enabled="editingEnabled"
-          :guidance="s.pricingStrategy?.guidance ?? null"
-          :ch7-market-fit="ch7MarketFitForPricing"
-          :ch7-market-entries="ch7MarketEntriesForPricing"
-        />
+          class="rounded-md border border-amber-200 bg-amber-50/30"
+        >
+          <summary class="cursor-pointer p-3">
+            <span class="text-xs font-semibold uppercase tracking-wide text-amber-800">
+              Pricing Strategy Builder
+            </span>
+            <span class="ml-1 text-xs text-neutral-700">
+              — use this if your section talks about price, cost, or margin. Optional.
+            </span>
+          </summary>
+          <div class="border-t border-amber-200 p-3">
+            <PricingStrategyBuilder
+              :deliverable-id="deliverable.id"
+              :section-id="s.id"
+              :section-title="s.title"
+              :initial="persistedPricingStrategy(s)"
+              :editing-enabled="editingEnabled"
+              :guidance="s.pricingStrategy?.guidance ?? null"
+              :ch7-market-fit="ch7MarketFitForPricing"
+              :ch7-market-entries="ch7MarketEntriesForPricing"
+            />
+          </div>
+        </details>
 
         <!-- AI Critique V1 — read-only coach panel for the Market
              Evidence Suite. Visible only when:
@@ -2777,11 +3143,29 @@ function shouldOpenDefend(s: TemplateStudioSection): boolean {
                    input (source notes / draft / final / evidence /
                    structured evidence / market builder entries).
              The panel never writes back to the document, never
-             auto-runs, and renders only after a user click. -->
-        <MarketEvidenceCritiquePanel
+             auto-runs, and renders only after a user click.
+             Independent Student Mode: collapsed by default. The
+             panel itself still requires a Review-button click to
+             call the model — collapsing this <details> does not
+             change the existing user-triggered semantics. -->
+        <details
           v-if="shouldShowAiCritique(s)"
-          :request="buildAiRequest(s)"
-        />
+          class="rounded-md border border-sky-200 bg-sky-50/30"
+        >
+          <summary class="cursor-pointer p-3">
+            <span class="text-xs font-semibold uppercase tracking-wide text-sky-800">
+              AI critique
+            </span>
+            <span class="ml-1 text-xs text-neutral-700">
+              — coach this section against the market evidence rubric. Suggestions only; nothing is saved or submitted. Optional.
+            </span>
+          </summary>
+          <div class="border-t border-sky-200 p-3">
+            <MarketEvidenceCritiquePanel
+              :request="buildAiRequest(s)"
+            />
+          </div>
+        </details>
           </div>
         </details>
       </li>

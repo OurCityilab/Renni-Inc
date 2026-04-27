@@ -2,14 +2,25 @@
 import { computed, ref } from 'vue'
 import { useAuthStore } from '~/stores/auth'
 import { useDeliverables } from '~/composables/useDeliverables'
+import { useDeliverableOutputs } from '~/composables/useDeliverableOutputs'
 import { useTasks } from '~/composables/useTasks'
-import type { Task, TaskStatus } from '~/types/models'
+import type { DeliverableOutputSection, Task, TaskStatus } from '~/types/models'
 import { taskStatusLabel } from '~/utils/taskStatus'
-import { deepLinkForTask } from '~/utils/requirementToSection'
+import {
+  deepLinkForTask,
+  resolveSectionIdForRequirement
+} from '~/utils/requirementToSection'
+import { getTemplateStudio } from '~/data/templateStudios'
+import {
+  getTaskMismatchWarnings,
+  isHighRigorChapter,
+  type SectionMismatchWarning
+} from '~/utils/sectionMismatch'
 
 const auth = useAuthStore()
 const tasks = useTasks()
 const deliverables = useDeliverables()
+const outputs = useDeliverableOutputs()
 
 type Tab = 'mine' | 'all'
 const tab = ref<Tab>('mine')
@@ -66,6 +77,47 @@ const deliverableLabelById = computed(() => {
   }
   return m
 })
+
+// --- Independent Student Mode: per-row mismatch warnings -------------
+// Surface non-blocking warnings when a task is marked done while the
+// linked section has no saved content, or when a task is in_progress
+// and the section is still empty. Pure helper from
+// app/utils/sectionMismatch.ts; the heavy lift here is loading
+// deliverableOutputs for the unique deliverableIds visible in the
+// current set, then resolving each task's requirementId to a section
+// using the same heuristic Tasks already uses for deep-links.
+const watchedDeliverableIds = computed<string[]>(() => {
+  const ids = new Set<string>()
+  for (const t of currentSet.value) {
+    if (t.deliverableId) ids.add(t.deliverableId)
+  }
+  return Array.from(ids)
+})
+const { data: outputsByDeliverableId } = outputs.watchManyOutputs(watchedDeliverableIds)
+
+function resolvedSectionForTask(t: Task): DeliverableOutputSection | null {
+  if (!t.deliverableId || !t.requirementId) return null
+  const studio = getTemplateStudio(t.deliverableId)
+  if (!studio) return null
+  const explicit = studio.requirements.find((r) => r.id === t.requirementId)
+  const sectionId = resolveSectionIdForRequirement(
+    studio,
+    t.requirementId,
+    explicit?.label
+  )
+  if (!sectionId) return null
+  const output = outputsByDeliverableId.value[t.deliverableId] ?? null
+  return output?.sections?.[sectionId] ?? null
+}
+
+function taskWarnings(t: Task): SectionMismatchWarning[] {
+  if (!t.deliverableId) return []
+  return getTaskMismatchWarnings({
+    task: t,
+    section: resolvedSectionForTask(t),
+    isHighRigor: isHighRigorChapter(t.deliverableId)
+  })
+}
 
 function deliverableLinkLabel(t: Task) {
   const base =
@@ -233,6 +285,32 @@ async function reopen(t: Task) {
         >
           Stuck: {{ t.blockedBy }}
         </p>
+
+        <!-- Independent Student Mode: per-row mismatch warning. Shown
+             when a task is marked done with an empty linked section,
+             or when an in-progress task has no saved content. Non-
+             blocking — never gates status changes, never affects the
+             submit gate, never affects approval. -->
+        <ul
+          v-if="taskWarnings(t).length"
+          class="space-y-1"
+          aria-label="Task progress warnings"
+        >
+          <li
+            v-for="(warning, wi) in taskWarnings(t)"
+            :key="`task-warn-${t.id}-${wi}`"
+            :class="[
+              'rounded-md border p-2 text-xs',
+              warning.severity === 'stuck'
+                ? 'border-rose-300 bg-rose-50 text-rose-900'
+                : warning.severity === 'action-today'
+                  ? 'border-amber-300 bg-amber-50 text-amber-900'
+                  : 'border-sky-200 bg-sky-50 text-sky-900'
+            ]"
+          >
+            {{ warning.message }}
+          </li>
+        </ul>
 
         <p v-if="t.notes" class="text-xs text-neutral-600">{{ t.notes }}</p>
 
