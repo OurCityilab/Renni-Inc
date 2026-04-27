@@ -642,19 +642,19 @@ function ch10CampaignIssues(
   if (missingSignals.length > 0) {
     out.push(makeIssue({
       id: 'sync-ch10-thin-segment-link',
-      severity: 'needs-action',
-      title: 'Campaign does not yet connect to segment / pricing context',
+      severity: 'check-soon',
+      title: 'Campaign may not yet reference segment / pricing context',
       summary:
-        'Chapter 10 has authored text, but the connection to the Ch. 7 segment and Ch. 8 pricing is not visible in the copy. Heuristic — adjust if the team is using synonyms.',
+        'Chapter 10 has authored text, but the substring check did not find the Ch. 7 segment / Ch. 8 pricing words in the copy. Heuristic — if your team already addressed this using different wording, treat this as a checklist reminder, not a grade.',
       whatToGather: missingSignals,
       whyItMatters:
-        'A campaign that does not name the buyer, the motivation, the objection, or the channel reads as "everyone, no one." The buyer behind the price has to live in the message.',
+        'A campaign that does not name the buyer, the motivation, the objection, or the channel reads as "everyone, no one." The buyer behind the price has to live in the message — but synonyms count, so check before you rewrite.',
       owner: 'CMO',
       helpFrom: ['Chief Strategy and Growth Officer', 'CFO'],
       nextAction:
-        'Edit Chapter 10 source notes / draft so the segment + motivation + channel + proof are explicit.',
+        'If the segment / pricing context is already covered with different wording, ignore this. Otherwise edit Ch. 10 so segment + motivation + channel + proof are explicit.',
       doneLooksLike:
-        'Chapter 10 text references the named segment, the motivation, the channel, and (for premium pricing) the quality + proof.',
+        'Chapter 10 text references the named segment, the motivation, the channel, and (for premium pricing) the quality + proof — in any wording the team chooses.',
       chapterId: CH10,
       route: `/deliverables/${CH10}`,
       source: 'campaign'

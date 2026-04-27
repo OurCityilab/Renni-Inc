@@ -103,6 +103,54 @@ const myApproved = computed(() => owned.value.filter((d) => d.status === 'approv
       </p>
     </header>
 
+    <!-- Start Your Day — onboarding orientation. Tells a new student
+         the daily path in one panel so they don't have to figure out
+         which surface to open first. Read-only; no Firestore writes. -->
+    <section class="card space-y-2 border-phoenix-200 bg-phoenix-50/30">
+      <header class="space-y-0.5">
+        <p class="text-xs font-semibold uppercase tracking-wide text-phoenix-700">
+          Start Your Day
+        </p>
+        <p class="text-sm text-neutral-800">
+          A simple daily flow. Use it Monday through Friday before May 12.
+        </p>
+      </header>
+      <ol class="ml-5 list-decimal space-y-0.5 text-sm text-neutral-800">
+        <li>Check <NuxtLink to="/presentation-readiness" class="text-phoenix-700 hover:underline">Presentation Readiness</NuxtLink> — what's at risk for May 12 / 15.</li>
+        <li>Open <NuxtLink to="/c-suite-advisor" class="text-phoenix-700 hover:underline">C-Suite Advisor</NuxtLink> — read Today's Moves.</li>
+        <li>Pick one at-risk chapter from the cockpit and open it.</li>
+        <li>Work one section in the section workspace.</li>
+        <li>Save source notes, evidence, draft, and final text.</li>
+        <li>End the day at <NuxtLink to="/export-center" class="text-phoenix-700 hover:underline">Export Center</NuxtLink> — confirm exports still match the team's work.</li>
+      </ol>
+      <p class="text-xs italic text-neutral-700">
+        Do not try to complete everything at once. Pick the top issue, gather the
+        missing evidence, and finish one section at a time.
+      </p>
+      <div class="flex flex-wrap gap-2 text-xs">
+        <NuxtLink
+          to="/presentation-readiness"
+          class="rounded border border-phoenix-300 bg-white px-2 py-1 text-phoenix-800 hover:bg-phoenix-50"
+        >Presentation Readiness</NuxtLink>
+        <NuxtLink
+          to="/c-suite-advisor"
+          class="rounded border border-phoenix-300 bg-white px-2 py-1 text-phoenix-800 hover:bg-phoenix-50"
+        >C-Suite Advisor</NuxtLink>
+        <NuxtLink
+          to="/timeline"
+          class="rounded border border-phoenix-300 bg-white px-2 py-1 text-phoenix-800 hover:bg-phoenix-50"
+        >Timeline</NuxtLink>
+        <NuxtLink
+          to="/export-center"
+          class="rounded border border-phoenix-300 bg-white px-2 py-1 text-phoenix-800 hover:bg-phoenix-50"
+        >Export Center</NuxtLink>
+        <NuxtLink
+          to="/deliverables"
+          class="rounded border border-phoenix-300 bg-white px-2 py-1 text-phoenix-800 hover:bg-phoenix-50"
+        >Deliverables</NuxtLink>
+      </div>
+    </section>
+
     <!-- Dynamic role-aware banner. While snapshots are still loading we
          show neutral copy so we don't briefly claim "all clear" before
          risk lands. CTA stays role-appropriate either way. -->

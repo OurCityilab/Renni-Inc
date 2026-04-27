@@ -8,7 +8,7 @@ const auth = useAuthStore()
 // first, then Support tools, then any role-specific Admin links. The
 // dedicated "My Department" link was removed because Workbench surfaces
 // the user's team for non-admins and /departments lists every team.
-type NavItem = { to: string; label: string }
+type NavItem = { to: string; label: string; hint?: string }
 type NavGroup = { label: string; items: NavItem[] }
 
 const navGroups = computed<NavGroup[]>(() => {
@@ -16,32 +16,33 @@ const navGroups = computed<NavGroup[]>(() => {
     {
       label: 'Work',
       items: [
-        { to: '/', label: 'Home' },
-        { to: '/tasks', label: 'Tasks' },
-        { to: '/workbench', label: 'Workbench' },
-        { to: '/deliverables', label: 'Deliverables' },
-        { to: '/departments', label: 'Departments' },
-        { to: '/playbook', label: 'Playbook' }
+        { to: '/', label: 'Home', hint: 'Start Your Day path + your tasks + signals' },
+        { to: '/tasks', label: 'Tasks', hint: 'Your individual assignments' },
+        { to: '/workbench', label: 'Workbench', hint: 'Role-aware work board (blockers, due dates)' },
+        { to: '/deliverables', label: 'Deliverables', hint: 'All Playbook chapters and their status' },
+        { to: '/departments', label: 'Departments', hint: 'Per-team views with chief advisor cards' },
+        { to: '/playbook', label: 'Playbook', hint: 'Chapter-level approval rollup' }
       ]
     },
     {
       label: 'Support',
       items: [
-        { to: '/canvas', label: 'Canvas' },
-        { to: '/timeline', label: 'Timeline' },
-        { to: '/goals', label: 'Goals' },
-        { to: '/pricing', label: 'Pricing' },
-        { to: '/revenue', label: 'Revenue' },
-        { to: '/presentation-readiness', label: 'Presentation' },
-        { to: '/export-center', label: 'Export' }
+        { to: '/canvas', label: 'Canvas', hint: 'Business Model Canvas (nine blocks)' },
+        { to: '/timeline', label: 'Timeline', hint: 'Due dates, dependencies, May 12 / 15 / 27 backplan' },
+        { to: '/goals', label: 'Goals', hint: 'Department goals (revenue, donations, brand)' },
+        { to: '/pricing', label: 'Pricing', hint: 'Operational pricing scenarios — source of truth' },
+        { to: '/revenue', label: 'Revenue', hint: 'Pop-up sales + donations recap' },
+        { to: '/presentation-readiness', label: 'Presentation', hint: 'Final presentation scorecard for May 12 / 15' },
+        { to: '/export-center', label: 'Export', hint: 'Snapshot exports for docs / slides / design briefs' }
       ]
     }
   ]
   const adminItems: NavItem[] = []
-  if (auth.isChief || auth.isAdmin) adminItems.push({ to: '/c-suite', label: 'C-Suite' })
   if (auth.isChief || auth.isAdmin)
-    adminItems.push({ to: '/c-suite-advisor', label: 'C-Suite Advisor' })
-  if (auth.isAdmin) adminItems.push({ to: '/team', label: 'Team' })
+    adminItems.push({ to: '/c-suite', label: 'C-Suite', hint: 'Leadership KPI dashboard (approvals, overdue, by department)' })
+  if (auth.isChief || auth.isAdmin)
+    adminItems.push({ to: '/c-suite-advisor', label: 'C-Suite Advisor', hint: 'Daily operating coach — Today\'s Moves, owner lanes, Intelligence Sync' })
+  if (auth.isAdmin) adminItems.push({ to: '/team', label: 'Team', hint: 'Roster + roles' })
   if (adminItems.length) groups.push({ label: 'Admin', items: adminItems })
   return groups
 })
@@ -67,7 +68,7 @@ const navGroups = computed<NavGroup[]>(() => {
               v-for="item in group.items"
               :key="item.to"
               :to="item.to"
-              :title="`${group.label} · ${item.label}`"
+              :title="item.hint ? `${item.label} — ${item.hint}` : `${group.label} · ${item.label}`"
               class="rounded-md px-3 py-1.5 text-sm text-neutral-700 hover:bg-neutral-100"
               active-class="bg-neutral-100 text-phoenix-700"
             >
@@ -94,6 +95,7 @@ const navGroups = computed<NavGroup[]>(() => {
             v-for="item in group.items"
             :key="item.to"
             :to="item.to"
+            :title="item.hint ? `${item.label} — ${item.hint}` : `${group.label} · ${item.label}`"
             class="rounded-md px-3 py-1.5 text-sm text-neutral-700 whitespace-nowrap hover:bg-neutral-100"
             active-class="bg-neutral-100 text-phoenix-700"
           >

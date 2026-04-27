@@ -43,6 +43,45 @@ export const popUpCampaign: TemplateStudio = {
         enabled: true,
         guidance:
           'Compare segments side-by-side before declaring a primary market. The school can be the primary market for some products and a launch / awareness market for others.'
+      },
+      expertGuidance: {
+        expertRole: 'CMO + customer researcher',
+        whyThisMatters:
+          'Every channel, sign, post, and price decision downstream depends on naming a real audience. "Detroit students and their families" is too broad to design a campaign around — TechTown foot traffic, parent loyalty, and Phoenix Nest carry are different buyers with different reasons to show up.',
+        whatToGather: [
+          '2–3 named buyer groups grounded in real conversations or observation, not demographic guesses.',
+          'A one-line description per group ("Renaissance underclassmen who wear school identity proudly", "alumni and parents stopping at TechTown after work").',
+          'A clear split: which group is the priority for the TechTown pop-up, which is the priority for the Phoenix Nest carry pitch.',
+          'A pointer to the Ch. 7 PRIZM-inspired segment that anchors each group.'
+        ],
+        whereToFindIt: [
+          'Chapter 7 — Segments and Customer Insights (use the Segment Composer entries already drafted).',
+          'Notes from past pop-ups, school-store conversations, or Phoenix Nest store-walks.',
+          'Any TechTown audience research the team has done.'
+        ],
+        weakAnswerLooksLike:
+          '"Students, parents, and the Detroit community." — three buckets a generic school brand could write without ever talking to a customer.',
+        strongAnswerLooksLike:
+          'Two or three named groups, each tied to a Ch. 7 segment, with a one-line description grounded in a real conversation, and a clear note on which group matters for TechTown vs. Phoenix Nest.',
+        expertPushback: [
+          'Could a designer or content lead pick a photo, color, and headline based on this audience?',
+          'Did this group come from a real conversation, or did the team write it from imagination?',
+          'Is the same group somehow showing up as the TechTown buyer AND the Phoenix Nest buyer? If so, which is primary and why?'
+        ],
+        commonMistakes: [
+          'Listing demographics ("teens", "parents") instead of buyer pictures.',
+          'Forgetting to name a TechTown vs. Phoenix Nest priority — every group ends up "important".',
+          'Skipping the Ch. 7 segment link, so the campaign and brand strategy describe different audiences.'
+        ],
+        decisionSupported: 'Audience, channels, messaging, and measurement everywhere downstream in this chapter.',
+        connectsTo: [
+          'Chapter 7 — Segment Composer',
+          'Chapter 9 — Brand audience block',
+          'Chapter 11 — Phoenix Nest pitch'
+        ],
+        ownerHint: 'Chief Strategy and Growth Officer · CMO support',
+        doneLooksLike:
+          'A new student could read this section, repeat back who the campaign is for, and explain who matters most for TechTown vs. Phoenix Nest.'
       }
     },
     {
@@ -68,6 +107,45 @@ export const popUpCampaign: TemplateStudio = {
         enabled: true,
         guidance:
           'For each problem/desire pair, log the segment of the audience that actually has the problem strongly enough to buy. That is the interest rate the campaign should plan against.'
+      },
+      expertGuidance: {
+        expertRole: 'brand strategist + campaign lead',
+        whyThisMatters:
+          'Customers do not buy product features. They buy a fix to a problem (the beanie keeps me warm, the sweatshirt is durable enough to wear all winter) and a feeling (I look like I belong, I represent my school well). The campaign must hit the right one for the right group, in the right voice, at the right price.',
+        whatToGather: [
+          'For every customer group, one problem the product fixes — written in the customer\'s words.',
+          'For every customer group, one desire the product satisfies — also in the customer\'s words.',
+          'Direct quotes if you have them; if not, a labeled assumption that names what would convert it to evidence.',
+          'A check that the problem and desire stay believable at the Chapter 8 price point.'
+        ],
+        whereToFindIt: [
+          'Customer conversation notes, interview tabs, or surveys.',
+          'Chapter 7 segment notes (problems and motivations are usually drafted there).',
+          'Chapter 9 brand value-proposition (the desire side often shows up there first).'
+        ],
+        weakAnswerLooksLike:
+          '"Customers want quality apparel that represents Detroit." — generic, written in marketing language, not customer language.',
+        strongAnswerLooksLike:
+          'Per group, a sentence the customer would actually say — "I want a sweatshirt that does not pill after one wash so I can wear it for school and weekends" — with at least one source noted, including labeled assumptions where evidence is missing.',
+        expertPushback: [
+          'Would the customer actually say this sentence, or is this how the team would describe it?',
+          'Does the desire match the price the team is charging in Ch. 8?',
+          'Have you separated problem from desire, or are they the same line restated?'
+        ],
+        commonMistakes: [
+          'Using company language instead of customer language.',
+          'Naming a desire that the product cannot really deliver at the planned price.',
+          'Stating an assumption as a fact instead of labeling it.'
+        ],
+        decisionSupported: 'Messaging angles, table-sign headline, and Phoenix Nest pitch language.',
+        connectsTo: [
+          'Chapter 7 — Segments and Customer Insights',
+          'Chapter 8 — Pricing (problem severity is the basis for interest rate)',
+          'Chapter 9 — Brand Value Proposition'
+        ],
+        ownerHint: 'Chief Strategy and Growth Officer · CMO',
+        doneLooksLike:
+          'Each customer group has at least one problem and one desire written in customer language; assumptions are clearly labeled.'
       }
     },
     {
@@ -154,6 +232,44 @@ export const popUpCampaign: TemplateStudio = {
         enabled: true,
         guidance:
           'Use Brand Fit Builder to check whether the campaign audience signals match the brand identity audience. If the campaign is targeting students but the visual identity reads premium adult, flag the mismatch here.'
+      },
+      expertGuidance: {
+        expertRole: 'CMO + channel strategist',
+        whyThisMatters:
+          'A campaign aimed at students looks completely different from one aimed at parents or alumni — different posts, different signage, different times of day. If the campaign audience does not match the brand audience, one of them was written from imagination.',
+        whatToGather: [
+          'The 2–3 audience groups copied forward from the target-customers section (the brand and the campaign should agree).',
+          'Where each group already spends attention — Instagram for underclassmen, group chats for student leaders, hallway/Renaissance bulletin for parents stopping by.',
+          'A short justification for each named channel — why this audience is actually there, not just "students use Instagram".'
+        ],
+        whereToFindIt: [
+          'Chapter 9 — Brand audience block (campaign and brand should match).',
+          'Chapter 7 — Segment Composer (channel preferences sometimes show up there).',
+          'Whatever the team has actually observed about how Renaissance students and parents share information.'
+        ],
+        weakAnswerLooksLike:
+          '"We will post on Instagram and TikTok and put up flyers." — every student campaign says this.',
+        strongAnswerLooksLike:
+          'Each named group is matched to one or two specific channels with a one-line "why" — "underclassmen → IG reels because that is where Renaissance class accounts are watched", "parents → Renaissance email + hallway flyer because we have observed they read both".',
+        expertPushback: [
+          'Does the campaign audience match the brand audience exactly? If not, which one is wrong?',
+          'For each channel named, can the team show why this audience is actually there?',
+          'Is the team relying on TikTok / Instagram by reflex even though the audience does not actually live there?'
+        ],
+        commonMistakes: [
+          'Listing every channel the team has access to instead of the ones the audience actually uses.',
+          'Diverging from the brand-story audience without flagging the mismatch.',
+          'Writing channel names without owners — the touchpoints section will then be impossible to plan.'
+        ],
+        decisionSupported: 'Touchpoint calendar, where to spend energy in the next two weeks.',
+        connectsTo: [
+          'Chapter 9 — Brand audience',
+          'Touchpoints section below',
+          'Chapter 11 — Phoenix Nest pitch (alumni / parent audiences often overlap)'
+        ],
+        ownerHint: 'CMO',
+        doneLooksLike:
+          'Every named group has a specific channel pairing with a one-line "why we know they are there".'
       }
     },
     {
@@ -190,6 +306,46 @@ export const popUpCampaign: TemplateStudio = {
         enabled: true,
         guidance:
           'Use the Brand Fit Builder voice block to argue tone, vocabulary, and what the brand never says agree with the price point and target customer.'
+      },
+      expertGuidance: {
+        expertRole: 'campaign strategist + brand voice lead',
+        whyThisMatters:
+          'The first post and the table-sign headline are usually the only words a stranger reads before deciding whether to walk over. They have to match the brand voice from Ch. 9, the price point from Ch. 8, and the customer language from the problems-and-desires section above. If the messaging sounds like every other school pop-up, the campaign loses before the doors open.',
+        whatToGather: [
+          'The first announcement post caption — full text, not a placeholder.',
+          'The table-sign headline — short enough to read at six feet.',
+          'The chapter-9 brand voice adjectives the team committed to (every line should pass them).',
+          'A one-sentence link from each piece of copy back to a specific customer problem or desire from above.'
+        ],
+        whereToFindIt: [
+          'Chapter 9 — Brand voice block.',
+          'Chapter 8 — Price point (premium prices need premium-feeling copy; donation-only events need different copy).',
+          'Customer-problems-and-desires section above (the customer language is the source).'
+        ],
+        weakAnswerLooksLike:
+          '"Come check out the Renni pop-up at TechTown! Beanies, sweatshirts, baked goods — see you there." — generic, voiceless, no reason to walk over.',
+        strongAnswerLooksLike:
+          'Copy that could only be House Phoenix — voice adjectives are visible, the customer problem/desire is named, the date and what to bring (cash/card) are clear, and the price feels consistent with the words around it.',
+        expertPushback: [
+          'Could a different student brand publish this exact caption? If yes, rewrite.',
+          'Does the headline pass the chapter-9 voice test ("would the brand never say this")?',
+          'Does the copy match the price the team chose in Ch. 8?',
+          'Will a Renaissance student or parent walking the hallway actually stop and read it?'
+        ],
+        commonMistakes: [
+          'Writing in generic event-promo voice instead of brand voice.',
+          'Forgetting the basics — date, location, cash/card.',
+          'Picking a clever headline that does not name a real customer reason to show up.'
+        ],
+        decisionSupported: 'First-round content shipped (announcement post, hallway flyer, table sign).',
+        connectsTo: [
+          'Chapter 9 — Brand Voice',
+          'Chapter 8 — Pricing tone',
+          'Chapter 11 — Phoenix Nest pitch language'
+        ],
+        ownerHint: 'CMO',
+        doneLooksLike:
+          'Copy reads in House Phoenix voice, names a real customer reason to come, includes the practical info (date / cash-card), and a CMO would not be embarrassed to publish it.'
       }
     },
     {
@@ -213,6 +369,45 @@ export const popUpCampaign: TemplateStudio = {
         enabled: true,
         guidance:
           'Use the Next-validation field on each Market Builder entry to name the measurement that tightens the assumption.'
+      },
+      expertGuidance: {
+        expertRole: 'CMO + post-event analyst',
+        whyThisMatters:
+          'A pop-up that does not measure anything teaches the next cohort nothing. One question at the booth ("How did you hear about us?") is enough to name which channel actually drove arrivals — and which assumptions the team should drop. This section is where Ch. 7 / Ch. 8 / Ch. 10 assumptions become evidence.',
+        whatToGather: [
+          'One or two real signals the team will capture pop-up day — the question, who asks it, where it gets written down.',
+          'The named owner who is responsible at-booth.',
+          'The Market Builder assumption each measurement is meant to tighten (audience, interest, conversion, price, channel).',
+          'Where the answers will live after the event so the recap can cite them.'
+        ],
+        whereToFindIt: [
+          'Chapter 7 — segment assumptions that need validation.',
+          'Chapter 8 — pricing scenarios that depend on conversion or interest rate.',
+          'Touchpoints section above (channel signals).'
+        ],
+        weakAnswerLooksLike:
+          '"We will track sales and ask people what they think." — no specific question, no owner, no plan for what to do with the answers.',
+        strongAnswerLooksLike:
+          'A specific question ("How did you hear about us?"), a named owner, a tally sheet or log it gets written into, and a one-line connection to the assumption it tightens ("validates the Ch. 7 channel hypothesis that IG reels reach underclassmen").',
+        expertPushback: [
+          'If we get 30 arrivals and 0 captured signals, what did we actually learn?',
+          'Who at the booth is responsible for asking — does that owner know it before pop-up day?',
+          'Will the recap quote this number, or will it disappear into a notebook?'
+        ],
+        commonMistakes: [
+          'Measuring what is easy (sales count) but not what is decision-useful (channel attribution).',
+          'No named owner, so the question never gets asked under booth pressure.',
+          'No place to write the answer down, so signal is lost.'
+        ],
+        decisionSupported: 'Recap, next-cohort handoff, and which Ch. 7 / Ch. 8 / Ch. 10 assumptions get tightened.',
+        connectsTo: [
+          'Chapter 7 — segment assumptions',
+          'Chapter 8 — pricing scenarios',
+          'Recap deliverable in Ch. 12'
+        ],
+        ownerHint: 'CMO · COO support for at-booth ops',
+        doneLooksLike:
+          'A specific question, a named owner, a place to log answers, and a one-line note on which assumption the answer is meant to tighten.'
       }
     }
   ],

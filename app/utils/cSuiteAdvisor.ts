@@ -997,20 +997,20 @@ function crossChapterSignals(inputs: AdvisorInputs): AdvisorSignal[] {
           out.push({
             id: makeId('xchap-campaign-thin-segment-link', [id]),
             scope: 'chapter',
-            severity: 'risk',
-            title: 'Campaign copy does not reference Ch. 7 segment context',
+            severity: 'watch',
+            title: 'Campaign copy may not reference Ch. 7 segment context',
             summary:
-              'Chapter 7 has a structured segment, but the Chapter 10 campaign copy does not echo its motivation / objection / channel. Heuristic — adjust if the team is using synonyms.',
-            gap: `Missing references in Ch. 10 text: ${missing.join(' · ')}.`,
+              'Chapter 7 has a structured segment, but the Chapter 10 campaign copy does not echo its motivation / objection / channel using those exact words. Heuristic — if your team already addressed this with different wording, treat this as a checklist reminder, not a grade.',
+            gap: `Words not found in Ch. 10 text (substring check): ${missing.join(' · ')}.`,
             owner: 'CMO',
             supportingRoles: ['Chief Strategy and Growth Officer', 'CFO'],
             dependency: 'Segment before campaign messaging.',
             nextAction:
-              'Edit Chapter 10 source notes / draft so the segment, motivation, objection, and channel are explicit in the copy.',
+              'If the segment, motivation, objection, and channel are already covered with different wording, ignore this. Otherwise edit Ch. 10 so they are explicit in the copy.',
             whyItMatters:
-              'A campaign that does not name the buyer or address the buyer\'s objection reads as "everyone, no one." The buyer behind the price has to live in the message.',
+              'A campaign that does not name the buyer or address the buyer\'s objection reads as "everyone, no one." The buyer behind the price has to live in the message — but synonyms count, so check before you rewrite.',
             howToFix:
-              `Open Ch. 10 and pull these from the Ch. 7 segment "${ch7Picked.segmentName}": motivation, likely objection, channel fit. Reuse the team's own words from the segment profile.`,
+              `Open Ch. 10 and confirm these are referenced (in any wording) from the Ch. 7 segment "${ch7Picked.segmentName}": motivation, likely objection, channel fit. If they are already there in different words, no action needed.`,
             chapterId: id,
             source: 'segments'
           })
