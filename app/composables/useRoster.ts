@@ -7,7 +7,13 @@ import {
 } from 'firebase/firestore'
 import { onMounted, onScopeDispose, ref } from 'vue'
 import { useAuthStore } from '~/stores/auth'
-import type { Department, EmailStatus, RosterEntry, Role } from '~/types/models'
+import type {
+  CollaborationRole,
+  Department,
+  EmailStatus,
+  RosterEntry,
+  Role
+} from '~/types/models'
 
 // Roles that are chiefs by convention. Mirrors config/role-map.json on the
 // server so Team-page edits land with a consistent isChief flag. Admin is a
@@ -29,6 +35,11 @@ export type RosterPatch = {
   alternateEmail?: string
   emailStatus?: EmailStatus | ''
   accessNotes?: string
+  // V1 Remote Marketing Studio metadata — display-only. Empty strings
+  // clear the field. None of these affect permissions or rules.
+  classSection?: string
+  cohortGroup?: string
+  collaborationRole?: CollaborationRole | ''
 }
 
 export function useRoster() {

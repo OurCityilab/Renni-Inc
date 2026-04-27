@@ -3,7 +3,11 @@ import { collection, getDocs } from 'firebase/firestore'
 import { computed, onMounted, ref } from 'vue'
 import { useAuthStore } from '~/stores/auth'
 import { useRoster } from '~/composables/useRoster'
-import type { EmailStatus, RosterEntry } from '~/types/models'
+import type {
+  CollaborationRole,
+  EmailStatus,
+  RosterEntry
+} from '~/types/models'
 
 // Admin-only Access Manager (V1).
 //
@@ -45,6 +49,21 @@ const STATUS_CHIP_CLASS: Record<EmailStatus | '', string> = {
   'pending-signup': 'border-sky-300 bg-sky-50 text-sky-800',
   'email-issue': 'border-rose-300 bg-rose-50 text-rose-800',
   'needs-review': 'border-amber-300 bg-amber-50 text-amber-800'
+}
+
+// V1 Remote Marketing Studio — display-only collaboration label.
+const COLLAB_OPTIONS: Array<{ value: CollaborationRole | ''; label: string }> = [
+  { value: '', label: '— Renni core (default) —' },
+  { value: 'renni-core', label: 'Renni core (Renaissance student / staff)' },
+  { value: 'remote-marketing-support', label: 'Remote marketing support' }
+]
+const COLLAB_LABEL: Record<CollaborationRole, string> = {
+  'renni-core': 'Renni core',
+  'remote-marketing-support': 'Remote marketing'
+}
+const COLLAB_CHIP_CLASS: Record<CollaborationRole, string> = {
+  'renni-core': 'border-neutral-300 bg-white text-neutral-700',
+  'remote-marketing-support': 'border-violet-300 bg-violet-50 text-violet-800'
 }
 
 // Provisioned users — cached once at mount so signup-status badges render.
@@ -108,9 +127,19 @@ interface Draft {
   alternateEmail: string
   emailStatus: EmailStatus | ''
   accessNotes: string
+  classSection: string
+  cohortGroup: string
+  collaborationRole: CollaborationRole | ''
 }
 const editingEmail = ref<string | null>(null)
-const draft = ref<Draft>({ alternateEmail: '', emailStatus: '', accessNotes: '' })
+const draft = ref<Draft>({
+  alternateEmail: '',
+  emailStatus: '',
+  accessNotes: '',
+  classSection: '',
+  cohortGroup: '',
+  collaborationRole: ''
+})
 const savingEmail = ref<string | null>(null)
 const rowError = ref<Record<string, string>>({})
 
@@ -119,7 +148,11 @@ function startEdit(e: RosterEntry) {
   draft.value = {
     alternateEmail: (e.alternateEmail || '').toLowerCase(),
     emailStatus: (e.emailStatus as EmailStatus | '' | undefined) ?? '',
-    accessNotes: e.accessNotes || ''
+    accessNotes: e.accessNotes || '',
+    classSection: e.classSection || '',
+    cohortGroup: e.cohortGroup || '',
+    collaborationRole:
+      (e.collaborationRole as CollaborationRole | '' | undefined) ?? ''
   }
   rowError.value[e.email] = ''
 }
@@ -177,7 +210,10 @@ async function save(e: RosterEntry) {
     await roster.update(e.email, {
       alternateEmail: altRaw,
       emailStatus: draft.value.emailStatus,
-      accessNotes: draft.value.accessNotes.trim()
+      accessNotes: draft.value.accessNotes.trim(),
+      classSection: draft.value.classSection.trim(),
+      cohortGroup: draft.value.cohortGroup.trim(),
+      collaborationRole: draft.value.collaborationRole
     })
     editingEmail.value = null
   } catch (err) {
@@ -310,6 +346,14 @@ async function copyTemplate() {
             <p v-if="e.accessNotes" class="text-xs italic text-neutral-600">
               {{ e.accessNotes }}
             </p>
+            <p
+              v-if="e.classSection || e.cohortGroup"
+              class="text-[11px] text-neutral-600"
+            >
+              <span v-if="e.classSection">Class: {{ e.classSection }}</span>
+              <span v-if="e.classSection && e.cohortGroup"> · </span>
+              <span v-if="e.cohortGroup">Cohort: {{ e.cohortGroup }}</span>
+            </p>
             <p v-if="e.updatedAt" class="text-[11px] text-neutral-500">
               Last access update {{ e.updatedAt.slice(0, 10) }}<span v-if="e.updatedByEmail">
                 · by {{ e.updatedByEmail }}</span>
@@ -325,6 +369,11 @@ async function copyTemplate() {
               class="rounded-full border px-2 py-0.5 uppercase tracking-wide"
               :class="STATUS_CHIP_CLASS[(e.emailStatus as EmailStatus | '')]"
             >{{ STATUS_LABEL[(e.emailStatus as EmailStatus | '')] }}</span>
+            <span
+              v-if="e.collaborationRole && e.collaborationRole !== 'renni-core'"
+              class="rounded-full border px-2 py-0.5 uppercase tracking-wide"
+              :class="COLLAB_CHIP_CLASS[(e.collaborationRole as CollaborationRole)]"
+            >{{ COLLAB_LABEL[(e.collaborationRole as CollaborationRole)] }}</span>
             <button
               v-if="editingEmail !== e.email"
               type="button"
@@ -377,6 +426,44 @@ async function copyTemplate() {
               class="mt-1 w-full rounded border border-neutral-300 p-2 text-sm"
               placeholder="e.g. LTU email blocked 2026-04-26; using personal Gmail"
             />
+          </label>
+          <!-- Remote Marketing Studio metadata — display-only labels.
+               None of these fields affect permissions or rules. -->
+          <label class="text-xs font-medium text-neutral-800">
+            Class section
+            <input
+              v-model="draft.classSection"
+              type="text"
+              autocomplete="off"
+              placeholder="e.g. MKT-310 Spring 2026"
+              class="mt-1 w-full rounded border border-neutral-300 p-2 text-sm"
+            />
+          </label>
+          <label class="text-xs font-medium text-neutral-800">
+            Cohort / group
+            <input
+              v-model="draft.cohortGroup"
+              type="text"
+              autocomplete="off"
+              placeholder="e.g. Renaissance 2026 / Remote Marketing"
+              class="mt-1 w-full rounded border border-neutral-300 p-2 text-sm"
+            />
+          </label>
+          <label class="text-xs font-medium text-neutral-800">
+            Collaboration role
+            <select
+              v-model="draft.collaborationRole"
+              class="mt-1 w-full rounded border border-neutral-300 p-2 text-sm"
+            >
+              <option
+                v-for="opt in COLLAB_OPTIONS"
+                :key="opt.value"
+                :value="opt.value"
+              >{{ opt.label }}</option>
+            </select>
+            <p class="mt-1 text-[11px] text-neutral-500">
+              Display label only — never grants approval or admin rights.
+            </p>
           </label>
           <div class="sm:col-span-3 flex flex-wrap items-center justify-end gap-2">
             <button

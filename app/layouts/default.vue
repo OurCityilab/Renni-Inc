@@ -33,6 +33,7 @@ const navGroups = computed<NavGroup[]>(() => {
         { to: '/pricing', label: 'Pricing', hint: 'Operational pricing scenarios — source of truth' },
         { to: '/revenue', label: 'Revenue', hint: 'Pop-up sales + donations recap' },
         { to: '/presentation-readiness', label: 'Presentation', hint: 'Final presentation scorecard for May 12 / 15' },
+        { to: '/remote-marketing', label: 'Remote Marketing', hint: 'Briefs, assignments, and feedback workflow for the remote marketing class' },
         { to: '/export-center', label: 'Export', hint: 'Snapshot exports for docs / slides / design briefs' }
       ]
     }

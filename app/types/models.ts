@@ -72,6 +72,12 @@ export type EmailStatus =
   | 'email-issue'
   | 'needs-review'
 
+// Remote Marketing Studio V1. Display-only metadata. Never gates
+// access, approval, submit, or readiness. Used to label outside
+// collaborators (e.g. a remote marketing class) so admins can tell
+// at a glance who is Renaissance core vs agency-style support.
+export type CollaborationRole = 'renni-core' | 'remote-marketing-support'
+
 export interface RosterEntry {
   email: string
   displayName: string
@@ -88,6 +94,14 @@ export interface RosterEntry {
   // provision, never affects /pricing, advisor, or readiness.
   emailStatus?: EmailStatus | ''
   accessNotes?: string
+  // Remote Marketing Studio metadata — display-only. classSection /
+  // cohortGroup are free-text labels (e.g. "Spring 2026 — MKT-310").
+  // collaborationRole defaults to renni-core when unset; flagging a
+  // member as remote-marketing-support changes nothing about their
+  // permissions, only how they show up in the access manager.
+  classSection?: string
+  cohortGroup?: string
+  collaborationRole?: CollaborationRole | ''
   updatedAt?: IsoTimestamp
   updatedByUid?: string
   updatedByEmail?: string
