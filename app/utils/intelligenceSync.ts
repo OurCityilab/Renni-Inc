@@ -443,10 +443,15 @@ function ch8PricingIssues(
   if (derived.belowCost) {
     out.push(makeIssue({
       id: 'sync-ch8-below-cost',
-      severity: 'stops-submit',
-      title: 'Proposed price is below total unit cost',
+      // QA stabilization: below-cost pricing is a serious advisory
+      // problem but it does NOT stop submit-for-review (the submit
+      // gate is requirement-task coverage only). Use needs-action
+      // and call it out as "Major issue" in the title so students
+      // see the gravity without a false "Stops Submit" claim.
+      severity: 'needs-action',
+      title: 'Major issue — proposed price is below total unit cost',
       summary:
-        'Each unit sold loses money before fixed costs. This is advisory only — submit gate is unaffected — but the team should not pitch this to anyone outside the room.',
+        'Each unit sold loses money before fixed costs. Submit-for-review is unaffected (the submit gate is requirement-task coverage), but the team should not pitch this to anyone outside the room.',
       whatToGather: [
         'A revised proposed price OR a tighter cost stack',
         'A short "why we are still pitching this" paragraph if the price stays low'
@@ -846,19 +851,34 @@ function presentationIssues(
     }))
   }
   // Advisor signal counts (when caller passed them in).
+  // QA stabilization: only requirement-coverage blockers actually
+  // stop submit-for-review. Other advisor blockers (below-cost
+  // pricing, blocked tasks) are advisory. Reserve `stops-submit`
+  // severity for the real submit-gating case.
   if (inputs.advisorSignals?.length) {
-    const stops = inputs.advisorSignals.filter((a) => a.signal.severity === 'blocker').length
+    const submitBlockers = inputs.advisorSignals.filter(
+      (a) =>
+        a.signal.severity === 'blocker' && a.signal.source === 'requirements'
+    ).length
+    const advisoryBlockers = inputs.advisorSignals.filter(
+      (a) =>
+        a.signal.severity === 'blocker' && a.signal.source !== 'requirements'
+    ).length
     const risks = inputs.advisorSignals.filter((a) => a.signal.severity === 'risk').length
-    if (stops > 0 || risks >= 3) {
+    if (submitBlockers > 0 || advisoryBlockers > 0 || risks >= 3) {
+      const totalSeriousCount = submitBlockers + advisoryBlockers
       out.push(makeIssue({
         id: 'sync-pres-advisor-load',
-        severity: stops > 0 ? 'stops-submit' : 'needs-action',
-        title: `${stops} Stops/Blocked + ${risks} Needs Action signals across the program`,
-        summary:
-          'The C-Suite Advisor has open signals across multiple chapters. Final presentation readiness depends on closing these.',
+        severity: submitBlockers > 0 ? 'stops-submit' : 'needs-action',
+        title: `${totalSeriousCount} blocker / major-issue + ${risks} Needs Action signal${risks === 1 ? '' : 's'} across the program`,
+        summary: submitBlockers > 0
+          ? `${submitBlockers} signal${submitBlockers === 1 ? '' : 's'} affect submit-for-review (required-task coverage). The remaining ${advisoryBlockers + risks} are advisory but worth closing for the final presentation.`
+          : 'The C-Suite Advisor has open advisory signals across multiple chapters. None of these stop submit-for-review on their own; final presentation readiness still benefits from closing them.',
         whatToGather: [
-          'Resolution for each Stops Submit signal (covers required task gap)',
-          'Owner action on each Needs Action signal',
+          submitBlockers > 0
+            ? 'Linked tasks for any required Template Studio requirement that has none (these are the only signals that affect submit-for-review)'
+            : 'Action on each Needs Action signal',
+          'Owner + due date on each open signal',
           'Updated evidence for any segment / pricing risks'
         ],
         whyItMatters:
@@ -866,9 +886,11 @@ function presentationIssues(
         owner: 'Co-CEOs',
         helpFrom: ['CFO', 'COO', 'CMO', 'Chief Strategy and Growth Officer'],
         nextAction:
-          'Open /c-suite-advisor and walk Today\'s Moves; close Stops/Blocked first.',
+          'Open /c-suite-advisor and walk Today\'s Moves; close Stops Submit first if any.',
         doneLooksLike:
-          '0 Stops/Blocked across studio-backed chapters; ≤ 2 Needs Action.',
+          submitBlockers > 0
+            ? '0 Stops Submit signals (required-task coverage clean). Major issues + Needs Action ≤ 3 across the program.'
+            : 'Major issues + Needs Action ≤ 3 across the program.',
         route: '/c-suite-advisor',
         source: 'presentation'
       }))

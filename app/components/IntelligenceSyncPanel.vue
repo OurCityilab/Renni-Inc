@@ -99,6 +99,11 @@ async function copy(key: string, content: string) {
         Read-only deterministic checks across Ch. 7 segment → Ch. 8 pricing →
         Ch. 10 campaign → Ch. 11 carry → presentation readiness.
       </p>
+      <p class="text-[11px] italic text-neutral-700">
+        This is a checklist, not a grade. Submit-for-review and Playbook
+        readiness are unchanged — the only signal here that actually affects
+        submit-for-review is required-task coverage in the C-Suite Advisor.
+      </p>
       <p class="text-[11px] italic text-neutral-500">
         AI coach prompts here are copy-only. The system of record is
         student-authored work in Renni Command Center. AI can coach and ask
@@ -268,8 +273,9 @@ async function copy(key: string, content: string) {
       </details>
 
       <p class="text-[11px] italic text-neutral-500">
-        Heuristic checks. If the team uses synonyms in chapter copy, mark a row
-        "done" and move on — chiefs and instructor still decide.
+        Heuristic checks for Ch. 10 / Ch. 11 read chapter copy by keyword. If
+        your team already addressed this with different wording, treat it as
+        done — chiefs and instructor still decide.
       </p>
     </template>
   </section>
