@@ -65,19 +65,18 @@ const canAssignForDeliverable = computed(() => {
 })
 const assigningOpen = ref(false)
 
-// Mirrors the deliverableOutputs Firestore rule: admin / Co-CEO / COO,
-// the deliverable's owner, or a chief whose department matches.
-// Status-based read-only-ness is layered inside the workspace itself.
+// Drafting access — V2.
+//
+// Any rostered class member can collaboratively draft a deliverable's
+// section text when the deliverable is in an editable state. The
+// status-based read-only gate (in_review / approved) lives inside
+// DeliverableOutputWorkspace and the Firestore rule. Approval rights,
+// due-date editing rights, and admin powers are NOT granted here —
+// they're separate computed flags (`canEditNotes`,
+// `canAssignForDeliverable`, ApprovalActions) that still gate by
+// owner / chief / admin / Co-CEO as before.
 const canEditOutput = computed(() => {
-  if (!deliverable.value) return false
-  if (auth.isAdmin || auth.isCoCEO) return true
-  if (auth.profile?.role === 'coo') return true
-  if (auth.user && auth.user.uid === deliverable.value.ownerUid) return true
-  if (
-    auth.isChief &&
-    auth.profile?.department === deliverable.value.department
-  ) return true
-  return false
+  return Boolean(deliverable.value) && Boolean(auth.profile)
 })
 
 // Template Studio lookup. If a curated studio exists for this deliverable,

@@ -180,10 +180,12 @@ service cloud.firestore {
     // Student-authored artifact content, keyed by deliverable id.
     // Read: any signed-in user — chiefs and approvers need to see what
     //   owners have written, the same way they see the deliverable itself.
-    // Write: admin / Co-CEO / COO, plus the deliverable's owner, plus
-    //   chiefs whose department matches the deliverable's department.
+    // Write: any rostered class member (admin / Co-CEO / COO / chief /
+    //   member / owner) when the deliverable is in an editable state.
     //   Approval is a separate axis (handled on /deliverables) — being
-    //   able to author output never grants approval rights.
+    //   able to author output never grants approval rights, due-date
+    //   edit rights, or admin powers. The status-based read-only lock
+    //   on in_review / approved is preserved by deliverableOutputEditable.
     match /deliverableOutputs/{deliverableId} {
       allow read: if isSignedIn();
       allow create, update: if deliverableOutputEditable(deliverableId)
@@ -192,6 +194,10 @@ service cloud.firestore {
           || deliverableDoc(deliverableId).ownerUid == request.auth.uid
           || (isChief()
             && deliverableDoc(deliverableId).department == userDoc().department)
+          // V2 collaborative drafting: any rostered member can author
+          // section content while status is draft / needs_revision.
+          // Approval, due-date edit, and admin powers remain untouched.
+          || hasRole('member')
         );
       allow delete: if isAdminOrCoCEO() && deliverableOutputEditable(deliverableId);
     }

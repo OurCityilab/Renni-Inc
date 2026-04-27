@@ -51,19 +51,51 @@ const navGroups = computed<NavGroup[]>(() => {
 </script>
 
 <template>
+  <!--
+    Shared shell for every signed-in route. Layout fix V2:
+
+    The header is now a two-row block. The top row carries the logo and
+    the sign-out button only. The nav lives on its own full-width row
+    that scrolls horizontally when there are too many items to fit.
+
+    Why this shape: prior versions put the logo, the inline desktop
+    nav, and the sign-out button into a single `flex … justify-between`
+    parent. With 14+ nav items, the middle child grew past the parent's
+    `max-w-6xl` and (because flex children don't shrink below their
+    intrinsic content width) forced the body wider than the viewport
+    on most laptop widths. `mx-auto` on the main wrapper then centered
+    page content inside that over-wide body, which the user perceived
+    as "main content squeezed into a far-right column" with empty
+    whitespace on the left. Putting the nav on its own row removes the
+    flex contention completely. `overflow-x-auto` + `whitespace-nowrap`
+    keeps long nav rows usable on narrow screens.
+  -->
   <div class="min-h-full flex flex-col">
     <header class="border-b border-neutral-200 bg-white">
-      <div class="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
-        <NuxtLink to="/" class="flex items-center gap-2">
-          <span
-            class="inline-flex h-8 w-8 items-center justify-center rounded-md bg-phoenix-600 text-sm font-bold text-white"
-          >R</span>
-          <span class="font-semibold">Renni Command Center</span>
-        </NuxtLink>
-        <nav class="hidden md:flex items-center gap-1">
+      <div class="mx-auto w-full max-w-6xl px-4">
+        <div class="flex h-14 items-center justify-between gap-3">
+          <NuxtLink to="/" class="flex min-w-0 items-center gap-2">
+            <span
+              class="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-phoenix-600 text-sm font-bold text-white"
+            >R</span>
+            <span class="truncate font-semibold">Renni Command Center</span>
+          </NuxtLink>
+          <div class="flex shrink-0 items-center gap-2">
+            <span v-if="auth.profile" class="hidden sm:inline truncate text-xs text-neutral-600">
+              {{ auth.profile.title }}
+            </span>
+            <button v-if="auth.user" class="btn-secondary" @click="auth.signOut()">
+              Sign out
+            </button>
+          </div>
+        </div>
+        <nav
+          class="-mx-4 flex items-center gap-1 overflow-x-auto border-t border-neutral-100 px-4 py-2"
+          aria-label="Primary"
+        >
           <template v-for="group in navGroups" :key="group.label">
             <span
-              class="ml-2 mr-1 select-none text-[10px] font-semibold uppercase tracking-wider text-neutral-400"
+              class="select-none whitespace-nowrap pl-2 pr-1 text-[10px] font-semibold uppercase tracking-wider text-neutral-400"
               :aria-label="`${group.label} navigation group`"
             >{{ group.label }}</span>
             <NuxtLink
@@ -71,48 +103,22 @@ const navGroups = computed<NavGroup[]>(() => {
               :key="item.to"
               :to="item.to"
               :title="item.hint ? `${item.label} — ${item.hint}` : `${group.label} · ${item.label}`"
-              class="rounded-md px-3 py-1.5 text-sm text-neutral-700 hover:bg-neutral-100"
+              class="whitespace-nowrap rounded-md px-3 py-1.5 text-sm text-neutral-700 hover:bg-neutral-100"
               active-class="bg-neutral-100 text-phoenix-700"
             >
               {{ item.label }}
             </NuxtLink>
           </template>
         </nav>
-        <div class="flex items-center gap-2">
-          <span v-if="auth.profile" class="hidden sm:inline text-xs text-neutral-600">
-            {{ auth.profile.title }}
-          </span>
-          <button v-if="auth.user" class="btn-secondary" @click="auth.signOut()">
-            Sign out
-          </button>
-        </div>
       </div>
-      <nav class="md:hidden flex items-center gap-1 overflow-x-auto border-t border-neutral-100 px-2 py-2">
-        <template v-for="group in navGroups" :key="group.label">
-          <span
-            class="select-none whitespace-nowrap pl-2 pr-1 text-[10px] font-semibold uppercase tracking-wider text-neutral-400"
-            :aria-label="`${group.label} navigation group`"
-          >{{ group.label }}</span>
-          <NuxtLink
-            v-for="item in group.items"
-            :key="item.to"
-            :to="item.to"
-            :title="item.hint ? `${item.label} — ${item.hint}` : `${group.label} · ${item.label}`"
-            class="rounded-md px-3 py-1.5 text-sm text-neutral-700 whitespace-nowrap hover:bg-neutral-100"
-            active-class="bg-neutral-100 text-phoenix-700"
-          >
-            {{ item.label }}
-          </NuxtLink>
-        </template>
-      </nav>
     </header>
-    <main class="flex-1">
-      <div class="mx-auto max-w-6xl px-4 py-6">
+    <main class="min-w-0 flex-1">
+      <div class="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 lg:px-8">
         <slot />
       </div>
     </main>
     <footer class="border-t border-neutral-200 bg-white">
-      <div class="mx-auto max-w-6xl px-4 py-3 text-xs text-neutral-500">
+      <div class="mx-auto w-full max-w-6xl px-4 py-3 text-xs text-neutral-500 sm:px-6 lg:px-8">
         Renaissance × Renni Inc. — Command Center
       </div>
     </footer>

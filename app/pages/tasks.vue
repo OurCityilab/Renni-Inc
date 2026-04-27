@@ -142,7 +142,9 @@ async function reopen(t: Task) {
       </p>
     </header>
 
-    <div class="grid gap-3 sm:grid-cols-4">
+    <!-- Status cards: 2-up on phones, 4-up from md so cards stay
+         readable on narrow laptops. -->
+    <div class="grid grid-cols-2 gap-3 md:grid-cols-4">
       <KpiCard label="Blocked" :value="blockedCount" :tone="blockedCount > 0 ? 'warn' : 'default'" />
       <KpiCard label="In progress" :value="inProgressCount" />
       <KpiCard label="Not started" :value="notStartedCount" />

@@ -41,20 +41,13 @@ const validSection = computed(() => {
   return studio.value.sections.find((s) => s.id === sectionId.value) ?? null
 })
 
-// Mirrors the rule helper deliverableOutputs.create/update gate. Same
-// shape as the chapter page's `canEditOutput` so behavior is
-// identical when the section workspace asks the underlying composable
-// to provision or save.
+// Drafting access — V2. Mirrors the deliverableOutputs Firestore
+// rule: any rostered class member can collaboratively draft when the
+// deliverable is in an editable state (status check is enforced by
+// DeliverableOutputWorkspace + the rule's deliverableOutputEditable
+// helper). Approval / due-date / admin rights stay where they were.
 const canEdit = computed(() => {
-  if (!deliverable.value) return false
-  if (auth.isAdmin || auth.isCoCEO) return true
-  if (auth.profile?.role === 'coo') return true
-  if (auth.user && auth.user.uid === deliverable.value.ownerUid) return true
-  if (
-    auth.isChief &&
-    auth.profile?.department === deliverable.value.department
-  ) return true
-  return false
+  return Boolean(deliverable.value) && Boolean(auth.profile)
 })
 
 const sectionIndex = computed(() => {
