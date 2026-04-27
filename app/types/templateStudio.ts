@@ -37,6 +37,16 @@ export interface TemplateStudioSection {
   //     above the writing surface in the compressed view.
   whyThisMatters?: string
   actionSummary?: string
+  // Customer Segments QuickStart Sprint addition. Optional metadata
+  // that turns a section into a guided plug-and-play scaffolding
+  // experience: chip-pick choices → deterministic starter draft →
+  // safe write-back to Working Draft. Intentionally narrow in V1:
+  // only `customerSegmentBuilder` is supported, and only the Ch. 4
+  // Customer Segments section opts in. The shape can grow as new
+  // section-specific QuickStart variants are needed; we deliberately
+  // do not generalize to a giant universal form engine until real
+  // student testing on this first variant says it's worth it.
+  guidedQuickStart?: GuidedQuickStartConfig
   // Structured Evidence Standard V1 — optional per-section guidance shown
   // next to the structured-evidence editor in the Output Workspace.
   // Authors can leave them blank; the editor falls back to generic copy.
@@ -86,6 +96,58 @@ export interface TemplateStudioSection {
   // Renders via ExpertGuidanceCard inside the section workspace
   // alongside the existing SectionGuidanceSummary.
   expertGuidance?: ExpertGuidance
+}
+
+// GuidedQuickStartConfig — Customer Segments QuickStart Sprint.
+//
+// Narrow-by-design V1 scaffolding metadata. The shape supports the
+// Customer Segments use case (chip-pick segments → needs → importance →
+// evidence → deterministic starter draft) without committing to a
+// universal form engine across all 99 requirements. Future sections
+// that opt in can add their own variant config without breaking
+// existing studios because every field is optional and the renderer
+// only fires when `enabled` is true and the matching builder config
+// is present.
+//
+// Posture (do not relax in V1):
+//   - never required: every studio without `guidedQuickStart` renders
+//     exactly as before
+//   - never auto-saves: the QuickStart only emits a payload; the
+//     parent workspace decides when to assign and dirty-flag
+//   - never overwrites Final Playbook text by default; the student
+//     must explicitly target Working Draft (`draftText`) or Team
+//     Thinking (`sourceNotes`)
+//   - never invokes AI; draft generation is a deterministic template
+//     with bracketed placeholders the student must fill in
+//   - never gates submit, status, approval, or Playbook readiness
+export interface GuidedQuickStartConfig {
+  enabled: boolean
+  // Section-level mission / framing copy. Kept short so the surface
+  // stays calm, not gamified.
+  title: string
+  missionLabel?: string
+  description?: string
+  // Where the generated starter draft lands by default. The student
+  // can still target Team Thinking via a secondary action. We do
+  // NOT default to `finalText` — final Playbook text remains the
+  // publishable student-owned version per the brief.
+  draftTarget?: 'sourceNotes' | 'draftText'
+  // First QuickStart variant: customer-segment composer. Other
+  // variants can be added as siblings as new sections opt in.
+  customerSegmentBuilder?: {
+    // Picklist of suggested customer groups. Students can also enter
+    // a custom group via the "Custom" affordance in the UI; this
+    // metadata only seeds the chip palette.
+    segmentOptions: string[]
+    // What each group might need. Custom entry also allowed.
+    needOptions: string[]
+    // Why the group matters (which downstream output it serves).
+    importanceOptions: string[]
+    // Evidence / proof tier. The renderer triggers a non-blocking
+    // confidence warning when the student picks an "assumption only"
+    // variant of these strings.
+    evidenceOptions: string[]
+  }
 }
 
 export interface ExpertGuidance {

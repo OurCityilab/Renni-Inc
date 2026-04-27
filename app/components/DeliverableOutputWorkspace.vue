@@ -45,6 +45,7 @@ import SectionGuidanceSummary from '~/components/SectionGuidanceSummary.vue'
 import ExpertGuidanceCard from '~/components/ExpertGuidanceCard.vue'
 import PlaybookWritingScaffold from '~/components/PlaybookWritingScaffold.vue'
 import HelpMeUnderstand from '~/components/HelpMeUnderstand.vue'
+import SectionQuickStart from '~/components/SectionQuickStart.vue'
 import MarketFitBuilder from '~/components/MarketFitBuilder.vue'
 import MarketFitReferencePanel, {
   type ReferencedMarketFitRow
@@ -512,6 +513,50 @@ const viewerIsLeader = computed<boolean>(
 
 function actionSummaryFor(s: TemplateStudioSection): string {
   return effectiveActionSummary(s)
+}
+
+// --- Customer Segments QuickStart Sprint: apply handler ----------
+// SectionQuickStart emits a payload describing where the generated
+// starter draft should land (sourceNotes / draftText) and how
+// (set / append / replace). The workspace decides how to merge into
+// the existing local draft and dirty-flag — the QuickStart itself
+// never touches Firestore and never marks dirty on its own.
+//
+// Posture (do not relax):
+//   - target is never `finalText`; the apply API doesn't expose it
+//   - 'set' implies the target was empty; just assign
+//   - 'replace' implies the student confirmed overwrite in the prompt
+//   - 'append' implies the student confirmed append in the prompt
+//   - we never autosave; markDirty(s) is the only persistence-side
+//     change so the existing Save flow stays in charge
+function handleQuickStartApply(
+  s: TemplateStudioSection,
+  payload: {
+    target: 'sourceNotes' | 'draftText'
+    mode: 'set' | 'replace' | 'append'
+    text: string
+  }
+) {
+  if (!editingEnabled.value) return
+  const d = drafts.value[s.id]
+  if (!d) return
+  const text = payload.text || ''
+  if (!text.trim()) return
+  if (payload.target === 'sourceNotes') {
+    if (payload.mode === 'append' && d.sourceNotes.trim()) {
+      d.sourceNotes = `${d.sourceNotes.trimEnd()}\n\n${text}`
+    } else {
+      d.sourceNotes = text
+    }
+  } else {
+    // draftText
+    if (payload.mode === 'append' && d.draftText.trim()) {
+      d.draftText = `${d.draftText.trimEnd()}\n\n${text}`
+    } else {
+      d.draftText = text
+    }
+  }
+  markDirty(s)
 }
 
 // --- Independent Student Mode: section warnings -------------------
@@ -2011,6 +2056,28 @@ function shouldOpenDefend(s: TemplateStudioSection): boolean {
           :studio="studio"
           :section="s"
           :deliverable-id="deliverable.id"
+        />
+
+        <!-- Customer Segments QuickStart Sprint: guided builder.
+             Renders ONLY for sections that opt in via
+             section.guidedQuickStart.enabled (V1: Ch. 4 customer-segments
+             only). Mounts above "Your team's thinking" so a student
+             opening the section at home gets a chip-pick scaffolding
+             flow that produces a starter draft they can edit before
+             saving. The component never autosaves, never targets
+             finalText by default, and never overwrites existing
+             student writing without an explicit append/replace
+             confirmation. The workspace's handleQuickStartApply
+             merges the emitted payload and marks dirty so the
+             existing Save button stays in charge. -->
+        <SectionQuickStart
+          v-if="s.guidedQuickStart?.enabled"
+          :section="s"
+          :deliverable-id="deliverable.id"
+          :current-source-notes="drafts[s.id]?.sourceNotes ?? ''"
+          :current-draft-text="drafts[s.id]?.draftText ?? ''"
+          :editing-enabled="editingEnabled"
+          @apply="(payload) => handleQuickStartApply(s, payload)"
         />
 
         <!-- Independent Student Mode: section-level mismatch warnings.

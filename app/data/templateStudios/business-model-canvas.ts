@@ -17,6 +17,63 @@ export const businessModelCanvas: TemplateStudio = {
       title: 'Customer segments',
       lesson:
         'Customer segments name the actual people the business serves. Be specific — first-time pop-up buyers, retail buyers at Phoenix Nest, and donation-minded community members are different segments with different needs.',
+      // Compressed-view "What to do" microcopy + section-level
+      // why-this-matters. Used by the Guidance Compression Sprint
+      // helpers; if absent, fallbacks derive from `lesson` /
+      // `studentPrompts`.
+      whyThisMatters:
+        'Naming the actual buyers — not "everyone" — is what makes the pricing, campaign, and Phoenix Nest carry pitch all line up. Vague segments here force every later chapter to guess.',
+      actionSummary:
+        'Name 2–3 customer groups and explain what each group needs from House Phoenix.',
+      // Customer Segments QuickStart Sprint — only this section opts
+      // in for V1. The renderer reads these options to seed chip
+      // palettes; students can always enter a custom value.
+      guidedQuickStart: {
+        enabled: true,
+        title: 'Identify the customers',
+        missionLabel: 'Mission',
+        description:
+          'Pick 2–3 customer groups, name what each one needs, choose why each matters, and add proof. We will build a starter draft you can edit before saving.',
+        draftTarget: 'draftText',
+        customerSegmentBuilder: {
+          segmentOptions: [
+            'Renaissance students',
+            'First-time TechTown pop-up buyers',
+            'Phoenix Nest retail buyers',
+            'Parents and families',
+            'Alumni and school supporters',
+            'Detroit-made product supporters',
+            'Donation-minded community members',
+            'Staff and faculty',
+            'Young professionals'
+          ],
+          needOptions: [
+            'an affordable school spirit item',
+            'a premium Detroit-made apparel piece',
+            'a giftable product',
+            'a way to support student entrepreneurs',
+            'a product that feels professional',
+            'a baked good or quick purchase',
+            'proof that students can run a real company'
+          ],
+          importanceOptions: [
+            'TechTown sales',
+            'Phoenix Nest retail carry',
+            'donations',
+            'brand awareness',
+            'next-semester strategy',
+            'school community support'
+          ],
+          evidenceOptions: [
+            'we talked to a student or customer',
+            'we observed interest in class or at school',
+            'we ran a survey or got feedback',
+            'we had a product interest conversation',
+            'we have a comparable product or price',
+            'assumption only — needs validation'
+          ]
+        }
+      },
       studentPrompts: [
         'Name 2–3 specific customer segments — not "everyone".',
         'For each segment, write one line about what they need from House Phoenix.',
