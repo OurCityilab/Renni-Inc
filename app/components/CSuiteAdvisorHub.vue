@@ -710,7 +710,7 @@ function fmtDate(iso: string | null): string {
             <tr>
               <th class="pb-1 pr-2">Chapter</th>
               <th class="pb-1 pr-2 text-right">Missing required</th>
-              <th class="pb-1 pr-2 text-right">Blocked</th>
+              <th class="pb-1 pr-2 text-right">Stuck</th>
               <th class="pb-1 pr-2 text-right">Overdue</th>
               <th class="pb-1 pr-2 text-right">Ownerless</th>
               <th class="pb-1 pr-2"></th>

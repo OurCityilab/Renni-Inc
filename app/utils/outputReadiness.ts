@@ -32,7 +32,7 @@ export function computeOutputReadiness(
       sectionsWithFinalText: 0,
       missingFinalTextSections: totalSections,
       hasOutput: false,
-      label: 'Output workspace not started yet.',
+      label: 'Build this section — not started yet.',
       detail: null
     }
   }

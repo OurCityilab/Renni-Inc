@@ -198,7 +198,7 @@ function deliverableLinkLabel(t: Task) {
           :tone="counts.needsRevision > 0 ? 'warn' : 'default'"
         />
         <KpiCard
-          label="Blocked tasks"
+          label="Stuck tasks"
           :value="blockedTasks.length"
           :tone="blockedTasks.length > 0 ? 'warn' : 'default'"
         />
@@ -325,12 +325,12 @@ function deliverableLinkLabel(t: Task) {
         </ul>
       </section>
 
-      <!-- Blocked + Due soon -->
+      <!-- Stuck + Due soon -->
       <div class="grid gap-4 md:grid-cols-2">
         <section class="space-y-2">
-          <h2 class="text-sm font-semibold text-neutral-700">What is blocked?</h2>
+          <h2 class="text-sm font-semibold text-neutral-700">What is stuck?</h2>
           <p v-if="!blockedTasks.length" class="text-sm text-neutral-500">
-            No blockers on record. Good sign.
+            No tasks flagged stuck right now. Good sign.
           </p>
           <ul v-else class="space-y-1">
             <li

@@ -101,13 +101,16 @@ export function resolveSectionIdForRequirement(
     ...(requirementLabel ? tokenize(requirementLabel) : [])
   ])
   if (!tokens.size) return null
-  // Prefer the requirement entry's matching section when the
-  // studio happens to define it (future-proofing — today no studio
-  // does, but we honor it if/when one does).
+  // Prefer the requirement's explicit `sectionId` when the studio
+  // sets one. Sprint 2 added two of these (Ch 10
+  // insights-customer-needs → customer-problems-and-desires; Ch 13
+  // appendix-templates-linked → templates-and-links) — anywhere a
+  // studio adds more, we honor them automatically.
   const explicit = studio.requirements.find((r) => r.id === requirementId)
-  if (explicit && (explicit as { sectionId?: string }).sectionId) {
-    const sid = (explicit as { sectionId?: string }).sectionId!
-    if (studio.sections.some((s) => s.id === sid)) return sid
+  if (explicit?.sectionId) {
+    if (studio.sections.some((s) => s.id === explicit.sectionId)) {
+      return explicit.sectionId
+    }
   }
   let best: { section: TemplateStudioSection; score: number } | null = null
   for (const section of studio.sections) {

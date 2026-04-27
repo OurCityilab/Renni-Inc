@@ -432,6 +432,12 @@ export const popUpCampaign: TemplateStudio = {
       requiredForApproval: true,
       department: 'strategy-growth',
       playbookChapter: 10,
+      // Sprint 2: explicit sectionId. The token-overlap heuristic
+      // tied this with `target-customers` (about *who* customers
+      // are) and `customer-problems-and-desires` (about *what they
+      // want / need*). The label is clearly about the latter, so
+      // pin the deep link explicitly. Heuristic stays unchanged.
+      sectionId: 'customer-problems-and-desires',
       definitionOfDone:
         'Problems and desires are written in plain customer-facing language.'
     },

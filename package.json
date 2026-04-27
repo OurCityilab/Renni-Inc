@@ -23,6 +23,7 @@
     "cleanup:qa-identities": "tsx scripts/cleanup-qa-identities.ts",
     "cleanup:bible-goal": "tsx scripts/cleanup-bible-goal.ts",
     "audit:studio-alignment": "tsx scripts/audit-studio-alignment.ts",
+    "audit:requirement-sections": "tsx scripts/audit-requirement-section-resolution.ts",
     "backfill:tasks": "tsx scripts/backfill-task-alignment.ts",
     "sync:users": "tsx scripts/sync-users-from-roster.ts"
   },

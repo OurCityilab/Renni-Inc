@@ -415,7 +415,7 @@ async function saveNotes() {
             <p class="mt-1 text-xs text-neutral-500">
               Short context for the approver about this submission — questions,
               caveats, or what changed since last review. The actual deliverable
-              content goes in the Output workspace above, not here.
+              content goes in <strong>Build this section</strong> above, not here.
             </p>
             <textarea
               v-model="notesDraft"

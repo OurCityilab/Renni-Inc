@@ -137,7 +137,12 @@ watch(sectionId, () => {
 
     <!-- Valid section — render the focused workspace. -->
     <template v-else>
-      <!-- Compact sticky header: chapter context + breadcrumb back -->
+      <!-- Compact sticky header: chapter context + breadcrumb back +
+           why-this-matters connection. The whyItMatters string is
+           studio metadata that ties this section's writing back to
+           one of the three real final outputs (TechTown pop-up,
+           Playbook, Phoenix Nest carry pitch) so a student can see
+           the work going somewhere real before they start typing. -->
       <header class="card space-y-1">
         <p class="text-xs uppercase tracking-wide text-neutral-500">
           {{ studio.title }}
@@ -146,9 +151,18 @@ watch(sectionId, () => {
         <h1 class="text-lg font-semibold text-neutral-900">
           {{ validSection.title }}
         </h1>
+        <p
+          v-if="studio.whyItMatters"
+          class="rounded-md border border-phoenix-200 bg-phoenix-50/40 p-2 text-xs text-phoenix-900"
+        >
+          <span class="font-semibold uppercase tracking-wide text-phoenix-700">Why this matters:</span>
+          {{ studio.whyItMatters }}
+        </p>
         <p class="text-sm text-neutral-600">
-          Focused section workspace. Save returns you to the chapter overview
-          to see how progress and the Playbook preview update.
+          Build this section in three steps: <strong>Think</strong>,
+          <strong>Draft</strong>, <strong>Defend</strong>. Save returns you to
+          the chapter overview to see how progress and the Playbook preview
+          update.
         </p>
         <div class="flex flex-wrap items-center gap-2 text-xs">
           <NuxtLink

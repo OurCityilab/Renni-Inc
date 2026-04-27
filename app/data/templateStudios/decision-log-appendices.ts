@@ -156,6 +156,12 @@ export const decisionLogAppendices: TemplateStudio = {
       department: 'operations',
       playbookChapter: 13,
       suggestedTaskTitle: 'Add templates / SOP links',
+      // Sprint 2: explicit sectionId. The token-overlap heuristic
+      // tied this with `evidence-appendix` and `templates-and-links`
+      // at the same score. The label literally names "Templates"
+      // and "tools linked", so pin the deep link to the
+      // templates-and-links section.
+      sectionId: 'templates-and-links',
       definitionOfDone:
         'COO confirms next cohort can actually open every tool from this list.'
     },

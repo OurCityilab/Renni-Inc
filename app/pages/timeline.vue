@@ -523,7 +523,7 @@ const dependencyCandidates = computed<Task[]>(() =>
               ? 'border-rose-300 bg-rose-50 text-rose-800 font-semibold'
               : 'border-neutral-300 bg-neutral-50 text-neutral-700'
           ]"
-        >Blocked tasks · {{ backplanSummary.blockedTaskCount }}</li>
+        >Stuck tasks · {{ backplanSummary.blockedTaskCount }}</li>
         <li
           :class="[
             'rounded-full border px-2 py-0.5 uppercase tracking-wide',

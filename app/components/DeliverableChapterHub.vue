@@ -151,7 +151,7 @@ function fmtWhen(iso?: string | null): string {
           </dd>
         </div>
         <div>
-          <dt class="inline font-medium text-neutral-600">Source notes</dt>
+          <dt class="inline font-medium text-neutral-600">Your team's thinking</dt>
           <dd class="inline">
             : {{ chapterProgress.sourceNotesDone }}/{{ chapterProgress.totalSections }}
           </dd>

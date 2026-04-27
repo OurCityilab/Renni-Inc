@@ -203,7 +203,7 @@ const statusColor: Record<string, string> = {
     <template v-else>
       <!-- KPIs -->
       <div class="grid gap-3 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-5">
-        <KpiCard label="Blocked" :value="blockedTasks.length" :tone="blockedTasks.length > 0 ? 'warn' : 'default'" />
+        <KpiCard label="Stuck" :value="blockedTasks.length" :tone="blockedTasks.length > 0 ? 'warn' : 'default'" />
         <KpiCard
           label="Overdue"
           :value="overdueTasks.length"
@@ -273,11 +273,11 @@ const statusColor: Record<string, string> = {
         >Open department page →</NuxtLink>
       </section>
 
-      <!-- Blocked -->
+      <!-- Stuck — tasks the team has flagged as needing help. -->
       <section class="space-y-2">
-        <h2 class="text-sm font-semibold text-neutral-700">Blocked</h2>
+        <h2 class="text-sm font-semibold text-neutral-700">Stuck — needs help</h2>
         <p v-if="!blockedTasks.length" class="text-sm text-neutral-500">
-          No blockers on record.
+          No tasks flagged stuck right now.
         </p>
         <ul v-else class="space-y-1">
           <li

@@ -129,7 +129,7 @@ const loading = computed(() => rosterLoading.value || tasksLoading.value || delL
             <dd class="mt-0.5 text-sm font-medium text-neutral-900">{{ row.active }}</dd>
           </div>
           <div class="rounded-md border border-neutral-200 p-2">
-            <dt class="text-neutral-500">Blocked</dt>
+            <dt class="text-neutral-500">Stuck</dt>
             <dd
               class="mt-0.5 text-sm font-medium"
               :class="row.blocked > 0 ? 'text-rose-700' : 'text-neutral-900'"

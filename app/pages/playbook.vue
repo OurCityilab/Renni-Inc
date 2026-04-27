@@ -266,7 +266,7 @@ const outputReadinessByChapter = computed<Map<number, ChapterOutputReadiness>>(
       if (stillLoading) {
         label = 'Checking output readiness…'
       } else if (!hasOutput) {
-        label = 'Output workspace not started yet.'
+        label = 'Build this section — not started yet.'
       } else {
         label = `Final text: ${sectionsWithFinalText} of ${totalSections} sections ready`
         if (missingFinalTextSections > 0) {
@@ -424,7 +424,7 @@ const statusLabel: Record<ChapterStatus, string> = {
             <span
               v-if="c.taskBlocked > 0"
               class="text-rose-700"
-            >Blocked {{ c.taskBlocked }}</span>
+            >Stuck {{ c.taskBlocked }}</span>
           </template>
         </div>
 

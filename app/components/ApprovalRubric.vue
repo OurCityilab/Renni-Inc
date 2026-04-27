@@ -13,7 +13,7 @@ const items = computed<readonly string[]>(() =>
 <template>
   <section class="card">
     <header class="flex items-center justify-between">
-      <h2 class="text-sm font-semibold">Approval rubric</h2>
+      <h2 class="text-sm font-semibold">What the chief is looking for</h2>
       <span class="text-xs text-neutral-500">Visible on every deliverable</span>
     </header>
     <p class="mt-2 text-xs text-neutral-600">

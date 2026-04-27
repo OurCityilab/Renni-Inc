@@ -111,8 +111,8 @@ function chapterTitle(row: ChapterReadinessRow): string {
         tasks, outputs, and advisor signals.
       </p>
       <p class="text-xs italic text-neutral-500">
-        Read-only — chiefs and instructor still decide. Submit gate, Playbook
-        readiness, and approval logic are unchanged.
+        Read-only — chiefs and instructor still decide. The "Ready for chief
+        review" gate, Playbook readiness, and approval logic are unchanged.
       </p>
     </header>
 
@@ -171,7 +171,7 @@ function chapterTitle(row: ChapterReadinessRow): string {
           Overdue tasks · {{ readiness.summary.overdueTaskCount }}
         </li>
         <li :class="['rounded-full border px-2 py-0.5 uppercase tracking-wide', readiness.summary.blockedTaskCount > 0 ? 'border-rose-300 bg-rose-50 text-rose-800 font-semibold' : 'border-neutral-300 bg-neutral-50 text-neutral-700']">
-          Blocked tasks · {{ readiness.summary.blockedTaskCount }}
+          Stuck tasks · {{ readiness.summary.blockedTaskCount }}
         </li>
         <li :class="['rounded-full border px-2 py-0.5 uppercase tracking-wide', readiness.summary.ownerlessTaskCount > 0 ? 'border-amber-200 bg-amber-50 text-amber-800 font-semibold' : 'border-neutral-300 bg-neutral-50 text-neutral-700']">
           Ownerless · {{ readiness.summary.ownerlessTaskCount }}

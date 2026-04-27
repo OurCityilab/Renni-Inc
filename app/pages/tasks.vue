@@ -152,14 +152,14 @@ async function reopen(t: Task) {
       <p class="text-sm text-neutral-500">Working list</p>
       <h1 class="text-2xl font-semibold">Tasks</h1>
       <p class="text-sm text-neutral-600">
-        Update the work assigned to you. Start tasks, mark them blocked with a reason, or mark them done.
+        Update the work assigned to you. Start tasks, mark them stuck with a short note, or mark them done.
       </p>
     </header>
 
     <!-- Status cards: 2-up on phones, 4-up from md so cards stay
          readable on narrow laptops. -->
     <div class="grid grid-cols-2 gap-3 md:grid-cols-4">
-      <KpiCard label="Blocked" :value="blockedCount" :tone="blockedCount > 0 ? 'warn' : 'default'" />
+      <KpiCard label="Stuck" :value="blockedCount" :tone="blockedCount > 0 ? 'warn' : 'default'" />
       <KpiCard label="In progress" :value="inProgressCount" />
       <KpiCard label="Not started" :value="notStartedCount" />
       <KpiCard label="Done" :value="doneCount" tone="good" />
@@ -186,7 +186,7 @@ async function reopen(t: Task) {
         <option value="">All statuses</option>
         <option value="not_started">Not started</option>
         <option value="in_progress">In progress</option>
-        <option value="blocked">Blocked</option>
+        <option value="blocked">Stuck — need help</option>
         <option value="done">Done</option>
       </select>
     </div>
@@ -231,7 +231,7 @@ async function reopen(t: Task) {
           v-if="t.status === 'blocked' && t.blockedBy"
           class="rounded-md border border-rose-200 bg-rose-50 p-2 text-xs text-rose-800"
         >
-          Blocked: {{ t.blockedBy }}
+          Stuck: {{ t.blockedBy }}
         </p>
 
         <p v-if="t.notes" class="text-xs text-neutral-600">{{ t.notes }}</p>
@@ -260,14 +260,14 @@ async function reopen(t: Task) {
             class="btn-secondary"
             :disabled="mutating === t.id"
             @click="unblock(t)"
-          >Unblock</button>
+          >Mark unstuck</button>
           <button
             v-if="t.status !== 'blocked' && t.status !== 'done'"
             class="btn-secondary"
             :disabled="mutating === t.id"
             @click="blockingId = blockingId === t.id ? null : t.id; blockReason = ''"
           >
-            {{ blockingId === t.id ? 'Cancel' : 'Mark blocked' }}
+            {{ blockingId === t.id ? 'Cancel' : 'Mark stuck' }}
           </button>
         </div>
 
@@ -276,13 +276,13 @@ async function reopen(t: Task) {
           class="rounded-md border border-rose-200 bg-rose-50 p-2"
         >
           <label class="block text-xs font-medium text-rose-900">
-            What's blocking this task?
+            What is making this task stuck?
           </label>
           <textarea
             v-model="blockReason"
             rows="2"
             class="mt-1 w-full rounded border border-rose-300 bg-white p-2 text-sm"
-            placeholder="e.g. waiting on inventory counts from ops"
+            placeholder="e.g. waiting on inventory counts from ops, or I do not know how to start"
           />
           <div class="mt-2 flex justify-end">
             <button

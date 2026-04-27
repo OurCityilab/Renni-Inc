@@ -126,6 +126,13 @@ export interface TemplateStudioRequirement {
   evidenceType?: string
   suggestedTaskTitle?: string
   definitionOfDone?: string
+  // Optional explicit pointer to the section a task created from this
+  // requirement should deep-link to. When unset, the deep-link helper
+  // (utils/requirementToSection.ts) falls back to a tokenized
+  // overlap heuristic across the studio's sections. Setting this is
+  // a low-risk override for cases where the heuristic chooses a
+  // related-but-not-quite-right section.
+  sectionId?: string
 }
 
 export interface TemplateStudioTask {

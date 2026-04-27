@@ -1329,22 +1329,88 @@ watch(
   },
   { immediate: true }
 )
+
+// --- Sprint 2: Think / Draft / Defend phase helpers ----------------
+// Display-only. Do not persist anything; do not change submit gate
+// or Playbook readiness. The phasing reorganizes how the section's
+// existing fields appear on screen — none of the underlying save
+// paths, builder mounts, or read-only states change.
+
+// "Think complete" — student has captured rough thinking.
+function isThinkComplete(s: TemplateStudioSection): boolean {
+  const p = persistedSection(s)
+  if (!p) return false
+  return Boolean((p.sourceNotes ?? '').trim())
+}
+
+// "Draft complete" — student has either a working draft or final
+// Playbook text saved. We do not require both — the working draft
+// alone counts as drafting underway.
+function isDraftComplete(s: TemplateStudioSection): boolean {
+  const p = persistedSection(s)
+  if (!p) return false
+  return (
+    Boolean((p.draftText ?? '').trim()) ||
+    Boolean((p.finalText ?? '').trim())
+  )
+}
+
+// "Defend started" — any evidence link, structured-evidence entry,
+// market-builder entry, or builder doc exists for the section. This
+// also drives the default-open behavior of the Defend accordion so
+// students who already have data don't have to expand to find it.
+function isDefendStarted(s: TemplateStudioSection): boolean {
+  const p = persistedSection(s)
+  if (!p) return false
+  if ((p.evidenceLinks?.length ?? 0) > 0) return true
+  if ((p.structuredEvidence?.length ?? 0) > 0) return true
+  if ((p.marketBuilderEntries?.length ?? 0) > 0) return true
+  if (p.marketFit) {
+    const f = p.marketFit
+    if ((f.segments?.length ?? 0) > 0) return true
+    if ((f.comparables?.length ?? 0) > 0) return true
+    if ((f.evidenceRequests?.length ?? 0) > 0) return true
+    if (f.productFacts?.productName?.trim()) return true
+    if (f.recommendation?.positioningSummary?.trim()) return true
+  }
+  if (p.brandFit) return true
+  if (p.pricingStrategy) return true
+  return false
+}
+
+// Defend defaults open when:
+//   - the section already has data (above), OR
+//   - the section is on a high-rigor / market-evidence chapter
+//     (Ch 7, 8, 10, 11) — those sections need the defense surface
+//     visible without the student having to discover it.
+// Otherwise Defend stays collapsed so the first screen is the
+// writing flow, not the form farm.
+function shouldOpenDefend(s: TemplateStudioSection): boolean {
+  if (isDefendStarted(s)) return true
+  return (
+    isMarketFitChapter.value ||
+    isChapter7.value ||
+    isChapter8.value ||
+    isChapter11.value
+  )
+}
 </script>
 
 <template>
   <section class="space-y-4">
     <header v-if="!sectionMode" class="space-y-1">
       <p class="text-xs uppercase tracking-wide text-neutral-500">
-        Output workspace
+        Build this section
       </p>
       <h2 class="text-lg font-semibold text-neutral-900">
         Build the {{ studio.title }}
       </h2>
       <p class="text-sm text-neutral-600">
         This is where your team writes the actual deliverable, section by
-        section. Source notes capture your thinking, the draft response is
-        your working answer, and the final Playbook text is what will roll
-        into the Brand &amp; Operations Playbook.
+        section. Each section is split into <strong>Think</strong> (your team's
+        thinking and guidance), <strong>Draft</strong> (working draft and final
+        Playbook text), and <strong>Defend</strong> (sources, structured
+        evidence, and any builder tools that apply).
       </p>
     </header>
 
@@ -1360,11 +1426,11 @@ watch(
         How to use this workspace
       </p>
       <ol class="mt-1 list-decimal space-y-0.5 pl-5 text-xs text-neutral-700">
-        <li>Read the section title and any guidance from your chief.</li>
-        <li><strong>Source notes:</strong> capture your team's own thinking, decisions, and evidence in your own words.</li>
-        <li><strong>Draft response:</strong> turn those notes into a working answer for the section. It can be rough.</li>
-        <li><strong>Final Playbook text:</strong> polish the draft so it reads like part of the final Playbook.</li>
-        <li>Add <strong>evidence links</strong> (Docs, Slides, folders, images) that back up what you wrote, then save.</li>
+        <li>Read the section title and the section guidance.</li>
+        <li><strong>Think:</strong> in <em>Your team's thinking</em>, capture rough notes, customer comments, and class discussion in your own words.</li>
+        <li><strong>Draft:</strong> turn those notes into a <em>Working draft</em>, then polish a <em>Final Playbook text</em> another team could publish.</li>
+        <li><strong>Defend:</strong> add sources, structured evidence, and any builder data that supports your claims.</li>
+        <li>Save when ready. The chief reviews against "What the chief is looking for".</li>
       </ol>
     </section>
 
@@ -1399,11 +1465,11 @@ watch(
         Every section has final Playbook text. Nice.
       </p>
       <dl class="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-neutral-600 sm:grid-cols-6">
-        <div><dt class="inline">Source notes</dt><dd class="inline"> · {{ readiness.withSourceNotes }}/{{ readiness.total }}</dd></div>
-        <div><dt class="inline">Draft text</dt><dd class="inline"> · {{ readiness.withDraft }}/{{ readiness.total }}</dd></div>
+        <div><dt class="inline">Your team's thinking</dt><dd class="inline"> · {{ readiness.withSourceNotes }}/{{ readiness.total }}</dd></div>
+        <div><dt class="inline">Working draft</dt><dd class="inline"> · {{ readiness.withDraft }}/{{ readiness.total }}</dd></div>
         <div><dt class="inline">Final text</dt><dd class="inline"> · {{ readiness.withFinal }}/{{ readiness.total }}</dd></div>
-        <div><dt class="inline">Links</dt><dd class="inline"> · {{ readiness.withEvidence }}/{{ readiness.total }}</dd></div>
-        <div><dt class="inline">Evidence entries</dt><dd class="inline"> · {{ readiness.totalStructuredEvidence }}</dd></div>
+        <div><dt class="inline">Sources and proof</dt><dd class="inline"> · {{ readiness.withEvidence }}/{{ readiness.total }}</dd></div>
+        <div><dt class="inline">Defend-your-claim entries</dt><dd class="inline"> · {{ readiness.totalStructuredEvidence }}</dd></div>
         <div><dt class="inline">Demand entries</dt><dd class="inline"> · {{ readiness.totalMarketBuilder }}</dd></div>
       </dl>
       <p class="mt-1 text-xs text-neutral-500">
@@ -1633,10 +1699,11 @@ watch(
       class="card space-y-2"
     >
       <p class="text-xs text-neutral-700">
-        Work one section at a time. Each section below includes its guidance,
-        source notes, draft response, final Playbook text, evidence, and any
-        builder tools that apply. Jump directly to a section using the links
-        below.
+        Work one section at a time. Each section is organized into
+        <strong>Think</strong> (your team's thinking and guidance),
+        <strong>Draft</strong> (working draft and final Playbook text),
+        and <strong>Defend</strong> (sources, structured evidence, and any
+        builder tools). Jump directly to a section using the links below.
       </p>
       <nav aria-label="Output section navigation">
         <ol class="flex flex-wrap gap-1.5 text-xs">
@@ -1676,122 +1743,190 @@ watch(
           </p>
         </header>
 
-        <!-- Compact display-only guidance summary for this section.
-             Same content the Template Studio block above carries, but
-             positioned next to the inputs so students don't have to
-             scroll back up to remember what the section is asking. -->
-        <SectionGuidanceSummary
-          :section="s"
-          :section-index="originalSectionIndex(s.id)"
-        />
+        <!-- Sprint 2: Think / Draft / Defend phasing.
+             Display-only reorganization. None of the underlying save
+             paths, builder mounts, or read-only states change — the
+             same fields appear under three accordions so a student
+             sees a guided writing flow instead of every input at
+             once. The accordions use native <details>; user toggles
+             are preserved by the DOM during the lifetime of the
+             section card. -->
+        <ul
+          class="flex flex-wrap gap-1.5 text-[11px]"
+          aria-label="Section phase progress"
+        >
+          <li
+            :class="[
+              'rounded-full border px-2 py-0.5 uppercase tracking-wide',
+              isThinkComplete(s)
+                ? 'border-emerald-300 bg-emerald-50 text-emerald-800'
+                : 'border-neutral-300 bg-neutral-50 text-neutral-600'
+            ]"
+          >Think {{ isThinkComplete(s) ? '✓' : '—' }}</li>
+          <li
+            :class="[
+              'rounded-full border px-2 py-0.5 uppercase tracking-wide',
+              isDraftComplete(s)
+                ? 'border-emerald-300 bg-emerald-50 text-emerald-800'
+                : 'border-neutral-300 bg-neutral-50 text-neutral-600'
+            ]"
+          >Draft {{ isDraftComplete(s) ? '✓' : '—' }}</li>
+          <li
+            :class="[
+              'rounded-full border px-2 py-0.5 uppercase tracking-wide',
+              isDefendStarted(s)
+                ? 'border-emerald-300 bg-emerald-50 text-emerald-800'
+                : 'border-neutral-300 bg-neutral-50 text-neutral-600'
+            ]"
+          >Defend {{ isDefendStarted(s) ? '✓' : '—' }}</li>
+        </ul>
 
-        <!-- Expert Chapter Guidance — only renders when the studio
-             section authored an expertGuidance block. Sections
-             without it (V1 studios) keep rendering exactly as
-             before. Read-only / display-only / copy-only AI prompt. -->
-        <ExpertGuidanceCard
-          :section="s"
-          :section-index="originalSectionIndex(s.id)"
-        />
+        <!-- THINK — guidance + your team's thinking (rough notes). -->
+        <details open class="rounded-md border border-emerald-200 bg-emerald-50/30">
+          <summary class="cursor-pointer select-none p-3">
+            <span class="text-xs font-semibold uppercase tracking-wide text-emerald-800">
+              Think
+            </span>
+            <span class="ml-1 text-xs text-neutral-700">
+              — what is this section asking, and what does your team already know?
+            </span>
+          </summary>
+          <div class="space-y-3 border-t border-emerald-200 p-3">
+            <SectionGuidanceSummary
+              :section="s"
+              :section-index="originalSectionIndex(s.id)"
+            />
 
-        <!-- Display-only writing scaffolds: suggested workflow, likely
-             owner cue, chapter-aware sentence starters, and the final
-             Playbook text checklist. Nothing here saves, calls AI, or
-             changes status. The cue appears above the inputs so
-             students see the recommended sequence (notes → builder →
-             draft → final → save) before they start writing. -->
-        <PlaybookWritingScaffold
-          :deliverable-id="deliverable.id"
-          :section="s"
-        />
+            <ExpertGuidanceCard
+              :section="s"
+              :section-index="originalSectionIndex(s.id)"
+            />
 
-        <div class="space-y-3">
-          <div>
-            <label class="block text-xs font-medium text-neutral-800">
-              Source notes
-              <textarea
-                v-model="drafts[s.id].sourceNotes"
-                rows="3"
-                :disabled="!editingEnabled"
-                class="mt-1 w-full rounded border border-neutral-300 p-2 text-sm disabled:bg-neutral-50"
-                placeholder="What did your team decide, why, and what evidence backs it up?"
-                @input="markDirty(s)"
-              />
-            </label>
-            <p class="mt-1 text-xs text-neutral-500">
-              Start here. Capture your team's own thinking, decisions, evidence,
-              and questions in your own words.
-            </p>
+            <PlaybookWritingScaffold
+              :deliverable-id="deliverable.id"
+              :section="s"
+            />
+
+            <div>
+              <label class="block text-xs font-medium text-neutral-800">
+                Your team's thinking
+                <textarea
+                  v-model="drafts[s.id].sourceNotes"
+                  rows="3"
+                  :disabled="!editingEnabled"
+                  class="mt-1 w-full rounded border border-neutral-300 p-2 text-sm disabled:bg-neutral-50"
+                  placeholder="e.g. Customers at TechTown said the beanies felt premium. Three asked about price."
+                  @input="markDirty(s)"
+                />
+              </label>
+              <p class="mt-1 text-xs text-neutral-500">
+                Rough notes, customer comments, class discussion, or links you
+                found. Write what you know — it does not need to be polished.
+              </p>
+            </div>
           </div>
-          <div>
-            <label class="block text-xs font-medium text-neutral-800">
-              Draft response
-              <textarea
-                v-model="drafts[s.id].draftText"
-                rows="4"
-                :disabled="!editingEnabled"
-                class="mt-1 w-full rounded border border-neutral-300 p-2 text-sm disabled:bg-neutral-50"
-                placeholder="A working answer for this section — turn your source notes into sentences."
-                @input="markDirty(s)"
-              />
-            </label>
-            <p class="mt-1 text-xs text-neutral-500">
-              Use this as the working version. It can be rough while your team
-              is still improving the section.
-            </p>
-          </div>
-          <div>
-            <label class="block text-xs font-medium text-neutral-800">
-              Final Playbook text
-              <textarea
-                v-model="drafts[s.id].finalText"
-                rows="5"
-                :disabled="!editingEnabled"
-                class="mt-1 w-full rounded border border-neutral-300 p-2 text-sm disabled:bg-neutral-50"
-                placeholder="The polished version that should read like part of the final Playbook."
-                @input="markDirty(s)"
-              />
-            </label>
-            <p class="mt-1 text-xs text-neutral-500">
-              This is the polished version that should read like part of the
-              final Brand &amp; Operations Playbook.
-            </p>
-          </div>
+        </details>
 
-          <div class="flex flex-wrap items-center justify-between gap-2">
-            <label
-              v-if="editingEnabled"
-              class="text-xs text-neutral-700"
-            >
-              Mark this section
-              <select
-                v-model="drafts[s.id].status"
-                class="ml-1 rounded border border-neutral-300 p-1 text-xs"
-                @change="markDirty(s)"
+        <!-- DRAFT — working draft + final Playbook text + save. -->
+        <details open class="rounded-md border border-sky-200 bg-sky-50/30">
+          <summary class="cursor-pointer select-none p-3">
+            <span class="text-xs font-semibold uppercase tracking-wide text-sky-800">
+              Draft
+            </span>
+            <span class="ml-1 text-xs text-neutral-700">
+              — turn your team's thinking into Playbook text. Save when ready.
+            </span>
+          </summary>
+          <div class="space-y-3 border-t border-sky-200 p-3">
+            <div>
+              <label class="block text-xs font-medium text-neutral-800">
+                Working draft
+                <textarea
+                  v-model="drafts[s.id].draftText"
+                  rows="4"
+                  :disabled="!editingEnabled"
+                  class="mt-1 w-full rounded border border-neutral-300 p-2 text-sm disabled:bg-neutral-50"
+                  placeholder="e.g. House Phoenix beanies are priced for the Civic Premium Buyer at TechTown. Vendor cost is $X; we sell at $Y."
+                  @input="markDirty(s)"
+                />
+              </label>
+              <p class="mt-1 text-xs text-neutral-500">
+                Write 3–5 sentences. It does not need to be perfect — your team
+                can polish later.
+              </p>
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-neutral-800">
+                Final Playbook text
+                <textarea
+                  v-model="drafts[s.id].finalText"
+                  rows="5"
+                  :disabled="!editingEnabled"
+                  class="mt-1 w-full rounded border border-neutral-300 p-2 text-sm disabled:bg-neutral-50"
+                  placeholder="The polished version another team could use next semester."
+                  @input="markDirty(s)"
+                />
+              </label>
+              <p class="mt-1 text-xs text-neutral-500">
+                This is the version that can be published. Polish it so another
+                cohort could use it next semester.
+              </p>
+            </div>
+
+            <div class="flex flex-wrap items-center justify-between gap-2">
+              <label
+                v-if="editingEnabled"
+                class="text-xs text-neutral-700"
               >
-                <option value="empty">Not started</option>
-                <option value="in_progress">In progress</option>
-                <option value="ready">Ready for review</option>
-              </select>
-            </label>
-            <button
-              v-if="editingEnabled"
-              class="btn-primary text-xs"
-              :disabled="savingSectionId === s.id || !hasChanges(s)"
-              @click="save(s)"
-            >
-              {{ savingSectionId === s.id ? 'Saving…' : 'Save section' }}
-            </button>
+                Mark this section
+                <select
+                  v-model="drafts[s.id].status"
+                  class="ml-1 rounded border border-neutral-300 p-1 text-xs"
+                  @change="markDirty(s)"
+                >
+                  <option value="empty">Not started</option>
+                  <option value="in_progress">In progress</option>
+                  <option value="ready">Ready for review</option>
+                </select>
+              </label>
+              <button
+                v-if="editingEnabled"
+                class="btn-primary text-xs"
+                :disabled="savingSectionId === s.id || !hasChanges(s)"
+                @click="save(s)"
+              >
+                {{ savingSectionId === s.id ? 'Saving…' : 'Save section' }}
+              </button>
+            </div>
+            <p v-if="sectionError[s.id]" class="text-xs text-rose-600">
+              {{ sectionError[s.id] }}
+            </p>
           </div>
-          <p v-if="sectionError[s.id]" class="text-xs text-rose-600">
-            {{ sectionError[s.id] }}
-          </p>
-        </div>
+        </details>
+
+        <!-- DEFEND — sources, structured evidence, builders, AI critique.
+             Default-collapsed unless the section already has data or
+             is on a high-rigor / market-evidence chapter (Ch 7 / 8 /
+             10 / 11). The wrapper closes near the bottom of the
+             section card, just before the closing </li>. -->
+        <details
+          :open="shouldOpenDefend(s)"
+          class="rounded-md border border-amber-200 bg-amber-50/30"
+        >
+          <summary class="cursor-pointer select-none p-3">
+            <span class="text-xs font-semibold uppercase tracking-wide text-amber-800">
+              Defend
+            </span>
+            <span class="ml-1 text-xs text-neutral-700">
+              — sources, evidence, builder tools, and the calculations behind your claims.
+            </span>
+          </summary>
+          <div class="space-y-3 border-t border-amber-200 p-3">
 
         <!-- Evidence links per section. Manual links only — no Drive API. -->
         <section class="space-y-2 rounded-md border border-neutral-200 bg-neutral-50 p-2">
           <header class="flex items-baseline justify-between">
-            <h4 class="text-xs font-medium text-neutral-800">Evidence links</h4>
+            <h4 class="text-xs font-medium text-neutral-800">Sources and proof</h4>
             <span class="text-xs text-neutral-500">
               {{ persistedSection(s)?.evidenceLinks?.length ?? 0 }} linked
             </span>
@@ -2647,6 +2782,8 @@ watch(
           v-if="shouldShowAiCritique(s)"
           :request="buildAiRequest(s)"
         />
+          </div>
+        </details>
       </li>
     </ol>
 
