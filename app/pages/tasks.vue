@@ -5,6 +5,7 @@ import { useDeliverables } from '~/composables/useDeliverables'
 import { useTasks } from '~/composables/useTasks'
 import type { Task, TaskStatus } from '~/types/models'
 import { taskStatusLabel } from '~/utils/taskStatus'
+import { deepLinkForTask } from '~/utils/requirementToSection'
 
 const auth = useAuthStore()
 const tasks = useTasks()
@@ -67,11 +68,24 @@ const deliverableLabelById = computed(() => {
 })
 
 function deliverableLinkLabel(t: Task) {
-  if (t.deliverableId && deliverableLabelById.value.has(t.deliverableId)) {
-    return deliverableLabelById.value.get(t.deliverableId)!
-  }
-  if (t.playbookChapter != null) return `Ch ${t.playbookChapter} · open deliverable`
-  return 'Open deliverable'
+  const base =
+    t.deliverableId && deliverableLabelById.value.has(t.deliverableId)
+      ? deliverableLabelById.value.get(t.deliverableId)!
+      : t.playbookChapter != null
+        ? `Ch ${t.playbookChapter} · open chapter`
+        : 'Open chapter'
+  // Append a small cue when the deep link will land the student
+  // directly in their writing surface, so they can tell the difference
+  // from a chapter-overview link at a glance.
+  return t.requirementId ? `${base} → start writing` : base
+}
+
+// Resolve the right deep link for a task. Prefers the section
+// workspace when the task carries a requirementId we can map to a
+// section in the studio; otherwise falls back to the chapter
+// overview, which is what the row was always doing before.
+function taskHref(t: Task): string {
+  return deepLinkForTask(t) ?? '/tasks'
 }
 
 // --- per-row state for inline block dialog ---
@@ -196,7 +210,7 @@ async function reopen(t: Task) {
             </p>
             <NuxtLink
               v-if="t.deliverableId"
-              :to="`/deliverables/${t.deliverableId}`"
+              :to="taskHref(t)"
               class="text-xs text-phoenix-700 hover:underline"
             >
               ↳ {{ deliverableLinkLabel(t) }}

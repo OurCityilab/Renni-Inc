@@ -8,21 +8,44 @@ const auth = useAuthStore()
 // first, then Support tools, then any role-specific Admin links. The
 // dedicated "My Department" link was removed because Workbench surfaces
 // the user's team for non-admins and /departments lists every team.
+//
+// Sprint 1A nav gating: Workbench is a planner / chief operator surface
+// (it self-redirects regular members to /tasks for status updates), so
+// we hide the nav entry for plain members. Chiefs, Co-CEOs, COO, and
+// Admin still see it. The route itself is unchanged — only nav
+// visibility — so deep links continue to work for anyone authorized.
 type NavItem = { to: string; label: string; hint?: string }
 type NavGroup = { label: string; items: NavItem[] }
 
+const canSeeWorkbench = computed<boolean>(
+  () =>
+    auth.isAdmin ||
+    auth.isCoCEO ||
+    auth.isChief ||
+    auth.profile?.role === 'coo'
+)
+
 const navGroups = computed<NavGroup[]>(() => {
+  const workItems: NavItem[] = [
+    { to: '/', label: 'Home', hint: 'Start Your Day path + your tasks + signals' },
+    { to: '/tasks', label: 'Tasks', hint: 'Your individual assignments' }
+  ]
+  if (canSeeWorkbench.value) {
+    workItems.push({
+      to: '/workbench',
+      label: 'Workbench',
+      hint: 'Role-aware work board (blockers, due dates)'
+    })
+  }
+  workItems.push(
+    { to: '/deliverables', label: 'Deliverables', hint: 'All Playbook chapters and their status' },
+    { to: '/departments', label: 'Departments', hint: 'Per-team views with chief advisor cards' },
+    { to: '/playbook', label: 'Playbook', hint: 'Chapter-level approval rollup' }
+  )
   const groups: NavGroup[] = [
     {
       label: 'Work',
-      items: [
-        { to: '/', label: 'Home', hint: 'Start Your Day path + your tasks + signals' },
-        { to: '/tasks', label: 'Tasks', hint: 'Your individual assignments' },
-        { to: '/workbench', label: 'Workbench', hint: 'Role-aware work board (blockers, due dates)' },
-        { to: '/deliverables', label: 'Deliverables', hint: 'All Playbook chapters and their status' },
-        { to: '/departments', label: 'Departments', hint: 'Per-team views with chief advisor cards' },
-        { to: '/playbook', label: 'Playbook', hint: 'Chapter-level approval rollup' }
-      ]
+      items: workItems
     },
     {
       label: 'Support',

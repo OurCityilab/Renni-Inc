@@ -135,7 +135,9 @@ async function returnRevision() {
           <li v-for="label in missingRequiredLabels" :key="label">{{ label }}</li>
         </ul>
         <p class="text-amber-800/80">
-          Tasks created from the requirement cards count automatically.
+          Use the Required checks section above to assign them, or ask
+          your chief if you do not have permission. Tasks created from
+          the Required checks panel count automatically.
         </p>
       </div>
 

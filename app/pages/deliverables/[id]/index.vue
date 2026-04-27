@@ -135,10 +135,19 @@ const submitBlocked = computed(() => {
 })
 const submitBlockReason = computed(() => {
   if (isCheckingRequirementCoverage.value) {
-    return 'Checking required task coverage…'
+    return 'Checking what is still needed before this is ready for review…'
   }
   if (!submitBlocked.value) return ''
-  return 'Before you submit, create at least one task for each required Template Studio requirement.'
+  // Plain-language headline. The bulleted list of missing labels and
+  // the trailing helper text live in ApprovalActions so the message
+  // reads like a single block in the UI:
+  //   "Almost ready. The chief reviewer is waiting on at least one
+  //    task for these required checks:
+  //      • <label>
+  //      • <label>
+  //    Use the Required checks section above to assign them, or ask
+  //    your chief if you do not have permission."
+  return 'Almost ready. The chief reviewer is waiting on at least one task for these required checks:'
 })
 
 // Reverse-chronological; most recent at top.
