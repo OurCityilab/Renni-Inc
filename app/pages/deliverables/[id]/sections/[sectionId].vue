@@ -23,6 +23,7 @@ import { useAuthStore } from '~/stores/auth'
 import { useDeliverables } from '~/composables/useDeliverables'
 import { getTemplateStudio } from '~/data/templateStudios'
 import DeliverableSectionWorkspace from '~/components/DeliverableSectionWorkspace.vue'
+import { effectiveWhyThisMatters } from '~/utils/sectionGuidance'
 
 const route = useRoute()
 const auth = useAuthStore()
@@ -56,6 +57,17 @@ const sectionIndex = computed(() => {
     (s) => s.id === validSection.value!.id
   )
   return idx >= 0 ? idx + 1 : null
+})
+
+// Guidance Compression Sprint: section-specific why-this-matters.
+// Prefers section.whyThisMatters → derived from section.lesson →
+// chapter-level studio.whyItMatters as last resort. Pure helper from
+// utils/sectionGuidance.ts; keeps the sticky header tight (1–2
+// sentences) instead of repeating the chapter-level paragraph on
+// every section.
+const whyForSection = computed<string>(() => {
+  if (!studio.value || !validSection.value) return ''
+  return effectiveWhyThisMatters(validSection.value, studio.value)
 })
 
 // Reset scroll on section change so deep-linked navigation lands the
@@ -160,11 +172,16 @@ onBeforeRouteLeave(() => {
     <!-- Valid section — render the focused workspace. -->
     <template v-else>
       <!-- Compact sticky header: chapter context + breadcrumb back +
-           why-this-matters connection. The whyItMatters string is
-           studio metadata that ties this section's writing back to
-           one of the three real final outputs (TechTown pop-up,
-           Playbook, Phoenix Nest carry pitch) so a student can see
-           the work going somewhere real before they start typing. -->
+           why-this-matters connection.
+           Guidance Compression Sprint: the why-this-matters callout
+           is now section-specific. effectiveWhyThisMatters prefers
+           section.whyThisMatters → derives from section.lesson →
+           falls back to studio.whyItMatters only when neither
+           section-level field is meaningful. The "Build this section
+           in three steps…" framing was removed because the workspace
+           below already labels Think / Draft / Defend on its own
+           accordions; repeating it here pushed the writing surface
+           below the fold. -->
       <header class="card space-y-1">
         <p class="text-xs uppercase tracking-wide text-neutral-500">
           {{ studio.title }}
@@ -174,17 +191,11 @@ onBeforeRouteLeave(() => {
           {{ validSection.title }}
         </h1>
         <p
-          v-if="studio.whyItMatters"
+          v-if="whyForSection"
           class="rounded-md border border-phoenix-200 bg-phoenix-50/40 p-2 text-xs text-phoenix-900"
         >
           <span class="font-semibold uppercase tracking-wide text-phoenix-700">Why this matters:</span>
-          {{ studio.whyItMatters }}
-        </p>
-        <p class="text-sm text-neutral-600">
-          Build this section in three steps: <strong>Think</strong>,
-          <strong>Draft</strong>, <strong>Defend</strong>. Save returns you to
-          the chapter overview to see how progress and the Playbook preview
-          update.
+          {{ whyForSection }}
         </p>
         <div class="flex flex-wrap items-center gap-2 text-xs">
           <NuxtLink

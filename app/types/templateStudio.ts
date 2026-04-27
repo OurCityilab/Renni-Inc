@@ -25,6 +25,18 @@ export interface TemplateStudioSection {
   studentPrompts: string[]
   requiredInputs?: string[]
   completionCriteria?: string[]
+  // Guidance Compression Sprint additions (both optional, both
+  // additive). Studios that don't set them get a deterministic
+  // fallback derived from `lesson` / `studentPrompts` /
+  // `completionCriteria`, so no studio file needs an update for the
+  // compressed student view to render correctly.
+  //
+  //   - whyThisMatters: 1–2 sentence section-level reason a student
+  //     should care, narrower than the studio-level whyItMatters.
+  //   - actionSummary: one-sentence "What to do" instruction shown
+  //     above the writing surface in the compressed view.
+  whyThisMatters?: string
+  actionSummary?: string
   // Structured Evidence Standard V1 — optional per-section guidance shown
   // next to the structured-evidence editor in the Output Workspace.
   // Authors can leave them blank; the editor falls back to generic copy.

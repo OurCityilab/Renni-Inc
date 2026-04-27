@@ -56,6 +56,7 @@ import {
   isHighRigorChapter,
   type SectionMismatchWarning
 } from '~/utils/sectionMismatch'
+import { effectiveActionSummary } from '~/utils/sectionGuidance'
 import {
   buildBrandFitSnapshot,
   type BrandFitSnapshot
@@ -491,6 +492,26 @@ function setSectionStatus(
 
 function toggleStuckPanel(s: TemplateStudioSection) {
   stuckPanelOpen.value[s.id] = !stuckPanelOpen.value[s.id]
+}
+
+// --- Guidance Compression Sprint: viewer role + action summary ----
+// Regular members default to the compressed view (writing surface
+// first, full curriculum guide collapsed). Leaders (admin / Co-CEO /
+// chief / COO) keep the full guide open by default so they can
+// review what students are seeing. Both audiences see HelpMeUnderstand
+// and the "What to do" microcopy — the only difference is whether
+// the deeper SectionGuidanceSummary / ExpertGuidanceCard /
+// PlaybookWritingScaffold cards are open by default.
+const viewerIsLeader = computed<boolean>(
+  () =>
+    auth.isAdmin ||
+    auth.isCoCEO ||
+    auth.isChief ||
+    auth.profile?.role === 'coo'
+)
+
+function actionSummaryFor(s: TemplateStudioSection): string {
+  return effectiveActionSummary(s)
 }
 
 // --- Independent Student Mode: section warnings -------------------
@@ -1893,7 +1914,16 @@ function shouldOpenDefend(s: TemplateStudioSection): boolean {
         :id="`output-section-${s.id}`"
         class="card space-y-3 scroll-mt-4"
       >
-        <header class="space-y-0.5">
+        <!-- Guidance Compression Sprint: in section-filter mode the
+             page-level sticky header above already shows the section
+             title, the chapter context, and the why-this-matters
+             callout. Repeating the section title inside the workspace
+             card pushed the writing surface below the fold on a
+             1366x768 laptop. We keep the "Last saved" line because
+             it's per-section freshness state the sticky header can't
+             show. In chapter mode the header still renders fully
+             since the page only displays the chapter overview. -->
+        <header v-if="!sectionMode" class="space-y-0.5">
           <p class="text-xs uppercase tracking-wide text-neutral-500">
             Section {{ originalSectionIndex(s.id) }}
           </p>
@@ -1908,6 +1938,15 @@ function shouldOpenDefend(s: TemplateStudioSection): boolean {
             </span>
           </p>
         </header>
+        <p
+          v-else-if="persistedSection(s)?.updatedAt"
+          class="text-xs text-neutral-500"
+        >
+          Last saved {{ fmtWhen(persistedSection(s)!.updatedAt) }}
+          <span v-if="persistedSection(s)?.updatedByEmail">
+            · {{ persistedSection(s)!.updatedByEmail }}
+          </span>
+        </p>
 
         <!-- Sprint 2: Think / Draft / Defend phasing.
              Display-only reorganization. None of the underlying save
@@ -1947,6 +1986,21 @@ function shouldOpenDefend(s: TemplateStudioSection): boolean {
           >Defend {{ isDefendStarted(s) ? '✓' : '—' }}</li>
         </ul>
 
+        <!-- Guidance Compression Sprint: section-level "What to do"
+             microcopy. One sentence, derived deterministically from
+             section.actionSummary → studentPrompts[0] → completionCriteria[0]
+             → generic fallback (utils/sectionGuidance.ts). Renders
+             above HelpMeUnderstand so a student who skips the help
+             panel still sees a concrete one-line instruction before
+             the writing surface. Curriculum-only; no Firestore reads,
+             no AI, no save path. -->
+        <p
+          class="rounded-md border border-sky-200 bg-sky-50/60 p-2 text-xs text-sky-900"
+        >
+          <span class="font-semibold uppercase tracking-wide text-sky-700">What to do:</span>
+          {{ actionSummaryFor(s) }}
+        </p>
+
         <!-- Independent Student Mode: Help me understand this.
              Deterministic Q&A panel built from existing curriculum
              metadata. No AI, no Firestore, no save path. Sits above
@@ -1985,7 +2039,17 @@ function shouldOpenDefend(s: TemplateStudioSection): boolean {
           </li>
         </ul>
 
-        <!-- THINK — guidance + your team's thinking (rough notes). -->
+        <!-- THINK — your team's thinking (rough notes) + a single
+             collapsible "Show full section guide" disclosure.
+             Guidance Compression Sprint: the writing surface comes
+             FIRST so a student opening the section reaches the
+             textarea without scrolling past three guidance cards.
+             The full guide (SectionGuidanceSummary + ExpertGuidanceCard
+             + PlaybookWritingScaffold) sits behind a single
+             `<details>` that defaults open for leaders (admin /
+             Co-CEO / chief / COO) and collapsed for regular members.
+             No component is removed; no save path or guidance
+             content is changed; only the default-visibility tier. -->
         <details open class="rounded-md border border-emerald-200 bg-emerald-50/30">
           <summary class="cursor-pointer select-none p-3">
             <span class="text-xs font-semibold uppercase tracking-wide text-emerald-800">
@@ -1996,21 +2060,6 @@ function shouldOpenDefend(s: TemplateStudioSection): boolean {
             </span>
           </summary>
           <div class="space-y-3 border-t border-emerald-200 p-3">
-            <SectionGuidanceSummary
-              :section="s"
-              :section-index="originalSectionIndex(s.id)"
-            />
-
-            <ExpertGuidanceCard
-              :section="s"
-              :section-index="originalSectionIndex(s.id)"
-            />
-
-            <PlaybookWritingScaffold
-              :deliverable-id="deliverable.id"
-              :section="s"
-            />
-
             <div>
               <label class="block text-xs font-medium text-neutral-800">
                 Your team's thinking
@@ -2028,6 +2077,44 @@ function shouldOpenDefend(s: TemplateStudioSection): boolean {
                 found. Write what you know — it does not need to be polished.
               </p>
             </div>
+
+            <!-- Full section guide. Open by default for leaders so
+                 chiefs / Co-CEOs / COO / admin can see what students
+                 are reading. Collapsed by default for regular members
+                 so the writing surface stays above the fold. Once
+                 open, the inner cards (SectionGuidanceSummary,
+                 ExpertGuidanceCard, PlaybookWritingScaffold) render
+                 with their existing content unchanged — sentence
+                 starters, evidence guidance, AI coach prompt copy
+                 block, "before finalizing" checklist all remain
+                 reachable in one click. -->
+            <details
+              :open="viewerIsLeader"
+              class="rounded-md border border-emerald-200 bg-white"
+            >
+              <summary class="cursor-pointer p-2 text-xs font-medium text-emerald-900">
+                Show full section guide
+                <span class="ml-1 font-normal text-neutral-600">
+                  — section guide, expert guidance, sentence starters, AI coach prompt
+                </span>
+              </summary>
+              <div class="space-y-3 border-t border-emerald-100 p-2">
+                <SectionGuidanceSummary
+                  :section="s"
+                  :section-index="originalSectionIndex(s.id)"
+                />
+
+                <ExpertGuidanceCard
+                  :section="s"
+                  :section-index="originalSectionIndex(s.id)"
+                />
+
+                <PlaybookWritingScaffold
+                  :deliverable-id="deliverable.id"
+                  :section="s"
+                />
+              </div>
+            </details>
           </div>
         </details>
 
