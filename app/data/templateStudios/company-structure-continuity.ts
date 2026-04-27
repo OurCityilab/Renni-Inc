@@ -26,7 +26,25 @@ export const companyStructureContinuity: TemplateStudio = {
       completionCriteria: [
         'Every C-Suite role is listed with a current student.',
         'Each role has a one-line scope description.'
-      ]
+      ],
+      expertGuidance: {
+        expertRole: 'COO / org-design operator',
+        whyThisMatters:
+          'A reviewer or next-cohort student should be able to read this once and know who to email about pricing, packaging, social, or research. If they cannot, the team becomes a bottleneck.',
+        whatToGather: [
+          'Every C-Suite role + current student name (Co-CEOs, COO, CFO, CMO, CSGO).',
+          'A one-line "owns this" scope per role.',
+          'Advisors and instructor and what each helps with.'
+        ],
+        weakAnswerLooksLike: '"We have a CMO and a CFO and a COO and we work together." — no scope, no names.',
+        strongAnswerLooksLike: 'Each role with a named student and a single sentence scope a stranger can route to.',
+        expertPushback: ['If pricing is wrong tomorrow, who fixes it?', 'If a vendor calls, who answers?'],
+        commonMistakes: ['Listing roles without owners.', 'Letting two roles claim the same scope.'],
+        decisionSupported: 'Day-to-day routing of decisions and questions.',
+        connectsTo: ['Chapter 1 — executive summary', 'Chapter 13 — decision log'],
+        ownerHint: 'Co-CEOs',
+        doneLooksLike: 'A new student could route any inbound question to a specific person without asking.'
+      }
     },
     {
       id: 'decision-rights',
@@ -43,7 +61,25 @@ export const companyStructureContinuity: TemplateStudio = {
       completionCriteria: [
         'Each role has 3–5 solo decisions named.',
         'Cross-role and Co-CEO escalation paths are explicit.'
-      ]
+      ],
+      expertGuidance: {
+        expertRole: 'COO / org-design operator',
+        whyThisMatters:
+          'Decision rights answer "what can I decide alone, what needs a chief, and what needs Co-CEOs?" Without them, every call becomes a meeting and the team slows down before launch.',
+        whatToGather: [
+          'For each role, 3–5 decisions made alone.',
+          '1–2 decisions that always require a Co-CEO sign-off.',
+          '1–2 decisions that require chief consultation across departments.'
+        ],
+        weakAnswerLooksLike: '"We talk things over and decide together." — no rights, no shortcuts.',
+        strongAnswerLooksLike: '"CFO decides /pricing changes under 20%; Co-CEOs approve above 20%; CMO sets pop-up signage but consults CSGO when buyer claims change."',
+        expertPushback: ['What is the most expensive decision a chief can make alone?', 'Have any meetings happened recently that should have been a chief decision?'],
+        commonMistakes: ['Vague verbs like "consult" with no trigger.', 'Routing every interesting decision to Co-CEOs.'],
+        decisionSupported: 'Pace and clarity of operating decisions.',
+        connectsTo: ['Chapter 13 — decision log', 'Chapter 9 — operations readiness'],
+        ownerHint: 'Co-CEOs',
+        doneLooksLike: 'A chief can answer "do I need a Co-CEO for this?" without asking.'
+      }
     },
     {
       id: 'accountability-rhythm',
@@ -58,7 +94,25 @@ export const companyStructureContinuity: TemplateStudio = {
       completionCriteria: [
         'At least three recurring touchpoints are listed with owners.',
         'Path for raising blockers between meetings is documented.'
-      ]
+      ],
+      expertGuidance: {
+        expertRole: 'operations lead',
+        whyThisMatters:
+          'A consistent rhythm catches risks before they become Stops Submit signals. An inconsistent rhythm means risks surface in the last week and the team scrambles.',
+        whatToGather: [
+          'Recurring meetings (weekly stand-up, pre-pop-up review, post-pop-up debrief).',
+          'Owner per meeting + decisions usually made there.',
+          'How blockers / risks get raised between meetings (channel, owner, response time).'
+        ],
+        weakAnswerLooksLike: '"We meet when needed." — no rhythm.',
+        strongAnswerLooksLike: 'A weekly stand-up + pre-pop-up review + post-pop-up debrief, each with owner and decision scope; a clear "raise a risk in this channel" path between meetings.',
+        expertPushback: ['Has the team actually held these meetings in the last two weeks?', 'Where do silent blockers go to die?'],
+        commonMistakes: ['Documenting meetings the team does not actually run.', 'Not naming a channel for off-meeting risk surfacing.'],
+        decisionSupported: 'Whether risks reach chiefs in time to fix them.',
+        connectsTo: ['/timeline backplan', 'C-Suite Advisor cockpit'],
+        ownerHint: 'COO',
+        doneLooksLike: 'The next cohort could open the calendar and join the rhythm without re-inventing it.'
+      }
     },
     {
       id: 'succession-and-handoff',
@@ -75,7 +129,25 @@ export const companyStructureContinuity: TemplateStudio = {
         'Every C-Suite role has a named backup or shadow.',
         'Handoff package contents are listed with owners.',
         'A handoff lock date is named.'
-      ]
+      ],
+      expertGuidance: {
+        expertRole: 'continuity operator (preparing next cohort)',
+        whyThisMatters:
+          'Most school companies die at the handoff. A backup per role + a documented handoff package is the difference between Renni Inc. surviving August and starting from scratch.',
+        whatToGather: [
+          'Named backup or shadow per C-Suite role.',
+          'Handoff package contents (roster, decision log, vendor list, asset folder, KPI snapshot, /pricing).',
+          'A locked handoff date so the package becomes real, not aspirational.'
+        ],
+        weakAnswerLooksLike: '"We will hand things off in August." — no contents, no backups, no date.',
+        strongAnswerLooksLike: 'Each role has a shadow named; the handoff package contents are listed with owners; a specific date is locked (e.g., "Aug 15 handoff package locked, Aug 25 next cohort kickoff").',
+        expertPushback: ['If a chief leaves in May, who runs that desk on day one?', 'Is the handoff package something the next cohort could open without you in the room?'],
+        commonMistakes: ['Treating handoff as a soft topic instead of a deliverable.', 'No backup for the COO or CFO desk.'],
+        decisionSupported: 'Whether Renni Inc. continues across cohorts.',
+        connectsTo: ['Chapter 12 — strategy / next-semester recommendations', 'Chapter 13 — decision log'],
+        ownerHint: 'Co-CEOs · Instructor/Admin support',
+        doneLooksLike: 'Next cohort week one is described in writing and a backup is named for every chief seat.'
+      }
     },
     {
       id: 'recognition-and-credit',
@@ -90,7 +162,25 @@ export const companyStructureContinuity: TemplateStudio = {
       completionCriteria: [
         'Recognition rules cover Playbook, pop-up, and outside-school surfaces.',
         'Rules apply consistently across departments.'
-      ]
+      ],
+      expertGuidance: {
+        expertRole: 'culture / org operator',
+        whyThisMatters:
+          'Recognition is the cheapest retention tool a student company has. Rules — not vibes — make recognition consistent across departments and across cohorts.',
+        whatToGather: [
+          'Recognition in the Playbook (signed sections, contributor list, role attribution).',
+          'Recognition at the pop-up (intro at the table, signage credits).',
+          'Recognition outside school (résumé / college language, LinkedIn-style summaries).'
+        ],
+        weakAnswerLooksLike: '"We thank everyone in the end." — no surfaces, no rules.',
+        strongAnswerLooksLike: 'Three explicit rules: who signs what in the Playbook, how the team is credited at the pop-up, what wording students can use on a résumé.',
+        expertPushback: ['Would the next cohort apply these rules without you?', 'Have any contributions slipped through the cracks this cohort?'],
+        commonMistakes: ['Rules that depend on someone remembering.', 'Different rules per department.'],
+        decisionSupported: 'Whether contribution is consistently visible.',
+        connectsTo: ['Chapter 13 — decision log'],
+        ownerHint: 'Co-CEOs',
+        doneLooksLike: 'A reader can predict who gets credited where without re-asking.'
+      }
     },
     {
       id: 'continuity-risks',
@@ -105,7 +195,25 @@ export const companyStructureContinuity: TemplateStudio = {
       completionCriteria: [
         'Two or three continuity risks are named with mitigations.',
         'Unmitigated risks are flagged so the next cohort sees them.'
-      ]
+      ],
+      expertGuidance: {
+        expertRole: 'continuity operator',
+        whyThisMatters:
+          'Knowledge dies between cohorts more often than people leave. Naming the risks honestly tells the next cohort what they\'re inheriting and what they need to fix first.',
+        whatToGather: [
+          '2–3 specific continuity risks (vendor relationship in one inbox, tracker nobody renews, undocumented decision).',
+          'A mitigation per risk (or a flag that it is unmitigated today).',
+          'Concrete trail markers — vendor name, tracker URL, decision date.'
+        ],
+        weakAnswerLooksLike: '"We need to document things better." — no specifics.',
+        strongAnswerLooksLike: 'Each risk names a system / vendor / decision, says where the knowledge lives, and proposes a one-line fix.',
+        expertPushback: ['What dies if the COO graduates without warning?', 'Is any vendor relationship in one student\'s phone?'],
+        commonMistakes: ['Listing soft risks (motivation, energy) and skipping system risks.', 'Hiding unmitigated risks to look done.'],
+        decisionSupported: 'What the next cohort fixes in week one.',
+        connectsTo: ['Chapter 12 — strategy / next-semester recommendations'],
+        ownerHint: 'Co-CEOs · COO support',
+        doneLooksLike: 'A reader can list 2–3 specific things that would break if a chief left tomorrow.'
+      }
     },
     {
       id: 'next-cohort-playbook',
@@ -121,7 +229,26 @@ export const companyStructureContinuity: TemplateStudio = {
       completionCriteria: [
         'A 30-day plan is written with at least four named milestones.',
         'A reader can act on it without asking for clarification.'
-      ]
+      ],
+      expertGuidance: {
+        expertRole: 'continuity operator (preparing next cohort)',
+        whyThisMatters:
+          'A first-30-days plan is the most useful page in the Playbook for the next cohort. Without it, they spend September figuring out what August already knew.',
+        whatToGather: [
+          'Day 1 — which Playbook chapters they read first.',
+          'Week 1 — chiefs and advisors they meet.',
+          'Week 2 — trackers they open (Workbench, /pricing, /revenue, C-Suite Advisor).',
+          'Week 4 — decisions to ratify or reopen.'
+        ],
+        weakAnswerLooksLike: '"Read everything and meet the team." — not actionable.',
+        strongAnswerLooksLike: 'A short numbered timeline with named chapters / chiefs / trackers / decisions per week.',
+        expertPushback: ['Could a brand-new student execute week one without you?', 'Which decisions need ratification on day 30 because they were soft this cohort?'],
+        commonMistakes: ['Vague onboarding language.', 'Skipping decision ratification.'],
+        decisionSupported: 'How quickly the next cohort gets productive.',
+        connectsTo: ['Chapter 12 — strategy / next-semester recommendations', 'Chapter 13 — decision log'],
+        ownerHint: 'Co-CEOs',
+        doneLooksLike: 'Next cohort has 4 weeks of named, executable activities they could follow without you in the room.'
+      }
     }
   ],
   requirements: [

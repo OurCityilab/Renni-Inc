@@ -67,6 +67,53 @@ export interface TemplateStudioSection {
     enabled: boolean
     guidance?: string
   }
+  // Expert Chapter Guidance (Sprint — Expert Guidance). Optional
+  // additive metadata that lifts a section from "static template"
+  // to "guided by a field expert." Curriculum content only — no
+  // Firestore impact, no submit gate, no Playbook readiness change.
+  // Renders via ExpertGuidanceCard inside the section workspace
+  // alongside the existing SectionGuidanceSummary.
+  expertGuidance?: ExpertGuidance
+}
+
+export interface ExpertGuidance {
+  // Who would normally critique this section in a real company.
+  // Pure copy ("retail operator", "CFO", "brand strategist"); no
+  // role enum so studios stay flexible.
+  expertRole?: string
+  // Plain-English why-this-matters paragraph from the expert's
+  // perspective. Different from section.lesson — that explains
+  // what to do; this explains why a real company would care.
+  whyThisMatters?: string
+  // Concrete inputs / facts a student should collect before they
+  // can write a strong answer.
+  whatToGather?: string[]
+  // Where to look for those inputs (existing app surfaces, vendor
+  // docs, real-world sources). Avoids "go research" hand-waving.
+  whereToFindIt?: string[]
+  // What a generic / shallow answer would look like.
+  weakAnswerLooksLike?: string
+  // What a defensible / strong answer would prove.
+  strongAnswerLooksLike?: string
+  // 1–4 questions an expert would ask if the team handed this
+  // section to them today.
+  expertPushback?: string[]
+  // Mistakes the curriculum has seen across cohorts.
+  commonMistakes?: string[]
+  // The downstream decision this section actually supports.
+  decisionSupported?: string
+  // Other chapters / surfaces this section feeds.
+  connectsTo?: string[]
+  // Free-form hint about which chief should drive the work.
+  // Display-only; never overrides ownership semantics elsewhere.
+  ownerHint?: string
+  // What the section reads like when it is genuinely complete —
+  // not just submit-eligible.
+  doneLooksLike?: string
+  // Optional copy-only LLM prompt students can paste into Claude /
+  // ChatGPT. Renni Command Center never sends this anywhere.
+  // When omitted the card auto-builds one from the other fields.
+  aiCoachPrompt?: string
 }
 
 export interface TemplateStudioRequirement {

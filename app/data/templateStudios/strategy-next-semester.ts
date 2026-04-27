@@ -26,7 +26,25 @@ export const strategyNextSemester: TemplateStudio = {
       completionCriteria: [
         'Lessons are concrete and traceable to a moment.',
         'A reader can act on each lesson, not just nod at it.'
-      ]
+      ],
+      expertGuidance: {
+        expertRole: 'operator preparing the next cohort',
+        whyThisMatters:
+          'Most "lessons learned" pages are forgotten because they read as essays. Lessons tied to a specific moment + a "confirmed / broke an assumption" tag turn into operating muscle the next cohort actually uses.',
+        whatToGather: [
+          '5–7 lessons tied to a specific moment, decision, or vendor interaction.',
+          'Per lesson: did this confirm an assumption (so we keep doing X) or break one (so we change X)?',
+          'For each lesson, the chief who would inherit it.'
+        ],
+        weakAnswerLooksLike: '"We learned to communicate better." — generic, no moment, no action.',
+        strongAnswerLooksLike: '"April 19 vendor quote arrived 3 days late and caught us with no buffer — broke our assumption that vendors confirm same-week. Action: 1-week buffer in next cohort\'s timeline. Owner: COO."',
+        expertPushback: ['Could a stranger read this and act on it?', 'Have you confused observations with lessons?'],
+        commonMistakes: ['Generic life-lesson language.', 'Missing the "confirmed / broke" tag.'],
+        decisionSupported: 'What the next cohort changes vs what they keep.',
+        connectsTo: ['Chapter 13 — decision log', 'Chapter 3 — continuity'],
+        ownerHint: 'Chief Strategy and Growth Officer · Co-CEO sign-off',
+        doneLooksLike: 'Each lesson has a moment, a tag, and a chief.'
+      }
     },
     {
       id: 'customer-and-sales-insights',
@@ -47,7 +65,26 @@ export const strategyNextSemester: TemplateStudio = {
       sourceGuidance: [
         'Pull numbers from /revenue and the post-event recap; do not invent figures.',
         'If an insight is one cohort\'s opinion, label it as such with confidence.'
-      ]
+      ],
+      expertGuidance: {
+        expertRole: 'Chief Strategy and Growth Officer / customer researcher',
+        whyThisMatters:
+          'Real customer + sales data is the most defensible thing the team has post-launch. Insights without it become opinion. The next cohort needs honest signal, not a victory lap.',
+        whatToGather: [
+          'Customer-conversation observations from the table (what surprised the team).',
+          'Sales-by-SKU data from /revenue (what sold faster / slower than expected).',
+          'Donation patterns (separate from product sales).',
+          '3–5 insights with structured-evidence backing.'
+        ],
+        weakAnswerLooksLike: '"Beanies sold well." — no number, no comparison.',
+        strongAnswerLooksLike: '"Beanies sold 28 units (90% of base scenario) by 1pm vs. t-shirts at 12 (60% of base). Insight: at $25, beanies hit a price-elasticity sweet spot for the Civic Premium Buyer segment. Confidence: medium (one cohort)."',
+        expertPushback: ['What did customers say that contradicted what the team expected?', 'Are insights tied to /revenue or to memory?'],
+        commonMistakes: ['Insights stated as facts without confidence.', 'Skipping donation patterns because they\'re smaller.'],
+        decisionSupported: 'Which next-semester product / pricing / campaign decisions are evidence-backed.',
+        connectsTo: ['Chapter 7 — segment composer', 'Chapter 8 — pricing strategy', '/revenue'],
+        ownerHint: 'Chief Strategy and Growth Officer',
+        doneLooksLike: '3–5 insights, each tied to a number or quote, each with confidence and an implication.'
+      }
     },
     {
       id: 'operational-lessons',
@@ -62,7 +99,26 @@ export const strategyNextSemester: TemplateStudio = {
       completionCriteria: [
         'At least three operational lessons named with concrete recommendations.',
         'Recommendations are specific enough to act on without re-debating.'
-      ]
+      ],
+      expertGuidance: {
+        expertRole: 'COO',
+        whyThisMatters:
+          'Operations is where launches succeed or fail. The next cohort cares less about strategy and more about which SOPs to keep, change, or cut.',
+        whatToGather: [
+          'SOPs that held up under pop-up pressure (keep).',
+          'SOPs that broke (change, with a specific recommendation).',
+          'Day-of operational surprises (the ones nobody planned for).',
+          'Top 3 changes the next cohort should make first.'
+        ],
+        weakAnswerLooksLike: '"Operations went mostly fine." — no detail.',
+        strongAnswerLooksLike: '"Cash reconciliation took 35 minutes — change to dual-counter SOP next cohort. Square offline for 8 minutes at 11:15 — keep paper backup ready. Bake-list timing held."',
+        expertPushback: ['What broke that nobody predicted?', 'Which SOP would the team copy as-is for the next pop-up?'],
+        commonMistakes: ['Praise ops generally without specifics.', 'Missing the surprises (the most useful lessons).'],
+        decisionSupported: 'What ops the next cohort inherits vs. rewrites.',
+        connectsTo: ['Chapter 9 — operations readiness'],
+        ownerHint: 'COO',
+        doneLooksLike: '3+ operational lessons, each with a concrete next-cohort change.'
+      }
     },
     {
       id: 'brand-and-product-priorities',
@@ -78,7 +134,25 @@ export const strategyNextSemester: TemplateStudio = {
       completionCriteria: [
         'Every current product has a keep / change / retire recommendation.',
         'Each brand (House Phoenix + supporting) has a priority direction.'
-      ]
+      ],
+      expertGuidance: {
+        expertRole: 'merchandising / brand portfolio operator',
+        whyThisMatters:
+          'The next cohort will rebuild the lineup from scratch unless this section explicitly says "keep this, change this, retire this." That rebuild costs them a month.',
+        whatToGather: [
+          'For each current SKU: keep, change (redesign / repackage / reprice), or retire.',
+          'For each brand (House Phoenix + supporting): a one-line priority direction.',
+          'Evidence: sales data + customer feedback that supports the call.'
+        ],
+        weakAnswerLooksLike: '"Beanies are good, t-shirts could be better." — no decision, no evidence.',
+        strongAnswerLooksLike: '"Beanies KEEP at $25 (sold through). T-shirts CHANGE — redesign neckline before next pop-up (3 customer complaints). Brownies RETIRE — under-sold, food-safety load too high."',
+        expertPushback: ['Are any retire decisions sentimental rather than evidence-backed?', 'Did any product earn its keep beyond first-cohort momentum?'],
+        commonMistakes: ['Vague "improve" language.', 'No retire calls (every product survives).'],
+        decisionSupported: 'Lineup the next cohort starts with.',
+        connectsTo: ['Chapter 7 — current product line', 'Chapter 8 — pricing strategy'],
+        ownerHint: 'CMO · Co-CEO sign-off',
+        doneLooksLike: 'Every product has a verb attached (keep / change / retire) with a one-line reason.'
+      }
     },
     {
       id: 'next-semester-goals',
@@ -94,7 +168,25 @@ export const strategyNextSemester: TemplateStudio = {
       completionCriteria: [
         'Goals are measurable and have owners.',
         'Targets are defended by the data in this chapter.'
-      ]
+      ],
+      expertGuidance: {
+        expertRole: 'strategy operator / Co-CEO',
+        whyThisMatters:
+          'A goal without a metric is a wish. The next cohort needs measurable, owner-tagged goals so they can tell at month two whether they\'re on track.',
+        whatToGather: [
+          '3–5 goals tied to a specific metric (revenue, units sold, segments validated, carry pitches).',
+          'Rough target per goal, defended by this cohort\'s actuals.',
+          'Owner department per goal.'
+        ],
+        weakAnswerLooksLike: '"Grow the brand and sell more." — no metric.',
+        strongAnswerLooksLike: '"Grow gross revenue 25% over this cohort\'s baseline ($X,XXX) — owner CFO. Validate Civic Premium Buyer segment at $100 with 20+ direct customer signals — owner CSGO."',
+        expertPushback: ['Are these targets defensible against this semester\'s data?', 'Are any goals so vague no one could fail at them?'],
+        commonMistakes: ['Aspirational percentages without baseline.', 'Goals with no department owner.'],
+        decisionSupported: 'How the next cohort spends time and prioritizes work.',
+        connectsTo: ['Chapter 1 — executive summary', 'Chapter 13 — decision log'],
+        ownerHint: 'Chief Strategy and Growth Officer · Co-CEO sign-off',
+        doneLooksLike: '3–5 goals, each with metric + target + owner.'
+      }
     },
     {
       id: 'risks-and-open-questions',
@@ -109,7 +201,25 @@ export const strategyNextSemester: TemplateStudio = {
       completionCriteria: [
         'Risks are real and not just rephrased lessons.',
         'Open questions are framed as questions, not declarations.'
-      ]
+      ],
+      expertGuidance: {
+        expertRole: 'CFO / risk operator',
+        whyThisMatters:
+          'Strategy without risks is wishful thinking. The cohorts that survive name the things that could derail them honestly.',
+        whatToGather: [
+          '2–4 strategic risks for next semester (vendor concentration, pricing acceptance, leadership turnover).',
+          'A one-line response option per risk.',
+          '2–4 open questions framed as questions, not declarations.'
+        ],
+        weakAnswerLooksLike: '"We might run out of time again." — soft risk, no response.',
+        strongAnswerLooksLike: '"Risk: vendor X is the only print partner — single point of failure. Response: source 2nd vendor in week 2. Open question: would Phoenix Nest carry pitch survive an alumni-only segment?"',
+        expertPushback: ['Are any of these risks the same as last cohort\'s?', 'Have you confused risks with lessons?'],
+        commonMistakes: ['Restating lessons as risks.', 'Open questions written as statements.'],
+        decisionSupported: 'What the next cohort experiments on early.',
+        connectsTo: ['Chapter 1 — executive summary risks', 'Chapter 13 — decision log'],
+        ownerHint: 'Co-CEOs · CFO support',
+        doneLooksLike: 'Each risk has a response; each open question is a real question.'
+      }
     },
     {
       id: 'recommended-action-plan',
@@ -124,7 +234,26 @@ export const strategyNextSemester: TemplateStudio = {
       completionCriteria: [
         'Action plan is sequenced with owners and rough timing.',
         'Sequencing-critical actions are flagged.'
-      ]
+      ],
+      expertGuidance: {
+        expertRole: 'strategy operator (preparing next cohort)',
+        whyThisMatters:
+          'Closing with a 90-day action plan turns the chapter into a real handoff. Without it, the next cohort gets opinions but no timeline.',
+        whatToGather: [
+          '6–10 actions in sequenced order with rough timing (week 1 / month 1 / month 2 / month 3).',
+          'Owner per action.',
+          'Sequencing-critical flag where order matters (segment work before pricing before campaign).',
+          'Decisions that next cohort still has to make before acting.'
+        ],
+        weakAnswerLooksLike: '"Plan the next pop-up, work on the brand, talk to vendors." — no order, no owners.',
+        strongAnswerLooksLike: 'A sequenced list with rough weeks/months, owner per item, sequencing-critical flags, and explicit "next cohort decides X first" notes.',
+        expertPushback: ['Could the next cohort start week one without you in the room?', 'What order is the team most likely to break?'],
+        commonMistakes: ['Action plans without owners.', 'Skipping the "they have to decide X first" notes.'],
+        decisionSupported: 'How the next cohort sequences the first 90 days.',
+        connectsTo: ['Chapter 3 — company structure & continuity (next-cohort first 30 days)'],
+        ownerHint: 'Chief Strategy and Growth Officer · Co-CEO sign-off',
+        doneLooksLike: 'A sequenced 6–10-step plan a new cohort could execute on day one without you.'
+      }
     }
   ],
   requirements: [

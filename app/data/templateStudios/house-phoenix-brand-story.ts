@@ -28,7 +28,25 @@ export const housePhoenixBrandStory: TemplateStudio = {
       completionCriteria: [
         'Audience is specific enough that a designer could make a choice based on it.',
         'At least one real customer conversation or observation is cited.'
-      ]
+      ],
+      expertGuidance: {
+        expertRole: 'brand strategist + customer researcher',
+        whyThisMatters:
+          'Pricing, design, packaging, signage, and Phoenix Nest carry all start with this answer. "Students and parents" is too vague to drive a design decision.',
+        whatToGather: [
+          '3 specific buyer pictures (a student, a parent, an alumni — actual people, not personas).',
+          'Direct conversation notes — who you talked to, what they said.',
+          'A pointer to the Ch. 7 Segment Composer template that anchors the audience.'
+        ],
+        weakAnswerLooksLike: '"Students at Renaissance and people in Detroit." — too broad to design for.',
+        strongAnswerLooksLike: 'Three named buyer descriptions plus quotes/observation, anchored to a Ch. 7 PRIZM-inspired segment.',
+        expertPushback: ['Could a designer pick a color based on this?', 'Have you talked to 3+ real people who match this audience?'],
+        commonMistakes: ['Naming demographics ("teens") instead of buyers.', 'Skipping evidence and writing the audience from imagination.'],
+        decisionSupported: 'Design, voice, pricing, and channel decisions in this chapter and downstream.',
+        connectsTo: ['Chapter 7 — Segment Composer', 'Chapter 8 — pricing', 'Chapter 10 — campaign'],
+        ownerHint: 'CMO · Chief Strategy and Growth Officer support',
+        doneLooksLike: 'A designer reading this section can make a real choice (color, photo style, packaging tone).'
+      }
     },
     {
       id: 'value-proposition',
@@ -45,7 +63,25 @@ export const housePhoenixBrandStory: TemplateStudio = {
       completionCriteria: [
         'The value proposition reads like a sentence a customer would nod at.',
         'The "not" list keeps the brand honest.'
-      ]
+      ],
+      expertGuidance: {
+        expertRole: 'brand strategist',
+        whyThisMatters:
+          'The value proposition is what every customer should walk away believing. If it sounds like every other student brand, the pop-up will too.',
+        whatToGather: [
+          'A one-sentence promise tied to a real product (Detroit-made apparel, premium fit, school-pride packaging).',
+          'A "what we are not" line that keeps the brand honest (e.g., "not generic school merch", "not fast-fashion").',
+          'Why this segment would believe the promise.'
+        ],
+        weakAnswerLooksLike: '"Quality apparel for everyone who loves Renaissance." — could fit any school.',
+        strongAnswerLooksLike: '"House Phoenix makes Detroit-made student-led apparel that hangs alongside Pure Detroit and Shinola in style and quality." — specific, comparable.',
+        expertPushback: ['Would a Civic Premium Buyer believe this on first read?', 'What is the team deliberately NOT?'],
+        commonMistakes: ['Slogan instead of promise.', 'No "not" list, so the promise tries to be everything.'],
+        decisionSupported: 'Design, packaging, signage, and Phoenix Nest pitch language.',
+        connectsTo: ['Chapter 11 — Phoenix Nest carry pitch', 'Chapter 10 — campaign'],
+        ownerHint: 'CMO',
+        doneLooksLike: 'A buyer or instructor could repeat the promise back; the "not" list reads as honest.'
+      }
     },
     {
       id: 'voice',
@@ -63,6 +99,24 @@ export const housePhoenixBrandStory: TemplateStudio = {
         enabled: true,
         guidance:
           'Use the Brand Fit Builder voice block to argue that tone, vocabulary, and what the brand never says match the customer and the price point.'
+      },
+      expertGuidance: {
+        expertRole: 'brand voice / copywriting strategist',
+        whyThisMatters:
+          'Voice is what stays consistent when different students post on Instagram, write a tag, or pitch a buyer. Without an explicit voice, every channel sounds different and the brand reads as inconsistent.',
+        whatToGather: [
+          '3 voice adjectives the team can defend (confident / warm / direct).',
+          'A "we never sound like" adjective (e.g., never formal, never hype-bro).',
+          'One real Instagram caption rewritten in the chosen voice.'
+        ],
+        weakAnswerLooksLike: '"Friendly and professional." — could describe any brand.',
+        strongAnswerLooksLike: 'Three specific adjectives + an explicit anti-adjective + a worked example caption.',
+        expertPushback: ['Would two students using these adjectives produce similar copy?', 'Is the anti-adjective specific enough to actually constrain anything?'],
+        commonMistakes: ['Generic adjectives.', 'No worked example, so the voice is theory.'],
+        decisionSupported: 'Consistency across signage, social, packaging, and Phoenix Nest pitch language.',
+        connectsTo: ['Chapter 10 — campaign / signage', 'Chapter 11 — Phoenix Nest carry pitch'],
+        ownerHint: 'CMO',
+        doneLooksLike: 'A new student writing for the brand could match voice without coaching.'
       }
     },
     {
@@ -83,6 +137,25 @@ export const housePhoenixBrandStory: TemplateStudio = {
         enabled: true,
         guidance:
           'Use the Brand Fit Builder to argue that color, font, logo, and packaging choices send the same signal as the price point and target customer the team is claiming.'
+      },
+      expertGuidance: {
+        expertRole: 'brand identity designer',
+        whyThisMatters:
+          'Identity is the most public part of the brand. Inconsistency here loses pop-up customers and Phoenix Nest carry buyers — both judge the brand visually before reading any copy.',
+        whatToGather: [
+          'Final wordmark / logo file (linked, not in someone\'s phone).',
+          'Color palette with hex codes.',
+          'Typography picks with usage rules.',
+          'Mockups: garment + sign + package.'
+        ],
+        weakAnswerLooksLike: '"We have a logo and some colors we like." — no link, no rules.',
+        strongAnswerLooksLike: 'Linked asset folder with logo, palette (hex), type system + usage rules; a teammate not in the design meeting could apply correctly.',
+        expertPushback: ['Could a printer deliver this without asking questions?', 'Is the price point legible from the visual identity alone?'],
+        commonMistakes: ['Logo files in chat history.', 'No color hex codes documented.'],
+        decisionSupported: 'Whether design renders consistently across SKUs and signage on May 27.',
+        connectsTo: ['Chapter 9 — operations readiness (production)', 'Chapter 10 — campaign signage'],
+        ownerHint: 'CMO',
+        doneLooksLike: 'A teammate could open the asset folder and produce signage / a mockup without re-asking.'
       }
     }
   ],

@@ -42,6 +42,7 @@ import MarketEvidenceReferencePanel, {
 } from '~/components/MarketEvidenceReferencePanel.vue'
 import MarketEvidenceCritiquePanel from '~/components/MarketEvidenceCritiquePanel.vue'
 import SectionGuidanceSummary from '~/components/SectionGuidanceSummary.vue'
+import ExpertGuidanceCard from '~/components/ExpertGuidanceCard.vue'
 import PlaybookWritingScaffold from '~/components/PlaybookWritingScaffold.vue'
 import MarketFitBuilder from '~/components/MarketFitBuilder.vue'
 import MarketFitReferencePanel, {
@@ -1680,6 +1681,15 @@ watch(
              positioned next to the inputs so students don't have to
              scroll back up to remember what the section is asking. -->
         <SectionGuidanceSummary
+          :section="s"
+          :section-index="originalSectionIndex(s.id)"
+        />
+
+        <!-- Expert Chapter Guidance — only renders when the studio
+             section authored an expertGuidance block. Sections
+             without it (V1 studios) keep rendering exactly as
+             before. Read-only / display-only / copy-only AI prompt. -->
+        <ExpertGuidanceCard
           :section="s"
           :section-index="originalSectionIndex(s.id)"
         />

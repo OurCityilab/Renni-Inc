@@ -28,7 +28,46 @@ export const brandArchitecture: TemplateStudio = {
       completionCriteria: [
         'Renni Inc. is named as the parent company.',
         'Reader understands whether Renni Inc. appears on packaging or not.'
-      ]
+      ],
+      expertGuidance: {
+        expertRole: 'brand strategist',
+        whyThisMatters:
+          'A real parent company is rarely visible to customers but is always visible to investors, partners, and retailers. Reviewers want to see "who actually owns this work" before they trust the launch brand.',
+        whatToGather: [
+          'One legal-style sentence: who Renni Inc. is, where it sits (Renaissance High School, Detroit), what it owns.',
+          'Customer visibility rule: where Renni Inc. appears (e.g., a small parent-company endorsement on a hangtag) vs. where House Phoenix carries the front-of-product brand.',
+          'Governance: Co-CEOs, chiefs (CFO, COO, CMO, CSGO), instructor / admin advisor.'
+        ],
+        whereToFindIt: [
+          'Chapter 3 — company structure & continuity (roles, decision rights).',
+          'Chapter 5 — House Phoenix audience for contrast.',
+          'Existing org-chart docs from prior cohorts.'
+        ],
+        weakAnswerLooksLike:
+          '"Renni Inc. is the company we run." — collapses parent and product brand into one, no governance.',
+        strongAnswerLooksLike:
+          '"Renni Inc. is the student-led parent company at Renaissance High School in Detroit. Co-CEOs lead it; chiefs run finance, operations, marketing, and strategy/growth. Renni Inc. owns House Phoenix (apparel) and the supporting brand line (Lumen, Notice, Humble Oven). Renni Inc. carries a small parent endorsement on hangtags but does not appear on the front of any product."',
+        expertPushback: [
+          'Where does Renni Inc. show up to a customer at TechTown?',
+          'If a Phoenix Nest buyer asks "who legally owns the brand?" — what is the answer?',
+          'Are governance roles documented anywhere outside of student memory?'
+        ],
+        commonMistakes: [
+          'Treating the parent company as a school assignment label rather than the actual operating umbrella.',
+          'Letting Renni Inc. and House Phoenix sound interchangeable.',
+          'Skipping governance because no one has asked for it yet.'
+        ],
+        decisionSupported:
+          'Whether the brand portfolio reads as a real business or as a worksheet.',
+        connectsTo: [
+          'Chapter 3 — company structure & continuity',
+          'Chapter 5 — House Phoenix Brand Story',
+          'Chapter 13 — decision log (governance evidence)'
+        ],
+        ownerHint: 'Co-CEOs',
+        doneLooksLike:
+          'A reader can answer "who owns the work" and "where does the parent show up to customers" without re-reading.'
+      }
     },
     {
       id: 'brand-portfolio',
@@ -43,7 +82,34 @@ export const brandArchitecture: TemplateStudio = {
       completionCriteria: [
         'All five brands are listed in the right tier.',
         'Each brand has a one-line "what it is" description.'
-      ]
+      ],
+      expertGuidance: {
+        expertRole: 'brand strategist',
+        whyThisMatters:
+          'A portfolio diagram answers "what is the family, and what does each member sell?" in one glance. Without it, every downstream chapter has to re-explain the cast.',
+        whatToGather: [
+          'Tiering: Renni Inc. (parent) · House Phoenix (primary launch) · Lumen / Notice / Humble Oven (supporting).',
+          'One line per brand stating product category and intended buyer.',
+          'Active-vs-planned status per brand for this cohort.'
+        ],
+        weakAnswerLooksLike:
+          'A flat list of brand names with no tier indication and no buyer for each.',
+        strongAnswerLooksLike:
+          'A simple tree or table with parent / primary / supporting tiers; each brand named with category, buyer, and active/planned flag.',
+        expertPushback: [
+          'If a parent or buyer reads only this, do they know which brand they would buy from?',
+          'Are any brands listed that are not actually shipping this cohort?'
+        ],
+        commonMistakes: [
+          'Listing brands at the same tier when they are not.',
+          'Adding aspirational brands that have no product yet.'
+        ],
+        decisionSupported: 'Which brands the team actively defends in pitches and which are placeholders.',
+        connectsTo: ['Chapter 5 — House Phoenix Brand Story', 'Chapter 6 — supporting brand sheets'],
+        ownerHint: 'Co-CEOs · CMO support',
+        doneLooksLike:
+          'Tiering is visible at a glance; every named brand has a buyer + product category.'
+      }
     },
     {
       id: 'house-phoenix-role',
@@ -58,7 +124,33 @@ export const brandArchitecture: TemplateStudio = {
       completionCriteria: [
         'Reader understands why House Phoenix leads.',
         'House Phoenix product categories are listed.'
-      ]
+      ],
+      expertGuidance: {
+        expertRole: 'brand strategist',
+        whyThisMatters:
+          'Reviewers ask "why this brand at the front?" If the answer is "because we picked one," the launch reads as arbitrary. If the answer is grounded in product category, audience reach, or pop-up logistics, the rest of the chapter follows.',
+        whatToGather: [
+          'Reasons House Phoenix carries the launch (Detroit-made apparel, broadest audience, premium positioning, pop-up readiness).',
+          'Categories House Phoenix actually sells this cohort.',
+          'Where House Phoenix shows up: TechTown pop-up + Phoenix Nest pitch.'
+        ],
+        weakAnswerLooksLike:
+          '"House Phoenix is our main brand because we like it." — no audience or product reasoning.',
+        strongAnswerLooksLike:
+          'Two or three paragraphs naming the brand role: apparel category leader for Detroit student / civic / parent / alumni buyers, primary product line for the May 27 TechTown pop-up, and the brand the team is pitching to Phoenix Nest carry buyers.',
+        expertPushback: [
+          'If House Phoenix did not exist, which supporting brand could lead — and what would change?',
+          'Is "primary" defined by revenue, audience, or storytelling reach?'
+        ],
+        commonMistakes: [
+          'Calling House Phoenix primary without explaining why.',
+          'Listing every product Renaissance has ever made instead of this cohort\'s lineup.'
+        ],
+        decisionSupported: 'How the team frames House Phoenix in the executive summary, the pop-up campaign, and the Phoenix Nest pitch.',
+        connectsTo: ['Chapter 5 — House Phoenix Brand Story', 'Chapter 8 — pricing + revenue scenarios', 'Chapter 11 — Phoenix Nest carry'],
+        ownerHint: 'CMO · Co-CEO support',
+        doneLooksLike: 'A reader can defend "why House Phoenix leads" in one or two sentences.'
+      }
     },
     {
       id: 'supporting-brands',
@@ -75,7 +167,34 @@ export const brandArchitecture: TemplateStudio = {
       completionCriteria: [
         'Lumen, Notice, and Humble Oven each have a customer-ready paragraph.',
         'Each supporting brand has a named owner.'
-      ]
+      ],
+      expertGuidance: {
+        expertRole: 'brand portfolio operator',
+        whyThisMatters:
+          'Supporting brands either expand reach or dilute focus. A retail buyer wants to see real categories with named owners — not "we also have ideas."',
+        whatToGather: [
+          'Lumen — what category, who the buyer is, what is shipping this cohort.',
+          'Notice — same.',
+          'Humble Oven — bake list, allergen story, who runs the table.',
+          'Owner per brand and current activity status.'
+        ],
+        weakAnswerLooksLike:
+          '"Lumen makes candles, Notice makes jewelry, Humble Oven bakes." — generic, no owner, no buyer.',
+        strongAnswerLooksLike:
+          'A short paragraph per brand naming category, target buyer, owner, and what is actually being made for May 27. A reader can predict what they would see at each table.',
+        expertPushback: [
+          'For each supporting brand, is the team actually producing inventory this cohort, or is it reserved?',
+          'Does each supporting brand share enough with House Phoenix to feel like family?'
+        ],
+        commonMistakes: [
+          'Listing supporting brands without an owner.',
+          'Treating supporting brands as conceptual when they need real SKUs for the pop-up.'
+        ],
+        decisionSupported: 'Which supporting brands the team actually defends at TechTown and which stay future-state.',
+        connectsTo: ['Chapter 6 — supporting brand sheets', 'Chapter 9 — operations (bake list, allergen labels)'],
+        ownerHint: 'CMO · Co-CEO + chief support',
+        doneLooksLike: 'Each supporting brand has a named owner and a paragraph a buyer could read at a Phoenix Nest pitch.'
+      }
     },
     {
       id: 'brand-relationship-rules',
@@ -90,7 +209,30 @@ export const brandArchitecture: TemplateStudio = {
       completionCriteria: [
         'At least one shared signal across the family is named.',
         'At least one rule about what should NOT carry the Renni Inc. name is named.'
-      ]
+      ],
+      expertGuidance: {
+        expertRole: 'brand systems designer',
+        whyThisMatters:
+          'A real brand system has explicit rules, not vibes. Without rules, a future cohort accidentally collapses everything into one look or invents inconsistent siblings.',
+        whatToGather: [
+          'Shared signals (a tag line on hangtags, a "by Renni Inc." endorsement, a shared brand mark size).',
+          'Distinct signals (color, voice, packaging, photography per brand).',
+          'Rules about what should NOT carry the Renni Inc. name (placeholder student work, unfinished ideas).'
+        ],
+        weakAnswerLooksLike:
+          '"All our brands look kind of similar." — no concrete rules.',
+        strongAnswerLooksLike:
+          'A list of explicit shared elements + per-brand distinct elements + at least one "never put this on a Renni Inc. tag" rule.',
+        expertPushback: [
+          'If the next cohort has to add a fifth supporting brand, what stays and what changes?',
+          'Has the team accidentally signaled "school project" anywhere a buyer would see?'
+        ],
+        commonMistakes: ['Stating taste preferences instead of rules.', 'Not naming a single thing the parent brand should never carry.'],
+        decisionSupported: 'How the next cohort extends or trims the brand family without breaking it.',
+        connectsTo: ['Chapter 5 — House Phoenix Brand Story', 'Chapter 6 — supporting brand sheets'],
+        ownerHint: 'CMO',
+        doneLooksLike: 'A future cohort could read these rules and stay consistent without asking.'
+      }
     },
     {
       id: 'future-brand-questions',
@@ -105,7 +247,25 @@ export const brandArchitecture: TemplateStudio = {
       completionCriteria: [
         'At least two open questions are named.',
         'Reader understands what the next cohort should tackle first.'
-      ]
+      ],
+      expertGuidance: {
+        expertRole: 'continuity-minded operator (preparing next cohort)',
+        whyThisMatters:
+          'The most valuable handoff naming what is unresolved. The next cohort works faster when they inherit a clear list of decisions to make rather than a fake-finished system.',
+        whatToGather: [
+          '2–3 honest open questions (sub-brand split, new brand, retired brand, naming conflicts).',
+          'Real customer or partner confusion observed this cohort.',
+          'A one-line "this is what we would tackle first if we had another semester."'
+        ],
+        weakAnswerLooksLike: '"We are still figuring it out." — no specifics, no order.',
+        strongAnswerLooksLike: 'A short numbered list naming the open question, the evidence behind it, and which chief should lead the decision.',
+        expertPushback: ['Are these the questions the next cohort would actually want to inherit?', 'Have you marked any pretend-resolved decisions as "still open"?'],
+        commonMistakes: ['Hiding open questions to look done.', 'Naming so many open questions that none feel actionable.'],
+        decisionSupported: 'Which decisions the next cohort gets first.',
+        connectsTo: ['Chapter 12 — strategy / next-semester recommendations', 'Chapter 13 — decision log'],
+        ownerHint: 'Co-CEOs',
+        doneLooksLike: 'A reader can predict what the next cohort tackles in week one.'
+      }
     },
     {
       id: 'mission',
@@ -123,7 +283,25 @@ export const brandArchitecture: TemplateStudio = {
       completionCriteria: [
         'Mission fits in one sentence.',
         'Mission is specific to Renni Inc., not generic to any student company.'
-      ]
+      ],
+      expertGuidance: {
+        expertRole: 'brand strategist',
+        whyThisMatters:
+          'A mission anchors every campaign decision. If the mission could fit any student club, the team will lose pop-up customers and Phoenix Nest buyers in the first sentence.',
+        whatToGather: [
+          'Who Renni Inc. serves today (Renaissance students + Detroit civic / parent / alumni buyers).',
+          'What Renni Inc. actually does (launches student-led brands, runs the pop-up, funds the next cohort).',
+          'A specific verb that is true of Renni Inc. and not true of any other school project.'
+        ],
+        weakAnswerLooksLike: '"Empower students to do their best." — could describe any school anywhere.',
+        strongAnswerLooksLike: 'A one-sentence mission that names Renaissance + Detroit + the launch + the funding mechanism.',
+        expertPushback: ['Does this mission distinguish Renni Inc. from a generic entrepreneurship class?', 'Could the team defend this sentence to a Phoenix Nest buyer in 10 seconds?'],
+        commonMistakes: ['Reaching for inspirational verbs like "empower" or "transform" with no concrete what.', 'Writing the mission first and shaping behavior to match it later.'],
+        decisionSupported: 'Whether the brand-architecture chapter has a real anchor for downstream decisions.',
+        connectsTo: ['Chapter 5 — House Phoenix Brand Story', 'Chapter 12 — strategy / next-semester recommendations'],
+        ownerHint: 'Co-CEOs',
+        doneLooksLike: 'A reader can answer "who does Renni serve and what does it do?" from one sentence.'
+      }
     },
     {
       id: 'vision',
@@ -138,7 +316,25 @@ export const brandArchitecture: TemplateStudio = {
       completionCriteria: [
         'Vision describes a believable future state, not a slogan.',
         'A reader can picture the change.'
-      ]
+      ],
+      expertGuidance: {
+        expertRole: 'brand strategist',
+        whyThisMatters:
+          'A vision tells the next cohort and the school what success would actually look like. Without one, every win feels like "we did the assignment."',
+        whatToGather: [
+          'A 3-year future state — Phoenix Nest carry, named brands, a sustained student leadership pipeline.',
+          'Concrete change in school / city / cohort that would prove the vision.',
+          'What would be visibly different about TechTown in 3 years.'
+        ],
+        weakAnswerLooksLike: '"Be the best student company." — slogan, no picture.',
+        strongAnswerLooksLike: 'A few sentences naming Phoenix Nest carry success, named recurring brands, and a measurable funding rhythm for the next cohort.',
+        expertPushback: ['Could a reader picture this change?', 'Is the vision believable for a high-school student company in 3 years?'],
+        commonMistakes: ['"Best in the world" language.', 'Vision indistinguishable from mission.'],
+        decisionSupported: 'Whether next cohort feels they are continuing a real arc.',
+        connectsTo: ['Chapter 12 — strategy / next-semester recommendations'],
+        ownerHint: 'Co-CEOs',
+        doneLooksLike: 'A reader can describe a different and recognisable future without re-reading.'
+      }
     },
     {
       id: 'values',
@@ -155,7 +351,25 @@ export const brandArchitecture: TemplateStudio = {
         'Three to five values are listed.',
         'Each value has a definition specific to Renni Inc.',
         'At least one value references student ownership; at least one references a professional standard.'
-      ]
+      ],
+      expertGuidance: {
+        expertRole: 'culture / brand strategist',
+        whyThisMatters:
+          'Values become how teams behave under pressure. If they read as poster words, the next cohort copies them and nothing changes.',
+        whatToGather: [
+          '3–5 values defended with a reason ("why this not that?").',
+          'A one-line definition per value naming behavior.',
+          'At least one value about student ownership and one about a professional standard.'
+        ],
+        weakAnswerLooksLike: '"Integrity, excellence, teamwork" — generic stock list.',
+        strongAnswerLooksLike: 'Values that two students could disagree about and that drive an actual decision (e.g., "we name what we don\'t know").',
+        expertPushback: ['Have you ever NOT done something because of one of these values?', 'Could two students apply this value the same way without coaching?'],
+        commonMistakes: ['Picking values to sound good.', 'Defining values too vaguely to apply.'],
+        decisionSupported: 'How the team behaves in moments not covered by SOPs.',
+        connectsTo: ['Chapter 3 — company structure & continuity', 'Chapter 12 — strategy / next-semester recommendations'],
+        ownerHint: 'Co-CEOs',
+        doneLooksLike: 'Each value has a behavior, not just a definition.'
+      }
     },
     {
       id: 'values-in-action',
@@ -170,7 +384,25 @@ export const brandArchitecture: TemplateStudio = {
       completionCriteria: [
         'Each value has at least one real "did" example.',
         'At least one value also has a "would refuse" example.'
-      ]
+      ],
+      expertGuidance: {
+        expertRole: 'culture / brand strategist',
+        whyThisMatters:
+          'Naming a value without a decision behind it is decoration. The "we refused this" examples are usually more powerful than "we did this" because they show the value cost something.',
+        whatToGather: [
+          'For each value, one real decision the team made because of it.',
+          'For each value, one decision the team refused because of it (if you cannot name one, the value may be inspirational, not operating).',
+          'Concrete artifacts: vendor email, pricing change, design choice.'
+        ],
+        weakAnswerLooksLike: '"We always try to live this value." — no decision artifact.',
+        strongAnswerLooksLike: 'Each value has a "did this" + at least one has a "refused this" with a real story.',
+        expertPushback: ['If you swap two values, would the team actually behave differently?', 'Are the "did" examples real or aspirational?'],
+        commonMistakes: ['Using future-tense examples.', 'Skipping the "refused" examples because they sound negative.'],
+        decisionSupported: 'Whether values become operating muscle or decoration.',
+        connectsTo: ['Chapter 13 — decision log'],
+        ownerHint: 'Co-CEOs',
+        doneLooksLike: 'A reader could predict how the team would behave under a new pressure.'
+      }
     },
     {
       id: 'decision-rules',
@@ -185,7 +417,25 @@ export const brandArchitecture: TemplateStudio = {
       completionCriteria: [
         'Three to five decision rules are written in the "If X, we will Y" form.',
         'Each rule maps to a value above.'
-      ]
+      ],
+      expertGuidance: {
+        expertRole: 'operating-rules author',
+        whyThisMatters:
+          'In-the-moment calls happen at the table, in vendor emails, on social — not in chapter writing. Decision rules turn values into shortcuts the team can apply without re-reading anything.',
+        whatToGather: [
+          '3–5 "If X, we will Y" rules.',
+          'Each rule traces back to a named value.',
+          'Rules a Renaissance student could apply without re-reading the chapter.'
+        ],
+        weakAnswerLooksLike: '"We try to make good decisions." — not a rule.',
+        strongAnswerLooksLike: 'Rules like "If a vendor cannot share a current quote, we do not list their item on /pricing." — concrete, testable.',
+        expertPushback: ['Could a new chief read these rules and act without coaching?', 'Has the team applied any of these rules in the last two weeks?'],
+        commonMistakes: ['Writing rules so abstract they apply to anything.', 'Rules that ignore the values list.'],
+        decisionSupported: 'Whether the team handles unscripted moments consistently.',
+        connectsTo: ['Chapter 9 — operations readiness (SOPs)', 'Chapter 13 — decision log'],
+        ownerHint: 'Co-CEOs',
+        doneLooksLike: 'A new chief could resolve a vendor or pop-up moment using only these rules.'
+      }
     }
   ],
   requirements: [

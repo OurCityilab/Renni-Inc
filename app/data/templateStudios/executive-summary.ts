@@ -28,7 +28,46 @@ export const executiveSummary: TemplateStudio = {
       completionCriteria: [
         'Renni Inc. is named as the parent company.',
         'House Phoenix is named as the primary launch brand.'
-      ]
+      ],
+      expertGuidance: {
+        expertRole: 'Co-CEO / strategy operator',
+        whyThisMatters:
+          'Investors, retailers, and reviewers decide whether to keep reading after this opening. If they cannot tell what Renni Inc. is and what House Phoenix sells in the first paragraph, the rest of the Playbook never lands.',
+        whatToGather: [
+          'Renni Inc. one-line legal-style description (high school student company at Renaissance, Detroit).',
+          'House Phoenix one-line positioning (Detroit-student-led merchandise brand for the TechTown pop-up).',
+          'Plain-English explanation a parent or buyer would understand on the first read.'
+        ],
+        whereToFindIt: [
+          'Chapter 2 brand architecture (parent company + flagship + supporting brands).',
+          'Chapter 5 House Phoenix Brand Story (audience, value prop, voice).',
+          'Existing Playbook chapter intros if any cohort copy already exists.'
+        ],
+        weakAnswerLooksLike:
+          '"Renni Inc. is a company. House Phoenix is one of its brands." — vague, unscoped, no audience or product reference.',
+        strongAnswerLooksLike:
+          '"Renni Inc. is the student-led parent company at Renaissance High School in Detroit. House Phoenix, our flagship launch brand, makes Detroit-made apparel for students, parents, alumni, and Detroit civic supporters; the team is preparing it for the TechTown pop-up on May 27."',
+        expertPushback: [
+          'If a parent reads only this paragraph, do they know what you sell?',
+          'Does the launch brand feel different from the parent company, or are they used as synonyms?',
+          'Is there a one-sentence answer to "why Renni, not just House Phoenix?"'
+        ],
+        commonMistakes: [
+          'Using "Renni Inc." and "House Phoenix" as if they were the same thing.',
+          'Adding paragraphs of context before naming what you actually sell.',
+          'Forgetting to mention the school or the city.'
+        ],
+        decisionSupported:
+          'Whether reviewers continue reading the rest of the Playbook.',
+        connectsTo: [
+          'Chapter 2 — Brand architecture',
+          'Chapter 5 — House Phoenix Brand Story',
+          'Final presentation cover slide'
+        ],
+        ownerHint: 'Co-CEOs',
+        doneLooksLike:
+          'A parent or buyer can answer "what is Renni Inc.?" and "what is House Phoenix?" after reading two sentences. Both names appear; the relationship between them is unambiguous.'
+      }
     },
     {
       id: 'launch-focus',
@@ -49,7 +88,46 @@ export const executiveSummary: TemplateStudio = {
         'TechTown pop-up is named and explained.',
         'Brand & Operations Playbook is named and explained.',
         'Phoenix Nest retail carry pitch is named and explained.'
-      ]
+      ],
+      expertGuidance: {
+        expertRole: 'Co-CEO / strategy operator',
+        whyThisMatters:
+          'These are three different deliverables with three different audiences (event customers, the next cohort, retail buyers). Confusing them in the executive summary makes every downstream chapter sound vague. Reviewers have to be able to tell which is which.',
+        whatToGather: [
+          'TechTown pop-up date, location, audience (May 27 event facts).',
+          'Brand & Operations Playbook scope (this document, what next cohort uses to start).',
+          'Phoenix Nest retail carry pitch scope (the retail ask itself, not the pop-up).'
+        ],
+        whereToFindIt: [
+          'TechTown logistics + the marketing/campaign chapter.',
+          'The Playbook itself is what the team is writing — describe it for the next cohort, not yourselves.',
+          'Chapter 11 Phoenix Nest carry pitch.'
+        ],
+        weakAnswerLooksLike:
+          '"We are doing the pop-up and writing the Playbook." — collapses three deliverables into one and skips the buyer-facing pitch entirely.',
+        strongAnswerLooksLike:
+          'Three short paragraphs that name (a) the May 27 TechTown pop-up and what is sold there, (b) the Brand & Operations Playbook the next cohort inherits, (c) the Phoenix Nest retail carry pitch and the ask the team is making. A reader can tell which is which.',
+        expertPushback: [
+          'If TechTown rains, which of these three is still happening?',
+          'Which deliverable is the team most behind on right now?',
+          'If a Phoenix Nest buyer reads only this section, do they know what they are being pitched?'
+        ],
+        commonMistakes: [
+          'Treating the Playbook as a school assignment rather than a real handoff document.',
+          'Treating Phoenix Nest as the same thing as the pop-up.',
+          'Skipping the Phoenix Nest pitch because no meeting is on the calendar yet.'
+        ],
+        decisionSupported:
+          'Which deliverable each chapter actually serves.',
+        connectsTo: [
+          'Chapter 8 — pop-up revenue scenarios',
+          'Chapter 10 — campaign/messaging',
+          'Chapter 11 — Phoenix Nest carry pitch'
+        ],
+        ownerHint: 'Co-CEOs',
+        doneLooksLike:
+          'A reader can name the audience, date (where applicable), and ask of each deliverable in their own words.'
+      }
     },
     {
       id: 'current-progress',
@@ -67,7 +145,46 @@ export const executiveSummary: TemplateStudio = {
       completionCriteria: [
         'All five lineup items are named: beanies, sweatshirts, t-shirts, baked goods, donations.',
         'Donations are clearly separated from product sales.'
-      ]
+      ],
+      expertGuidance: {
+        expertRole: 'retail operator / merchandising lead',
+        whyThisMatters:
+          'A retail buyer or instructor checks whether the executive summary matches what is actually being sold. If the summary names a product the team is not making this cohort, every downstream pricing / inventory / campaign claim becomes suspect.',
+        whatToGather: [
+          'Confirmed pop-up SKU list from /pricing or Ch. 7 product line.',
+          'Confirmed bake list (Humble Oven items) from Ch. 9 baked-goods SOP.',
+          'Donation accept/decline policy and where donations sit at the table.'
+        ],
+        whereToFindIt: [
+          '/pricing — actual seeded pricingScenarios (operational source of truth).',
+          'Chapter 7 — current product line.',
+          'Chapter 9 — operations readiness (inventory + bake list).'
+        ],
+        weakAnswerLooksLike:
+          '"We sell merch and baked goods." — generic, skips the explicit lineup, mixes donations and products.',
+        strongAnswerLooksLike:
+          'A short list that names every actual SKU (House Phoenix beanies / sweatshirts / t-shirts plus Humble Oven baked goods), with donations called out as a separate revenue path. Matches /pricing.',
+        expertPushback: [
+          'Does the list match what is on /pricing today?',
+          'If a baked good runs out at hour two, what does the team say to a customer who walks up?',
+          'Are donations on the same line as product sales, or visually separate?'
+        ],
+        commonMistakes: [
+          'Listing aspirational products that are not actually being made.',
+          'Mixing donations into the product list, which double-counts revenue.',
+          'Forgetting Humble Oven baked goods because they live in a different builder.'
+        ],
+        decisionSupported:
+          'What the team can defensibly say about the pop-up lineup to a parent, instructor, or Phoenix Nest buyer.',
+        connectsTo: [
+          'Chapter 7 — current product line',
+          'Chapter 8 — pricing strategy + revenue scenarios',
+          '/pricing operational source of truth'
+        ],
+        ownerHint: 'Co-CEOs · COO support',
+        doneLooksLike:
+          'Lineup matches /pricing exactly. Donations are separated. A reviewer reading this section can predict the /pricing page contents.'
+      }
     },
     {
       id: 'key-risks',
@@ -82,7 +199,47 @@ export const executiveSummary: TemplateStudio = {
       completionCriteria: [
         'Two or three risks are named.',
         'Each risk has a one-line explanation.'
-      ]
+      ],
+      expertGuidance: {
+        expertRole: 'CFO / risk lead',
+        whyThisMatters:
+          'Naming risks is what separates a real executive summary from a school project. Investors and buyers trust teams that show they know where they could fail. Hiding risk reads as inexperience.',
+        whatToGather: [
+          'Two or three highest-likelihood-or-impact risks (price acceptance, inventory miss, weather, vendor delay, time).',
+          'For each risk: a one-line "why this matters" explanation.',
+          'For each risk: who owns mitigating it (Co-CEO, CFO, CMO, COO, CSGO).'
+        ],
+        whereToFindIt: [
+          'C-Suite Advisor cockpit (/c-suite-advisor) — Stops Submit + Needs Action signals.',
+          'Intelligence Sync panel — what is missing right now.',
+          'Open advisor signals on each chapter hub.'
+        ],
+        weakAnswerLooksLike:
+          '"Our biggest risk is running out of time." — vague, generic, no mitigation owner, no follow-on.',
+        strongAnswerLooksLike:
+          'Two or three risks named with concrete handles: "Price acceptance is unproven at $100 (CFO + CSGO are running a preorder test before May 12). Inventory has not been counted twice (COO confirms by April 30). Weather contingency for May 27 (CMO drafts an indoor signage plan)."',
+        expertPushback: [
+          'Which of these risks could actually kill the launch, vs. just complicate it?',
+          'For each named risk, who owns the mitigation, and what is the next concrete step?',
+          'Are there any risks you are deliberately leaving out because they sound bad?'
+        ],
+        commonMistakes: [
+          'Naming only soft risks (time, motivation) and skipping hard ones (margin, comp evidence, inventory).',
+          'Listing risks without owners — leaves them as observations, not commitments.',
+          'Adding risks to look thorough rather than because they actually matter.'
+        ],
+        decisionSupported:
+          'Which risks the team will brief instructors and Phoenix Nest buyers on — vs. which they will pretend do not exist.',
+        connectsTo: [
+          'C-Suite Advisor cockpit',
+          'Chapter 8 — pricing risk',
+          'Chapter 9 — operations risk',
+          'Chapter 11 — Phoenix Nest carry risk'
+        ],
+        ownerHint: 'Co-CEOs · CFO support',
+        doneLooksLike:
+          'Two or three named risks, each with an owner + a concrete next mitigation step. A reviewer asks "what could go wrong?" and gets a clear answer.'
+      }
     },
     {
       id: 'next-steps',
@@ -97,7 +254,46 @@ export const executiveSummary: TemplateStudio = {
       completionCriteria: [
         'Three to five next actions are listed with owners.',
         'Actions read as real work, not vague intentions.'
-      ]
+      ],
+      expertGuidance: {
+        expertRole: 'Co-CEO / strategy operator',
+        whyThisMatters:
+          'The next-steps list is what stakeholders actually scan for: "is this team executing?" Aspirational verbs ("explore", "consider") read as not-started; concrete verbs ("ship", "lock", "preorder") read as in-flight.',
+        whatToGather: [
+          '3–5 concrete actions before TechTown (May 27) or final presentation (May 12 / 15).',
+          'Owner for each action (Co-CEO, CMO, CFO, COO, CSGO).',
+          'Cross-check: do these actions appear on /timeline as actual tasks?'
+        ],
+        whereToFindIt: [
+          '/timeline — Final Presentation Backplan and task list.',
+          '/c-suite-advisor — Today\'s Moves.',
+          'Intelligence Sync — gather-next checklist.'
+        ],
+        weakAnswerLooksLike:
+          '"We will work on the Playbook, finalize pricing, and prepare for the pop-up." — vague verbs, no owner, no due date implied.',
+        strongAnswerLooksLike:
+          '"CFO locks /pricing for all SKUs by April 30. CMO drafts pop-up signage by May 5. COO confirms inventory + bake list by May 5. CSGO runs a 10-person preorder test at $100 before May 12. Co-CEOs review the final Playbook bundle by May 12."',
+        expertPushback: [
+          'Are these actions on the timeline, or do they live only here?',
+          'Which one is the team most likely to slip on, and what is the recovery plan?',
+          'Is anyone accidentally listed twice as the owner?'
+        ],
+        commonMistakes: [
+          'Listing aspirations rather than the work that is actually queued this week.',
+          'Forgetting to name the Phoenix Nest carry pitch ask in the next-steps list.',
+          'Using vague verbs ("explore", "consider", "look into") that hide whether the work is moving.'
+        ],
+        decisionSupported:
+          'Whether the executive summary feels like a real operating brief or a school project.',
+        connectsTo: [
+          '/timeline — Gantt + backplan',
+          'C-Suite Advisor cockpit — Today\'s Moves',
+          'Chapter 12 — strategy / next-semester recommendations (post-launch handoff)'
+        ],
+        ownerHint: 'Co-CEOs · cross-functional',
+        doneLooksLike:
+          'Each action has an owner, an implied or explicit deadline, and matches a real task on /timeline. Verbs are concrete.'
+      }
     }
   ],
   requirements: [
