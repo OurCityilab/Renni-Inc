@@ -17,6 +17,7 @@ import { useTasks } from '~/composables/useTasks'
 import { useDeliverableOutputs } from '~/composables/useDeliverableOutputs'
 import { getTemplateStudio } from '~/data/templateStudios'
 import CSuiteAdvisorHub from '~/components/CSuiteAdvisorHub.vue'
+import IntelligenceSyncPanel from '~/components/IntelligenceSyncPanel.vue'
 
 definePageMeta({ middleware: ['c-suite'] })
 
@@ -53,6 +54,13 @@ const loading = computed<boolean>(
     <NuxtLink to="/" class="text-sm text-phoenix-700 hover:underline">
       ← Home
     </NuxtLink>
+
+    <IntelligenceSyncPanel
+      :deliverables="deliverableList"
+      :tasks="taskList"
+      :outputs="outputsByDeliverableId"
+      :loading="loading"
+    />
 
     <CSuiteAdvisorHub
       :deliverables="deliverableList"

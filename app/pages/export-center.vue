@@ -33,6 +33,7 @@ import {
   buildPricingSummaryCsv,
   type DesignOutputType
 } from '~/utils/exportCenter'
+import IntelligenceSyncPanel from '~/components/IntelligenceSyncPanel.vue'
 
 const deliverables = useDeliverables()
 const tasks = useTasks()
@@ -180,14 +181,29 @@ function download(filename: string, content: string, mime: string) {
         narrative, CSV for tabular pricing.
       </p>
       <p class="text-xs italic text-neutral-500">
-        Exports are snapshots. Renni Command Center remains the source of truth.
-        No Google Drive integration. No URL fetching. No AI.
+        Exports are snapshots. Re-export after changing source notes, pricing,
+        segments, or final text. Renni Command Center remains the source of
+        truth. No Google Drive integration. No URL fetching. No in-app AI here.
+      </p>
+      <p class="text-xs italic text-neutral-500">
+        AI coach prompts are copy-only unless you use the in-app critique
+        button. AI can coach and ask questions, but it cannot approve, submit,
+        or invent missing evidence.
       </p>
     </header>
 
     <p v-if="loading" class="text-sm italic text-neutral-500">
       Loading export data…
     </p>
+
+    <!-- Intelligence Sync — show what's missing before exporting. -->
+    <IntelligenceSyncPanel
+      :deliverables="deliverableList"
+      :tasks="taskList"
+      :outputs="outputsByDeliverableId"
+      :advisor-signals="advisorSignals"
+      :loading="loading"
+    />
 
     <!-- 1. Final presentation outline (Markdown) -->
     <section class="card space-y-2">

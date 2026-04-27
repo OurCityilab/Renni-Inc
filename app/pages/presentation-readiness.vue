@@ -21,6 +21,7 @@ import {
   getAdvisorDisplayLabel
 } from '~/utils/advisorDisplay'
 import type { ChapterReadinessRow } from '~/utils/presentationReadiness'
+import IntelligenceSyncPanel from '~/components/IntelligenceSyncPanel.vue'
 
 const deliverables = useDeliverables()
 const tasks = useTasks()
@@ -177,6 +178,15 @@ function chapterTitle(row: ChapterReadinessRow): string {
         </li>
       </ul>
     </section>
+
+    <!-- Intelligence Sync — what to gather next -->
+    <IntelligenceSyncPanel
+      :deliverables="deliverableList"
+      :tasks="taskList"
+      :outputs="outputsByDeliverableId"
+      :advisor-signals="readiness.signals"
+      :loading="loading"
+    />
 
     <!-- Chapter readiness table -->
     <section class="card space-y-2">

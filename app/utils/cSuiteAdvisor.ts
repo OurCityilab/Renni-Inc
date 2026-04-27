@@ -958,6 +958,65 @@ function crossChapterSignals(inputs: AdvisorInputs): AdvisorSignal[] {
         source: 'segments'
       })
     }
+
+    // Sprint 3 — Intelligence Sync — Ch.7 segment exists but the
+    // campaign copy doesn't reference its motivation / objection /
+    // channel. Heuristic substring match against the chapter's
+    // sourceNotes/draft/finalText blob.
+    const ch7Output = inputs.crossChapterContext?.ch7Output ?? null
+    const ch7Picked = ch7Output ? pickCh7SegmentProfile(ch7Output) : null
+    if (ch7Picked && output) {
+      const blobParts: string[] = []
+      for (const s of Object.values(output.sections ?? {})) {
+        if (s?.sourceNotes) blobParts.push(s.sourceNotes)
+        if (s?.draftText) blobParts.push(s.draftText)
+        if (s?.finalText) blobParts.push(s.finalText)
+      }
+      const blob = blobParts.join(' \n ').toLowerCase()
+      if (blob.trim().length > 0) {
+        const profile = ch7Picked.profile
+        const motivation = (profile.motivations ?? '').trim().toLowerCase()
+        const objection = (profile.likelyObjections ?? '').trim().toLowerCase()
+        const channel = (profile.channelFit ?? '').trim().toLowerCase()
+        const segName = (ch7Picked.segmentName ?? '').trim().toLowerCase()
+        const missing: string[] = []
+        if (segName && !blob.includes(segName)) missing.push('segment name')
+        if (
+          motivation &&
+          !blob.includes(motivation.split(',')[0]?.trim() ?? motivation)
+        ) missing.push('buyer motivation')
+        if (
+          objection &&
+          !blob.includes(objection.split(',')[0]?.trim() ?? objection)
+        ) missing.push('likely objection')
+        if (
+          channel &&
+          !blob.includes(channel.split(',')[0]?.trim() ?? channel)
+        ) missing.push('channel fit')
+        if (missing.length >= 2) {
+          out.push({
+            id: makeId('xchap-campaign-thin-segment-link', [id]),
+            scope: 'chapter',
+            severity: 'risk',
+            title: 'Campaign copy does not reference Ch. 7 segment context',
+            summary:
+              'Chapter 7 has a structured segment, but the Chapter 10 campaign copy does not echo its motivation / objection / channel. Heuristic — adjust if the team is using synonyms.',
+            gap: `Missing references in Ch. 10 text: ${missing.join(' · ')}.`,
+            owner: 'CMO',
+            supportingRoles: ['Chief Strategy and Growth Officer', 'CFO'],
+            dependency: 'Segment before campaign messaging.',
+            nextAction:
+              'Edit Chapter 10 source notes / draft so the segment, motivation, objection, and channel are explicit in the copy.',
+            whyItMatters:
+              'A campaign that does not name the buyer or address the buyer\'s objection reads as "everyone, no one." The buyer behind the price has to live in the message.',
+            howToFix:
+              `Open Ch. 10 and pull these from the Ch. 7 segment "${ch7Picked.segmentName}": motivation, likely objection, channel fit. Reuse the team's own words from the segment profile.`,
+            chapterId: id,
+            source: 'segments'
+          })
+        }
+      }
+    }
   }
 
   // Ch. 11 — carry pitch missing pricing / segment / margin context.
@@ -1260,6 +1319,7 @@ export interface AggregateAdvisorInputs {
 
 const CH7_DELIVERABLE_ID = 'ch-07-current-product-line-and-pricing'
 const CH8_DELIVERABLE_ID = 'ch-08-finance-and-revenue-model'
+const CH10_DELIVERABLE_ID = 'ch-10-marketing-and-campaign-playbook'
 const CH11_DELIVERABLE_ID = 'ch-11-phoenix-nest-retail-carry-pitch'
 
 export function aggregateAdvisorSignals(
@@ -1283,6 +1343,11 @@ export function aggregateAdvisorSignals(
     // Other chapters get no cross-chapter context.
     let crossChapterContext: AdvisorInputs['crossChapterContext'] = null
     if (d.id === CH8_DELIVERABLE_ID) {
+      crossChapterContext = { ch7Output }
+    } else if (d.id === CH10_DELIVERABLE_ID) {
+      // Sprint 3 — Intelligence Sync — Ch.10 reads Ch.7 segment so
+      // the campaign sync rule can detect when copy doesn't reference
+      // motivation / objection / channel.
       crossChapterContext = { ch7Output }
     } else if (d.id === CH11_DELIVERABLE_ID) {
       crossChapterContext = { ch7Output, ch8Output }
