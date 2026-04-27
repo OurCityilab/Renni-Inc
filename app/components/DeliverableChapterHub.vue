@@ -27,6 +27,7 @@ import {
 } from '~/utils/deliverableOutputProgress'
 import DeliverablePlaybookPreview from '~/components/DeliverablePlaybookPreview.vue'
 import CSuiteAdvisorCard from '~/components/CSuiteAdvisorCard.vue'
+import { getLikelyOwner } from '~/data/chapterOwners'
 
 const props = defineProps<{
   deliverable: Deliverable
@@ -67,36 +68,12 @@ const cards = computed<CardModel[]>(() =>
   }))
 )
 
-// Likely owner cue copy mirrors the per-section PlaybookWritingScaffold
-// component's chapter-owner map. Surfaced as a small subtitle so the
-// chapter hub names the role likely to push the work next, without
-// touching ownerUid / ownerEmail / approverUid fields.
-const LIKELY_OWNER_BY_CHAPTER: Record<string, string> = {
-  'ch-01-executive-summary': 'Co-CEOs',
-  'ch-02-renni-overview-and-brand-architecture': 'Co-CEOs · CMO support',
-  'ch-03-company-structure-and-continuity': 'Co-CEOs · COO support',
-  'ch-04-business-model-canvas':
-    'Chief Strategy and Growth Officer · Co-CEO sign-off',
-  'ch-05-house-phoenix-brand-book': 'CMO',
-  'ch-06-supporting-brand-sheets': 'CMO · Co-CEO support',
-  'ch-07-current-product-line-and-pricing': 'CFO · COO support',
-  'ch-08-finance-and-revenue-model':
-    'CFO · Chief Strategy and Growth Officer support',
-  'ch-09-operations-and-continuity-systems': 'COO',
-  'ch-10-marketing-and-campaign-playbook':
-    'CMO · Chief Strategy and Growth Officer support',
-  'ch-11-phoenix-nest-retail-carry-pitch':
-    'Co-CEOs · CFO / CMO / COO / CSGO support',
-  'ch-12-strategy-and-next-semester-recommendations':
-    'Chief Strategy and Growth Officer · Co-CEO sign-off',
-  'ch-13-decision-log-and-appendices':
-    'Co-CEOs · cross-functional support'
-}
-const likelyOwner = computed<string>(
-  () =>
-    LIKELY_OWNER_BY_CHAPTER[props.deliverable.id] ||
-    'Co-CEOs · cross-functional'
-)
+// Likely-owner cue. Sourced from the canonical chapterOwners map
+// (see app/data/chapterOwners.ts) so this and PlaybookWritingScaffold
+// stay in sync — prior to Sprint 1B both components shipped their own
+// 13-row map and disagreed on Ch 11. Display only; never overrides
+// ownerUid / ownerEmail / approverUid on the deliverable itself.
+const likelyOwner = computed<string>(() => getLikelyOwner(props.deliverable.id))
 
 function fmtWhen(iso?: string | null): string {
   if (!iso) return ''

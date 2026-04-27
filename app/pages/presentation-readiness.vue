@@ -135,7 +135,7 @@ function chapterTitle(row: ChapterReadinessRow): string {
       <article class="card border-rose-200 bg-rose-50/40">
         <p class="text-xs uppercase tracking-wide text-rose-700">At risk</p>
         <p class="text-2xl font-semibold text-rose-900">{{ readiness.summary.bandCounts.at_risk }}</p>
-        <p class="text-[11px] text-rose-700">Stops / Blocked or open Needs Action.</p>
+        <p class="text-[11px] text-rose-700">Stuck or open Action today.</p>
       </article>
       <article class="card border-neutral-200 bg-neutral-50">
         <p class="text-xs uppercase tracking-wide text-neutral-600">Not started</p>
@@ -156,13 +156,13 @@ function chapterTitle(row: ChapterReadinessRow): string {
       </header>
       <ul class="flex flex-wrap gap-1.5 text-[11px]">
         <li :class="['rounded-full border px-2 py-0.5 uppercase tracking-wide', readiness.summary.blockerCount > 0 ? 'border-rose-300 bg-rose-50 text-rose-800 font-semibold' : 'border-neutral-300 bg-neutral-50 text-neutral-700']">
-          Stops / Blocked · {{ readiness.summary.blockerCount }}
+          Stuck · {{ readiness.summary.blockerCount }}
         </li>
         <li :class="['rounded-full border px-2 py-0.5 uppercase tracking-wide', readiness.summary.riskCount > 0 ? 'border-amber-300 bg-amber-50 text-amber-800 font-semibold' : 'border-neutral-300 bg-neutral-50 text-neutral-700']">
-          Needs Action · {{ readiness.summary.riskCount }}
+          Action today · {{ readiness.summary.riskCount }}
         </li>
         <li :class="['rounded-full border px-2 py-0.5 uppercase tracking-wide', readiness.summary.watchCount > 0 ? 'border-sky-300 bg-sky-50 text-sky-800 font-semibold' : 'border-neutral-300 bg-neutral-50 text-neutral-700']">
-          Check Soon · {{ readiness.summary.watchCount }}
+          Look at soon · {{ readiness.summary.watchCount }}
         </li>
         <li :class="['rounded-full border px-2 py-0.5 uppercase tracking-wide', readiness.summary.dueSoonTaskCount > 0 ? 'border-amber-200 bg-amber-50 text-amber-800 font-semibold' : 'border-neutral-300 bg-neutral-50 text-neutral-700']">
           Due Soon · {{ readiness.summary.dueSoonTaskCount }}
@@ -208,8 +208,8 @@ function chapterTitle(row: ChapterReadinessRow): string {
               <th class="pb-1 pr-2">Evidence</th>
               <th class="pb-1 pr-2">Pricing</th>
               <th class="pb-1 pr-2">Segment</th>
-              <th class="pb-1 pr-2 text-right">Stops</th>
-              <th class="pb-1 pr-2 text-right">Needs Action</th>
+              <th class="pb-1 pr-2 text-right">Stuck</th>
+              <th class="pb-1 pr-2 text-right">Action today</th>
               <th class="pb-1 pr-2 text-right">Due</th>
               <th class="pb-1 pr-2"></th>
             </tr>
@@ -292,13 +292,13 @@ function chapterTitle(row: ChapterReadinessRow): string {
           </header>
           <ul class="flex flex-wrap gap-1.5 text-[11px]">
             <li :class="['rounded-full border px-2 py-0.5 uppercase tracking-wide', row.blockerCount > 0 ? 'border-rose-300 bg-rose-50 text-rose-800 font-semibold' : 'border-neutral-300 bg-neutral-50 text-neutral-700']">
-              Stops · {{ row.blockerCount }}
+              Stuck · {{ row.blockerCount }}
             </li>
             <li :class="['rounded-full border px-2 py-0.5 uppercase tracking-wide', row.riskCount > 0 ? 'border-amber-300 bg-amber-50 text-amber-800 font-semibold' : 'border-neutral-300 bg-neutral-50 text-neutral-700']">
-              Needs Action · {{ row.riskCount }}
+              Action today · {{ row.riskCount }}
             </li>
             <li :class="['rounded-full border px-2 py-0.5 uppercase tracking-wide', row.watchCount > 0 ? 'border-sky-300 bg-sky-50 text-sky-800 font-semibold' : 'border-neutral-300 bg-neutral-50 text-neutral-700']">
-              Check Soon · {{ row.watchCount }}
+              Look at soon · {{ row.watchCount }}
             </li>
           </ul>
           <p

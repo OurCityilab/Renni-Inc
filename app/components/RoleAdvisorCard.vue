@@ -161,7 +161,7 @@ function chapterTitle(d: Deliverable): string {
               ? 'border-rose-300 bg-rose-50 text-rose-800 font-semibold'
               : 'border-neutral-300 bg-neutral-50 text-neutral-700'
           ]"
-        >Stops / Blocked · {{ stopsBlockedCount }}</li>
+        >Stuck · {{ stopsBlockedCount }}</li>
         <li
           :class="[
             'rounded-full border px-2 py-0.5 uppercase tracking-wide',
@@ -169,7 +169,7 @@ function chapterTitle(d: Deliverable): string {
               ? 'border-amber-300 bg-amber-50 text-amber-800 font-semibold'
               : 'border-neutral-300 bg-neutral-50 text-neutral-700'
           ]"
-        >Needs Action · {{ needsActionCount }}</li>
+        >Action today · {{ needsActionCount }}</li>
         <li
           :class="[
             'rounded-full border px-2 py-0.5 uppercase tracking-wide',
@@ -177,7 +177,7 @@ function chapterTitle(d: Deliverable): string {
               ? 'border-sky-300 bg-sky-50 text-sky-800 font-semibold'
               : 'border-neutral-300 bg-neutral-50 text-neutral-700'
           ]"
-        >Check Soon · {{ checkSoonCount }}</li>
+        >Look at soon · {{ checkSoonCount }}</li>
         <li
           :class="[
             'rounded-full border px-2 py-0.5 uppercase tracking-wide',

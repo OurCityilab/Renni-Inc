@@ -19,42 +19,21 @@
 //   - no submit-gate or readiness logic
 //   - no data model changes — chapter category is derived from
 //     props.deliverableId, owner role from a static map.
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import type { TemplateStudioSection } from '~/types/templateStudio'
+import {
+  getLikelyOwner,
+  getPrimaryHelpRole
+} from '~/data/chapterOwners'
 
 const props = defineProps<{
-  // Owning deliverable id — used to drive chapter-specific starters
-  // and the likely-owner cue. The id maps directly to the studio
-  // registry key (e.g. 'ch-07-current-product-line-and-pricing').
+  // Owning deliverable id — used to drive chapter-specific starters,
+  // the likely-owner cue, and the Ping-chief help message. The id
+  // maps directly to the studio registry key (e.g.
+  // 'ch-07-current-product-line-and-pricing').
   deliverableId: string
   section: TemplateStudioSection
 }>()
-
-// --- Likely-owner map ----------------------------------------------
-// Curriculum-shipped — keeps Renaissance students learning who pushes
-// the work without us mutating any owner field.
-const LIKELY_OWNER_BY_CHAPTER: Record<string, string> = {
-  'ch-01-executive-summary': 'Co-CEOs',
-  'ch-02-renni-overview-and-brand-architecture': 'Co-CEOs · CMO support',
-  'ch-03-company-structure-and-continuity': 'Co-CEOs · COO support',
-  'ch-04-business-model-canvas':
-    'Chief Strategy and Growth Officer · Co-CEO sign-off',
-  'ch-05-house-phoenix-brand-book': 'CMO',
-  'ch-06-supporting-brand-sheets': 'CMO · Co-CEO support',
-  'ch-07-current-product-line-and-pricing':
-    'CFO · COO support',
-  'ch-08-finance-and-revenue-model':
-    'CFO · Chief Strategy and Growth Officer support',
-  'ch-09-operations-and-continuity-systems': 'COO',
-  'ch-10-marketing-and-campaign-playbook':
-    'CMO · Chief Strategy and Growth Officer support',
-  'ch-11-phoenix-nest-retail-carry-pitch':
-    'Co-CEOs · CFO / CMO / COO / CSGO support',
-  'ch-12-strategy-and-next-semester-recommendations':
-    'Chief Strategy and Growth Officer · Co-CEO sign-off',
-  'ch-13-decision-log-and-appendices':
-    'Co-CEOs · cross-functional support'
-}
 
 // --- Workflow cue --------------------------------------------------
 // "Suggested workflow" line, adapted to the builders the section
@@ -98,11 +77,43 @@ const workflowSteps = computed<string[]>(() => {
   return steps
 })
 
-const likelyOwner = computed<string>(() => {
+const likelyOwner = computed<string>(() =>
+  getLikelyOwner(props.deliverableId)
+)
+// First role in the owner string — the chief most likely to push the
+// work next. Used by the Ping-chief affordance below to name one
+// person to ask, not the whole support cast.
+const primaryHelpRole = computed<string>(() =>
+  getPrimaryHelpRole(props.deliverableId)
+)
+
+// --- Ping-chief help message ----------------------------------------
+// Read-only clipboard handoff. We do NOT introduce email, Slack, or
+// any new messaging path; we just hand the student a prewritten
+// sentence they can paste wherever their team already talks. The
+// student fills in the bracketed reason before sending.
+const helpMessage = computed<string>(() => {
+  const sectionTitle = props.section.title || 'this section'
   return (
-    LIKELY_OWNER_BY_CHAPTER[props.deliverableId] || 'Co-CEOs · cross-functional'
+    `I'm working on ${sectionTitle} (deliverable ${props.deliverableId}). ` +
+    `I'm stuck on [say what's hard in 1-2 sentences]. ` +
+    `Can you help me figure out the next step?`
   )
 })
+
+const helpCopied = ref(false)
+async function copyHelpMessage(): Promise<void> {
+  if (typeof navigator === 'undefined' || !navigator.clipboard) return
+  try {
+    await navigator.clipboard.writeText(helpMessage.value)
+    helpCopied.value = true
+    setTimeout(() => {
+      helpCopied.value = false
+    }, 1500)
+  } catch {
+    // Best-effort. The student can still select the prewritten text.
+  }
+}
 
 // --- Sentence starter palette --------------------------------------
 // Categories combine "general" with whichever of brand / market /
@@ -223,6 +234,35 @@ const FINAL_TEXT_CHECKLIST: string[] = [
         <span class="font-medium">Likely owner to push this next:</span>
         {{ likelyOwner }}.
       </p>
+    </div>
+
+    <!-- Ping-chief / "Need help?" affordance. Display-only:
+         no Firestore writes, no email or Slack integration, no
+         server call. The button copies a prewritten sentence to
+         the clipboard so the student can paste it into whichever
+         channel their team already uses. They fill in the
+         bracketed reason before sending. -->
+    <div class="rounded bg-white/70 p-2">
+      <p class="font-medium text-neutral-700">
+        Need help? Ask: {{ primaryHelpRole }}.
+      </p>
+      <p class="mt-1 text-neutral-700">
+        Copy this prewritten message and paste it wherever your team
+        already talks. Replace the bracketed reason with what is hard
+        for you right now.
+      </p>
+      <p class="mt-1 italic text-neutral-700">"{{ helpMessage }}"</p>
+      <div class="mt-2 flex flex-wrap items-center gap-2">
+        <button
+          type="button"
+          class="rounded border border-emerald-300 bg-white px-2 py-0.5 text-[11px] font-medium text-emerald-900 hover:bg-emerald-50"
+          @click="copyHelpMessage"
+        >{{ helpCopied ? 'Copied ✓' : 'Copy help message' }}</button>
+        <span class="text-[11px] text-neutral-500">
+          If you are blocked, you can also open the task and mark it
+          stuck with a short note.
+        </span>
+      </div>
     </div>
 
     <!-- Sentence starters by category -->

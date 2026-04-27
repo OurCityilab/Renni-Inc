@@ -1,15 +1,20 @@
-// C-Suite Advisor V1.2 — student-facing display labels + handhold copy.
+// C-Suite Advisor — student-facing display labels + handhold copy.
+//
+// Sprint 1B: collapse the chip vocabulary to the four-tier student
+// language used everywhere else in the app:
+//
+//   blocker → "Stuck"          (red)
+//   risk    → "Action today"   (amber)
+//   watch   → "Look at soon"   (sky)
+//   info    → "All good"       (emerald)
 //
 // The internal severity enum (info / watch / risk / blocker) stays as
-// the source of truth for sorting and rule branching. This helper
-// translates each signal into clearer language for student chiefs:
-//
-//   blocker + task coverage missing → "Stops Submit"
-//   blocker + blocked task          → "Blocked Task"
-//   blocker + below-cost pricing    → "Major Issue"
-//   risk                            → "Needs Action"
-//   watch                           → "Check Soon"
-//   info                            → "FYI"
+// the source of truth for sorting and rule branching — only the chip
+// text + explanation copy change. The previous label trinity (Stops
+// Submit / Blocked Task / Major Issue) is no longer surfaced as a
+// chip; the source-specific detail lives in `whyItMatters` /
+// `howToFix` and the existing source chip renders next to severity
+// in every signal card, so no diagnostic information is lost.
 //
 // Pure function. No persistence, no AI, no side effects. Renaissance
 // students should be able to read every line of this file and trace
@@ -21,12 +26,10 @@ import type {
 } from '~/types/advisor'
 
 export type AdvisorDisplayLabel =
-  | 'Stops Submit'
-  | 'Blocked Task'
-  | 'Major Issue'
-  | 'Needs Action'
-  | 'Check Soon'
-  | 'FYI'
+  | 'Stuck'
+  | 'Action today'
+  | 'Look at soon'
+  | 'All good'
 
 export interface AdvisorDisplayInfo {
   // Student-facing label for the severity chip.
@@ -45,37 +48,32 @@ export interface AdvisorDisplayInfo {
 }
 
 const LABEL_EXPLANATIONS: Record<AdvisorDisplayLabel, string> = {
-  'Stops Submit':
-    'This does not mean the page is broken. It means submit-for-review will not unlock until this required task coverage is fixed.',
-  'Blocked Task':
-    'A task is currently blocked. Required task coverage is at risk until the dependency clears.',
-  'Major Issue':
-    'A serious problem in the underlying numbers — this is advisory only, not a submit gate, but the team should not move past it.',
-  'Needs Action':
-    'Work can continue, but this gap could weaken the chapter or final pitch.',
-  'Check Soon': 'Not urgent yet, but do not ignore it.',
-  FYI: 'Informational. Use this for handoff, monitoring, or context.'
+  'Stuck':
+    'Submit-for-review or section progress is stuck on this. Fix it or plan the unblock before moving on.',
+  'Action today':
+    'Work can continue, but this gap could weaken the chapter or final pitch. Push it today.',
+  'Look at soon': 'Not urgent yet, but do not ignore it.',
+  'All good': 'Background information; no action required today.'
 }
 
-// Map a signal to a display label. The (severity, source) pair is
-// usually enough; for blockers we look at source to split "Stops
-// Submit" (requirements) from "Blocked Task" (tasks) from "Major
-// Issue" (everything else, e.g. below-cost pricing).
+// Map a signal to a display label. The internal severity enum drives
+// the chip text directly — the (severity + source) pair still
+// determines `whyItMatters` and `howToFix` below, so the diagnostic
+// copy stays specific even though the chip vocabulary is now four
+// student-friendly words.
 export function chooseDisplayLabel(
   signal: Pick<AdvisorSignal, 'severity' | 'source'>
 ): AdvisorDisplayLabel {
   switch (signal.severity) {
     case 'blocker':
-      if (signal.source === 'requirements') return 'Stops Submit'
-      if (signal.source === 'tasks') return 'Blocked Task'
-      return 'Major Issue'
+      return 'Stuck'
     case 'risk':
-      return 'Needs Action'
+      return 'Action today'
     case 'watch':
-      return 'Check Soon'
+      return 'Look at soon'
     case 'info':
     default:
-      return 'FYI'
+      return 'All good'
   }
 }
 
@@ -187,10 +185,8 @@ export function getAdvisorDisplayLabel(
 }
 
 export const DISPLAY_LABEL_CHIP_CLASS: Record<AdvisorDisplayLabel, string> = {
-  'Stops Submit': 'border-rose-300 bg-rose-50 text-rose-800',
-  'Blocked Task': 'border-rose-300 bg-rose-50 text-rose-800',
-  'Major Issue': 'border-rose-300 bg-rose-50 text-rose-800',
-  'Needs Action': 'border-amber-300 bg-amber-50 text-amber-800',
-  'Check Soon': 'border-sky-300 bg-sky-50 text-sky-800',
-  FYI: 'border-neutral-300 bg-neutral-50 text-neutral-700'
+  'Stuck': 'border-rose-300 bg-rose-50 text-rose-800',
+  'Action today': 'border-amber-300 bg-amber-50 text-amber-800',
+  'Look at soon': 'border-sky-300 bg-sky-50 text-sky-800',
+  'All good': 'border-emerald-300 bg-emerald-50 text-emerald-800'
 }

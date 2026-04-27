@@ -210,7 +210,7 @@ export const executiveSummary: TemplateStudio = {
           'For each risk: who owns mitigating it (Co-CEO, CFO, CMO, COO, CSGO).'
         ],
         whereToFindIt: [
-          'C-Suite Advisor cockpit (/c-suite-advisor) — Stops Submit + Needs Action signals.',
+          'C-Suite Advisor cockpit (/c-suite-advisor) — Stuck + Action today signals.',
           'Intelligence Sync panel — what is missing right now.',
           'Open advisor signals on each chapter hub.'
         ],

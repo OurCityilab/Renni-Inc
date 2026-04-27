@@ -98,7 +98,7 @@ export const companyStructureContinuity: TemplateStudio = {
       expertGuidance: {
         expertRole: 'operations lead',
         whyThisMatters:
-          'A consistent rhythm catches risks before they become Stops Submit signals. An inconsistent rhythm means risks surface in the last week and the team scrambles.',
+          'A consistent rhythm catches risks before they become Stuck signals. An inconsistent rhythm means risks surface in the last week and the team scrambles.',
         whatToGather: [
           'Recurring meetings (weekly stand-up, pre-pop-up review, post-pop-up debrief).',
           'Owner per meeting + decisions usually made there.',

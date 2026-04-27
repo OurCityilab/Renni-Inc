@@ -312,8 +312,8 @@ function download(filename: string, content: string, mime: string) {
             4. C-Suite Advisor action plan
           </p>
           <p class="text-xs text-neutral-500">
-            Snapshot of advisor signals grouped by Stops Submit / Blocked Task /
-            Major Issue / Needs Action / Check Soon / FYI.
+            Snapshot of advisor signals grouped by Stuck / Action today /
+            Look at soon / All good.
           </p>
         </div>
         <div class="flex gap-2 text-xs">

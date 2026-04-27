@@ -491,7 +491,7 @@ const dependencyCandidates = computed<Task[]>(() =>
               ? 'border-rose-300 bg-rose-50 text-rose-800 font-semibold'
               : 'border-neutral-300 bg-neutral-50 text-neutral-700'
           ]"
-        >Stops / Blocked · {{ backplanSummary.blockerCount }}</li>
+        >Stuck · {{ backplanSummary.blockerCount }}</li>
         <li
           :class="[
             'rounded-full border px-2 py-0.5 uppercase tracking-wide',
@@ -499,7 +499,7 @@ const dependencyCandidates = computed<Task[]>(() =>
               ? 'border-amber-300 bg-amber-50 text-amber-800 font-semibold'
               : 'border-neutral-300 bg-neutral-50 text-neutral-700'
           ]"
-        >Needs Action · {{ backplanSummary.riskCount }}</li>
+        >Action today · {{ backplanSummary.riskCount }}</li>
         <li
           :class="[
             'rounded-full border px-2 py-0.5 uppercase tracking-wide',

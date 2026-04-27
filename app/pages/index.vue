@@ -151,10 +151,10 @@ const memberCard = computed(() =>
   })
 )
 
-// Severity → tone class map. Matches the audit's unified vocabulary
-// (stuck / action-today / look-at-soon / all-good) so the card reads
-// the same as the C-Suite Advisor + Intelligence Sync chips will once
-// the rest of the vocabulary collapse lands in Sprint 2.
+// Severity → tone class map. Matches the unified four-tier student
+// vocabulary (stuck / action-today / look-at-soon / all-good) used by
+// the C-Suite Advisor, Intelligence Sync, and Presentation Readiness
+// chip layers as of Sprint 1B.
 const memberCardTone: Record<
   ReturnType<typeof buildMemberNextBestAction>['severity'],
   string
@@ -164,6 +164,30 @@ const memberCardTone: Record<
   'look-at-soon': 'border-sky-300 bg-sky-50',
   'all-good': 'border-emerald-300 bg-emerald-50'
 }
+
+// --- Phoenix Nest card -----------------------------------------------
+// One of the three final outputs in the project (TechTown pop-up,
+// Brand & Operations Playbook, Phoenix Nest carry pitch). Surface the
+// chapter-11 deliverable status on Home so students and chiefs can
+// see it without hunting the Playbook chapter list. Uses
+// allDeliverables, which the page already watches for every audience
+// — no extra query.
+const PHOENIX_NEST_DELIVERABLE_ID = 'ch-11-phoenix-nest-retail-carry-pitch'
+const phoenixNestDeliverable = computed<Deliverable | null>(
+  () =>
+    allDeliverables.value.find((d) => d.id === PHOENIX_NEST_DELIVERABLE_ID) ?? null
+)
+const PHOENIX_NEST_STATUS_LABEL: Record<string, string> = {
+  draft: 'Drafting',
+  in_review: 'In review',
+  needs_revision: 'Needs revision',
+  approved: 'Approved'
+}
+const phoenixNestStatusLabel = computed<string | null>(() => {
+  const d = phoenixNestDeliverable.value
+  if (!d) return null
+  return PHOENIX_NEST_STATUS_LABEL[d.status] ?? d.status
+})
 </script>
 
 <template>
@@ -539,6 +563,34 @@ const memberCardTone: Record<
         </p>
         <p class="mt-1 text-xs text-neutral-600">
           Record sales and donations as they happen; track toward the donation goal.
+        </p>
+      </NuxtLink>
+      <!-- Phoenix Nest carry pitch — one of the three final outputs.
+           Visible to every audience so students and chiefs can find
+           it from Home without hunting through Playbook chapters.
+           Status chip mirrors the chapter-11 deliverable status when
+           the watcher has resolved; otherwise the card shows just
+           the link copy. -->
+      <NuxtLink
+        :to="phoenixNestDeliverable
+          ? `/deliverables/${phoenixNestDeliverable.id}`
+          : '/playbook'"
+        class="card group block hover:border-phoenix-300 border-amber-200 bg-amber-50/30"
+      >
+        <div class="flex items-baseline justify-between gap-2">
+          <p class="text-xs uppercase tracking-wide text-amber-700">
+            Final output · Retail carry
+          </p>
+          <span
+            v-if="phoenixNestStatusLabel"
+            class="shrink-0 rounded-full border border-amber-300 bg-white px-2 py-0.5 text-[10px] uppercase tracking-wide text-amber-800"
+          >{{ phoenixNestStatusLabel }}</span>
+        </div>
+        <p class="mt-1 text-sm font-medium text-neutral-900">
+          Phoenix Nest carry pitch →
+        </p>
+        <p class="mt-1 text-xs text-neutral-700">
+          Help prove which products are ready for the school store.
         </p>
       </NuxtLink>
       <NuxtLink

@@ -25,6 +25,20 @@ const canSeeWorkbench = computed<boolean>(
     auth.profile?.role === 'coo'
 )
 
+// Sprint 1B nav gating — keep member nav simple. The student-relevant
+// reference tools (Canvas, Timeline, Goals, Pricing, Revenue, Remote
+// Marketing) stay visible to everyone; the chief / planner-only
+// surfaces (Presentation Readiness, Export Center) are gated to the
+// same audience as Workbench so the member nav row is shorter and
+// every link a member sees actually opens.
+const canSeeAdvancedSupport = computed<boolean>(
+  () =>
+    auth.isAdmin ||
+    auth.isCoCEO ||
+    auth.isChief ||
+    auth.profile?.role === 'coo'
+)
+
 const navGroups = computed<NavGroup[]>(() => {
   const workItems: NavItem[] = [
     { to: '/', label: 'Home', hint: 'Start Your Day path + your tasks + signals' },
@@ -42,6 +56,21 @@ const navGroups = computed<NavGroup[]>(() => {
     { to: '/departments', label: 'Departments', hint: 'Per-team views with chief advisor cards' },
     { to: '/playbook', label: 'Playbook', hint: 'Chapter-level approval rollup' }
   )
+
+  const supportItems: NavItem[] = [
+    { to: '/canvas', label: 'Canvas', hint: 'Business Model Canvas (nine blocks)' },
+    { to: '/timeline', label: 'Timeline', hint: 'Due dates, dependencies, May 12 / 15 / 27 backplan' },
+    { to: '/goals', label: 'Goals', hint: 'Department goals (revenue, donations, brand)' },
+    { to: '/pricing', label: 'Pricing', hint: 'Operational pricing scenarios — source of truth' },
+    { to: '/revenue', label: 'Revenue', hint: 'Pop-up sales + donations recap' },
+    { to: '/remote-marketing', label: 'Remote Marketing', hint: 'Briefs, assignments, and feedback workflow for the remote marketing class' }
+  ]
+  if (canSeeAdvancedSupport.value) {
+    supportItems.push(
+      { to: '/presentation-readiness', label: 'Presentation', hint: 'Final presentation scorecard for May 12 / 15' },
+      { to: '/export-center', label: 'Export', hint: 'Snapshot exports for docs / slides / design briefs' }
+    )
+  }
   const groups: NavGroup[] = [
     {
       label: 'Work',
@@ -49,16 +78,7 @@ const navGroups = computed<NavGroup[]>(() => {
     },
     {
       label: 'Support',
-      items: [
-        { to: '/canvas', label: 'Canvas', hint: 'Business Model Canvas (nine blocks)' },
-        { to: '/timeline', label: 'Timeline', hint: 'Due dates, dependencies, May 12 / 15 / 27 backplan' },
-        { to: '/goals', label: 'Goals', hint: 'Department goals (revenue, donations, brand)' },
-        { to: '/pricing', label: 'Pricing', hint: 'Operational pricing scenarios — source of truth' },
-        { to: '/revenue', label: 'Revenue', hint: 'Pop-up sales + donations recap' },
-        { to: '/presentation-readiness', label: 'Presentation', hint: 'Final presentation scorecard for May 12 / 15' },
-        { to: '/remote-marketing', label: 'Remote Marketing', hint: 'Briefs, assignments, and feedback workflow for the remote marketing class' },
-        { to: '/export-center', label: 'Export', hint: 'Snapshot exports for docs / slides / design briefs' }
-      ]
+      items: supportItems
     }
   ]
   const adminItems: NavItem[] = []

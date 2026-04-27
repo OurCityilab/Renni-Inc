@@ -870,14 +870,14 @@ function presentationIssues(
       out.push(makeIssue({
         id: 'sync-pres-advisor-load',
         severity: submitBlockers > 0 ? 'stops-submit' : 'needs-action',
-        title: `${totalSeriousCount} blocker / major-issue + ${risks} Needs Action signal${risks === 1 ? '' : 's'} across the program`,
+        title: `${totalSeriousCount} Stuck + ${risks} Action today signal${risks === 1 ? '' : 's'} across the program`,
         summary: submitBlockers > 0
           ? `${submitBlockers} signal${submitBlockers === 1 ? '' : 's'} affect submit-for-review (required-task coverage). The remaining ${advisoryBlockers + risks} are advisory but worth closing for the final presentation.`
           : 'The C-Suite Advisor has open advisory signals across multiple chapters. None of these stop submit-for-review on their own; final presentation readiness still benefits from closing them.',
         whatToGather: [
           submitBlockers > 0
-            ? 'Linked tasks for any required Template Studio requirement that has none (these are the only signals that affect submit-for-review)'
-            : 'Action on each Needs Action signal',
+            ? 'Linked tasks for any required check that has none (these are the only signals that actually block submit-for-review)'
+            : 'Action on each Action today signal',
           'Owner + due date on each open signal',
           'Updated evidence for any segment / pricing risks'
         ],
@@ -886,11 +886,11 @@ function presentationIssues(
         owner: 'Co-CEOs',
         helpFrom: ['CFO', 'COO', 'CMO', 'Chief Strategy and Growth Officer'],
         nextAction:
-          'Open /c-suite-advisor and walk Today\'s Moves; close Stops Submit first if any.',
+          "Open /c-suite-advisor and walk Today's Moves; close Stuck items first.",
         doneLooksLike:
           submitBlockers > 0
-            ? '0 Stops Submit signals (required-task coverage clean). Major issues + Needs Action ≤ 3 across the program.'
-            : 'Major issues + Needs Action ≤ 3 across the program.',
+            ? '0 Stuck items affecting submit (required-task coverage clean). Advisory blockers + Action today ≤ 3 across the program.'
+            : 'Advisory blockers + Action today ≤ 3 across the program.',
         route: '/c-suite-advisor',
         source: 'presentation'
       }))
@@ -915,11 +915,16 @@ export function generateIntelligenceSyncIssues(
 
 // ---------- display helpers ----------
 
+// Sprint 1B: chip labels match the four-tier student vocabulary used
+// across C-Suite Advisor, Presentation Readiness, and Home so a
+// student who learns one surface understands the others. Internal
+// IntelligenceSyncSeverity values are unchanged — only the display
+// labels move to the student-facing words.
 export const SYNC_SEVERITY_LABEL: Record<IntelligenceSyncSeverity, string> = {
-  'stops-submit': 'Stops Submit',
-  'needs-action': 'Needs Action',
-  'check-soon': 'Check Soon',
-  ready: 'Ready'
+  'stops-submit': 'Stuck',
+  'needs-action': 'Action today',
+  'check-soon': 'Look at soon',
+  ready: 'All good'
 }
 
 export const SYNC_SEVERITY_CHIP_CLASS: Record<IntelligenceSyncSeverity, string> = {

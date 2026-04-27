@@ -171,7 +171,7 @@ function statusFor(m: BackplanMilestone): MilestoneStatus {
 function backplanStatusLabel(m: BackplanMilestone): string {
   const s = statusFor(m)
   if (s === 'today') return 'Today'
-  if (s === 'past-needs-action') return 'Needs Action — past due'
+  if (s === 'past-needs-action') return 'Action today — past due'
   if (s === 'past-clean') return 'Past · related chapters clean'
   const d = daysUntil(m.suggestedDate, backplanTodayStr)
   return `In ${d}d`
@@ -430,31 +430,34 @@ function fmtDate(iso: string | null): string {
       </p>
     </section>
 
-    <!-- B. Summary cards (V1.2 — student-friendly labels) -->
+    <!-- B. Summary cards. Sprint 1B: chip vocabulary collapsed to the
+         four-tier student set (Stuck / Action today / Look at soon /
+         All good) so the card headers, advisor signals, and the
+         Intelligence Sync panel all read in the same words. -->
     <section class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
       <article class="card border-rose-200 bg-rose-50/40">
-        <p class="text-xs uppercase tracking-wide text-rose-700">Stops / Blocked</p>
+        <p class="text-xs uppercase tracking-wide text-rose-700">Stuck</p>
         <p class="text-2xl font-semibold text-rose-900">{{ severityCounts.blocker }}</p>
         <p class="text-[11px] text-rose-700">
           Items that stop submit or show a task is blocked.
         </p>
       </article>
       <article class="card border-amber-200 bg-amber-50/40">
-        <p class="text-xs uppercase tracking-wide text-amber-700">Needs Action</p>
+        <p class="text-xs uppercase tracking-wide text-amber-700">Action today</p>
         <p class="text-2xl font-semibold text-amber-900">{{ severityCounts.risk }}</p>
         <p class="text-[11px] text-amber-700">
           Work can continue, but this could weaken the chapter or pitch.
         </p>
       </article>
       <article class="card border-sky-200 bg-sky-50/40">
-        <p class="text-xs uppercase tracking-wide text-sky-700">Check Soon</p>
+        <p class="text-xs uppercase tracking-wide text-sky-700">Look at soon</p>
         <p class="text-2xl font-semibold text-sky-900">{{ severityCounts.watch }}</p>
         <p class="text-[11px] text-sky-700">
           Not urgent yet, but do not ignore it.
         </p>
       </article>
       <article class="card border-emerald-200 bg-emerald-50/40">
-        <p class="text-xs uppercase tracking-wide text-emerald-700">FYI / Monitoring</p>
+        <p class="text-xs uppercase tracking-wide text-emerald-700">All good · Monitoring</p>
         <p class="text-2xl font-semibold text-emerald-900">{{ severityCounts.info }}</p>
         <p class="text-[11px] text-emerald-700">
           {{ statusCounts.in_review }} in review · {{ statusCounts.approved }} approved
@@ -476,7 +479,7 @@ function fmtDate(iso: string | null): string {
         v-if="topMoves.length === 0"
         class="rounded-md border border-emerald-200 bg-emerald-50 p-2 text-xs text-emerald-900"
       >
-        No Stops Submit, Needs Action, or Check Soon items under this filter. Continue
+        No Stuck, Action today, or Look at soon items under this filter. Continue
         reviewing final text and approval rubric.
       </p>
       <ul v-else class="space-y-2">
@@ -652,7 +655,7 @@ function fmtDate(iso: string | null): string {
           At-risk chapters
         </p>
         <p class="text-xs text-neutral-500">
-          Chapters with at least one Stops Submit / Blocked Task / Needs Action / Check Soon. Sorted by severity.
+          Chapters with at least one Stuck / Action today / Look at soon item. Sorted by severity.
         </p>
       </header>
       <p

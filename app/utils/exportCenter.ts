@@ -101,9 +101,9 @@ export function buildPresentationOutlineMd(inputs: ExportInputs): string {
     `- In review: ${summary.inReviewChapters}`,
     `- Draft: ${summary.draftChapters}`,
     `- Needs revision: ${summary.needsRevisionChapters}`,
-    `- Stops / Blocked: ${summary.blockerCount}`,
-    `- Needs Action: ${summary.riskCount}`,
-    `- Check Soon: ${summary.watchCount}`,
+    `- Stuck: ${summary.blockerCount}`,
+    `- Action today: ${summary.riskCount}`,
+    `- Look at soon: ${summary.watchCount}`,
     `- Overdue tasks: ${summary.overdueTaskCount}`,
     `- Blocked tasks: ${summary.blockedTaskCount}`
   ].join('\n')))
@@ -132,8 +132,8 @@ export function buildPresentationOutlineMd(inputs: ExportInputs): string {
     if (row.daysToDue != null) {
       meta.push(`- Days to due: ${row.daysToDue}`)
     }
-    if (row.blockerCount > 0) meta.push(`- Stops / Blocked signals: ${row.blockerCount}`)
-    if (row.riskCount > 0) meta.push(`- Needs Action signals: ${row.riskCount}`)
+    if (row.blockerCount > 0) meta.push(`- Stuck signals: ${row.blockerCount}`)
+    if (row.riskCount > 0) meta.push(`- Action today signals: ${row.riskCount}`)
     lines.push('')
     lines.push(mdSection(header, [meta.join('\n'), '', sectionLines.join('\n')].join('\n')))
   }
@@ -460,7 +460,11 @@ export function buildAdvisorActionPlanMd(
     if (!groups[label]) groups[label] = []
     groups[label].push(a)
   }
-  const ORDER = ['Stops Submit', 'Blocked Task', 'Major Issue', 'Needs Action', 'Check Soon', 'FYI']
+  // Sprint 1B: ORDER must match the label values returned by
+  // getAdvisorDisplayLabel(). The advisor display layer collapsed
+  // to a four-tier student vocabulary in this pass, so the keys
+  // here changed from the previous six-label set.
+  const ORDER = ['Stuck', 'Action today', 'Look at soon', 'All good']
   for (const label of ORDER) {
     const list = groups[label]
     if (!list?.length) continue
@@ -712,7 +716,7 @@ export function buildFinalPresentationCoachPromptMd(
   lines.push(mdSection('Readiness snapshot', mdBullets([
     `Chapters covered: ${summary.totalChapters}`,
     `Approved: ${summary.approvedChapters} · In review: ${summary.inReviewChapters} · Draft: ${summary.draftChapters} · Needs revision: ${summary.needsRevisionChapters}`,
-    `Stops / Blocked: ${summary.blockerCount} · Needs Action: ${summary.riskCount} · Check Soon: ${summary.watchCount}`,
+    `Stuck: ${summary.blockerCount} · Action today: ${summary.riskCount} · Look at soon: ${summary.watchCount}`,
     `Overdue tasks: ${summary.overdueTaskCount} · Blocked tasks: ${summary.blockedTaskCount} · Ownerless: ${summary.ownerlessTaskCount}`
   ])))
 
@@ -740,8 +744,8 @@ export function buildFinalPresentationCoachPromptMd(
       `- Status: ${row.status}`,
       `- Readiness: ${row.band}`,
       row.daysToDue != null ? `- Days to due: ${row.daysToDue}` : null,
-      row.blockerCount > 0 ? `- Stops / Blocked signals: ${row.blockerCount}` : null,
-      row.riskCount > 0 ? `- Needs Action signals: ${row.riskCount}` : null
+      row.blockerCount > 0 ? `- Stuck signals: ${row.blockerCount}` : null,
+      row.riskCount > 0 ? `- Action today signals: ${row.riskCount}` : null
     ].filter((s): s is string => Boolean(s))
     lines.push('')
     lines.push(
