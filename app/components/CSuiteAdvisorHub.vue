@@ -42,6 +42,17 @@ import type {
   AdvisorSignalSeverity
 } from '~/types/advisor'
 import { getTemplateStudio } from '~/data/templateStudios'
+import { PROJECT_MILESTONES } from '~/data/projectMilestones'
+import {
+  buildMilestoneBackplan,
+  chapterNumberFromDeliverableId,
+  daysUntil,
+  evaluateMilestoneStatus,
+  getNextMilestones,
+  todayIso as backplanTodayIso,
+  type BackplanMilestone,
+  type MilestoneStatus
+} from '~/utils/milestoneBackplan'
 
 const props = defineProps<{
   deliverables: Deliverable[]
@@ -123,6 +134,60 @@ const topMoves = computed<AggregatedSignal[]>(() => {
     )
     .slice(0, 5)
 })
+
+// ---- C2. Milestone Backplan ----
+// Read-only view over the configured project milestones. Suggested
+// dates only — never creates a task, never edits a due date, never
+// writes anywhere. Past-due milestones are flagged "Needs Action"
+// only when their related chapters still carry open advisor signals
+// (blocker / risk / watch). The role filter is intentionally NOT
+// applied here — milestones span the whole program.
+const backplanTodayStr = backplanTodayIso()
+
+// Build set of chapter numbers that currently have at least one open
+// (non-info) advisor signal across the unfiltered aggregated list.
+const chaptersWithOpenIssues = computed<Set<number>>(() => {
+  const out = new Set<number>()
+  for (const a of allAggregated.value) {
+    if (a.signal.severity === 'info') continue
+    const n = chapterNumberFromDeliverableId(a.deliverable.id)
+    if (n !== null) out.add(n)
+  }
+  return out
+})
+function hasOpenChapterIssues(chapter: number): boolean {
+  return chaptersWithOpenIssues.value.has(chapter)
+}
+
+const fullBackplan = computed<BackplanMilestone[]>(() =>
+  buildMilestoneBackplan(PROJECT_MILESTONES)
+)
+const nextMilestones = computed<BackplanMilestone[]>(() =>
+  getNextMilestones(fullBackplan.value, backplanTodayStr, 3)
+)
+function statusFor(m: BackplanMilestone): MilestoneStatus {
+  return evaluateMilestoneStatus(m, backplanTodayStr, hasOpenChapterIssues)
+}
+function backplanStatusLabel(m: BackplanMilestone): string {
+  const s = statusFor(m)
+  if (s === 'today') return 'Today'
+  if (s === 'past-needs-action') return 'Needs Action — past due'
+  if (s === 'past-clean') return 'Past · related chapters clean'
+  const d = daysUntil(m.suggestedDate, backplanTodayStr)
+  return `In ${d}d`
+}
+function backplanStatusChipClass(m: BackplanMilestone): string {
+  switch (statusFor(m)) {
+    case 'today':
+      return 'border-rose-300 bg-rose-50 text-rose-800'
+    case 'past-needs-action':
+      return 'border-amber-300 bg-amber-50 text-amber-800'
+    case 'past-clean':
+      return 'border-neutral-300 bg-neutral-50 text-neutral-600'
+    default:
+      return 'border-sky-300 bg-sky-50 text-sky-800'
+  }
+}
 
 // ---- D. Owner lanes ----
 const OWNER_LANES: AdvisorRole[] = [
@@ -480,6 +545,50 @@ function fmtDate(iso: string | null): string {
               </p>
             </div>
           </details>
+        </li>
+      </ul>
+    </section>
+
+    <!-- C2. Milestone Backplan — next 3 suggested dates back-planned
+         from the configured final-presentation target. Suggestions
+         only; never creates a task, never edits a due date. -->
+    <section v-if="nextMilestones.length" class="card space-y-2">
+      <header class="space-y-0.5">
+        <p class="text-xs font-semibold uppercase tracking-wide text-neutral-600">
+          Milestone backplan
+        </p>
+        <p class="text-xs text-neutral-500">
+          Next 3 suggested milestones based on the configured final target. These
+          are suggestions only — they do not change task or deliverable due dates.
+          The full plan lives on
+          <NuxtLink to="/timeline" class="text-phoenix-700 hover:underline">/timeline</NuxtLink>.
+        </p>
+      </header>
+      <ul class="space-y-1.5 text-xs">
+        <li
+          v-for="m in nextMilestones"
+          :key="`backplan-${m.id}`"
+          class="rounded border border-neutral-200 bg-white px-2 py-1.5"
+        >
+          <div class="flex flex-wrap items-baseline justify-between gap-2">
+            <p class="font-semibold text-neutral-900">{{ m.title }}</p>
+            <span
+              class="rounded-full border px-2 py-0.5 text-[11px] uppercase tracking-wide"
+              :class="backplanStatusChipClass(m)"
+            >{{ backplanStatusLabel(m) }}</span>
+          </div>
+          <p class="mt-0.5 text-[11px] text-neutral-700 tabular-nums">
+            <span class="font-mono">{{ m.suggestedDate }}</span>
+            · <span class="font-medium">Owner:</span> {{ m.owner }}
+            <span v-if="m.relatedChapters.length">
+              · <span class="font-medium">Ch.</span>
+              {{ m.relatedChapters.join(', ') }}
+            </span>
+          </p>
+          <p class="mt-0.5 text-[11px] text-neutral-700">
+            <span class="font-medium">Done looks like:</span>
+            {{ m.definitionOfDone }}
+          </p>
         </li>
       </ul>
     </section>

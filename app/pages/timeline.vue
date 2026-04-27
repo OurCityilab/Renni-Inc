@@ -20,6 +20,13 @@ import {
   buildPresentationReadiness,
   PROCESS_ORDER
 } from '~/utils/presentationReadiness'
+import { PROJECT_MILESTONES } from '~/data/projectMilestones'
+import {
+  buildMilestoneBackplan,
+  daysUntil,
+  todayIso,
+  type BackplanMilestone
+} from '~/utils/milestoneBackplan'
 
 const auth = useAuthStore()
 const tasks = useTasks()
@@ -51,32 +58,41 @@ const presentationReadiness = computed(() =>
 )
 const backplanSummary = computed(() => presentationReadiness.value.summary)
 
-// Sprint 2 — fixed milestone markers for May 12 / May 15 / May 27.
-// Display-only. Does NOT introduce a global deadline model and does
-// NOT edit any deliverable due date. Days remaining are computed at
-// render time so the chip flips to "today" or "passed" naturally.
+// Milestone markers are now sourced from app/data/projectMilestones.ts
+// instead of being hardcoded in this file. Display-only. Does NOT
+// introduce a Firestore-backed deadline model and does NOT edit any
+// deliverable due date. Days remaining are computed at render time so
+// the chip flips to "today" or "passed" naturally.
 interface Milestone {
   iso: string
   label: string
   detail: string
 }
-const MILESTONES: Milestone[] = [
-  {
-    iso: '2026-05-12',
-    label: 'Final presentation target',
-    detail: 'Primary final-presentation date.'
-  },
-  {
-    iso: '2026-05-15',
-    label: 'Final presentation fallback',
-    detail: 'Latest acceptable final-presentation date.'
-  },
-  {
-    iso: '2026-05-27',
-    label: 'TechTown pop-up',
-    detail: 'Pop-up sale day. Square remains the external POS.'
+const MILESTONES = computed<Milestone[]>(() => {
+  const out: Milestone[] = []
+  if (PROJECT_MILESTONES.finalPresentationTargetDate) {
+    out.push({
+      iso: PROJECT_MILESTONES.finalPresentationTargetDate,
+      label: 'Final presentation target',
+      detail: 'Primary final-presentation date.'
+    })
   }
-]
+  if (PROJECT_MILESTONES.finalPresentationFallbackDate) {
+    out.push({
+      iso: PROJECT_MILESTONES.finalPresentationFallbackDate,
+      label: 'Final presentation fallback',
+      detail: 'Latest acceptable final-presentation date.'
+    })
+  }
+  if (PROJECT_MILESTONES.techTownPopUpDate) {
+    out.push({
+      iso: PROJECT_MILESTONES.techTownPopUpDate,
+      label: 'TechTown pop-up',
+      detail: 'Pop-up sale day. Square remains the external POS.'
+    })
+  }
+  return out
+})
 function todayMs(): number {
   const d = new Date()
   return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime()
@@ -104,6 +120,28 @@ function milestoneDaysLabel(iso: string): string {
   if (days < 0) return `${Math.abs(days)}d ago`
   if (days === 0) return 'today'
   return `${days}d to go`
+}
+
+// Suggested Milestone Plan — back-planned from the configured final
+// target date. Display-only; never mutates a deliverable.dueDate or
+// task.dueDate. The advisor / chiefs / instructor still drive the
+// actual due-date edits per deliverable.
+const todayStr = todayIso()
+const suggestedBackplan = computed<BackplanMilestone[]>(() =>
+  buildMilestoneBackplan(PROJECT_MILESTONES)
+)
+function backplanDaysLabel(m: BackplanMilestone): string {
+  const d = daysUntil(m.suggestedDate, todayStr)
+  if (d < 0) return `${Math.abs(d)}d ago`
+  if (d === 0) return 'today'
+  return `${d}d to go`
+}
+function backplanRowClass(m: BackplanMilestone): string {
+  const d = daysUntil(m.suggestedDate, todayStr)
+  if (d < 0) return 'border-neutral-300 bg-neutral-50 text-neutral-700'
+  if (d === 0) return 'border-rose-300 bg-rose-50 text-rose-800'
+  if (d <= 3) return 'border-amber-300 bg-amber-50 text-amber-800'
+  return 'border-sky-200 bg-white text-neutral-800'
 }
 
 // Mirrors Firestore: admin, Co-CEO, or any chief may create/edit planning.
@@ -512,10 +550,59 @@ const dependencyCandidates = computed<Task[]>(() =>
         </li>
       </ul>
       <p class="text-[11px] italic text-neutral-500">
-        Display-only milestones. Renni Command Center has no global deadline
-        model; chiefs and instructor still set deliverable due dates from each
-        deliverable detail page.
+        Display-only milestones. Configured in
+        <code>app/data/projectMilestones.ts</code>. Chiefs and instructor still
+        set deliverable due dates from each deliverable detail page.
       </p>
+
+      <!-- Suggested Milestone Plan — back-planned from the final
+           target date. Suggestion only; never mutates task or
+           deliverable due dates. -->
+      <details class="rounded-md border border-neutral-200 bg-white p-2" open>
+        <summary class="cursor-pointer text-xs font-semibold text-neutral-800">
+          Suggested milestone plan
+          <span class="ml-1 font-normal text-neutral-500">
+            ({{ suggestedBackplan.length }} suggested dates · back-planned from final target)
+          </span>
+        </summary>
+        <p class="mt-1 text-[11px] italic text-neutral-600">
+          Suggested dates do not change task due dates until the instructor
+          updates tasks/deliverables. Use these as a planning lens, not as a
+          live calendar.
+        </p>
+        <ul class="mt-2 space-y-1.5 text-xs">
+          <li
+            v-for="m in suggestedBackplan"
+            :key="m.id"
+            :class="['rounded border px-2 py-1.5', backplanRowClass(m)]"
+          >
+            <div class="flex flex-wrap items-baseline justify-between gap-2">
+              <p class="font-semibold">{{ m.title }}</p>
+              <p class="text-[11px] tabular-nums">
+                <span class="font-mono">{{ m.suggestedDate }}</span>
+                · {{ backplanDaysLabel(m) }}
+              </p>
+            </div>
+            <p class="mt-0.5 text-[11px] opacity-90">
+              <span class="font-medium">Owner:</span> {{ m.owner }}
+              <span v-if="m.dependency">
+                · <span class="font-medium">After:</span> {{ m.dependency }}
+              </span>
+              <span v-if="m.relatedChapters.length">
+                · <span class="font-medium">Ch.</span>
+                {{ m.relatedChapters.join(', ') }}
+              </span>
+            </p>
+            <p class="mt-0.5 text-[11px] opacity-90">
+              <span class="font-medium">Done looks like:</span>
+              {{ m.definitionOfDone }}
+            </p>
+            <p class="mt-0.5 text-[11px] italic opacity-80">
+              {{ m.whyItMatters }}
+            </p>
+          </li>
+        </ul>
+      </details>
 
       <!-- Process-order ladder. Display-only; reminds the team
            which step blocks which next step. -->
