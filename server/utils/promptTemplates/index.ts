@@ -29,6 +29,30 @@ import {
   type MarketEvidenceCritiquePayload,
   type MarketEvidenceCritiqueResult
 } from './marketEvidenceCritique'
+import {
+  dailyCommandBriefTemplate,
+  buildDailyCommandBriefTemplate,
+  type DailyCommandBriefPayload,
+  type DailyCommandBriefResult
+} from './dailyCommandBrief'
+import {
+  whatsNextTemplate,
+  buildWhatsNextTemplate,
+  type WhatsNextPayload,
+  type WhatsNextResult
+} from './whatsNext'
+import {
+  runTheMeetingTemplate,
+  buildRunTheMeetingTemplate,
+  type RunTheMeetingPayload,
+  type RunTheMeetingResult
+} from './runTheMeeting'
+import {
+  assignTheWorkTemplate,
+  buildAssignTheWorkTemplate,
+  type AssignTheWorkPayload,
+  type AssignTheWorkResult
+} from './assignTheWork'
 
 /**
  * A prompt template for one AI critique mode. Generic over the
@@ -39,6 +63,12 @@ export interface PromptTemplate<TPayload, TResponse> {
   /** Stable string identifier the endpoint dispatches on. Must
    *  match the `mode` in the request body and the registry key. */
   mode: string
+  /** Stable version string written into responses and audit log
+   *  entries so chiefs and instructors can correlate behavior
+   *  changes with template revisions. Existing templates that
+   *  predate this field can omit it (optional in V1). New
+   *  templates SHOULD set this. */
+  templateVersion?: string
   /** Builds the system prompt from brand + program context. The
    *  template must reference brand.name / program.name etc. via
    *  these arguments, not via hardcoded literals. */
@@ -82,7 +112,15 @@ export interface PromptTemplate<TPayload, TResponse> {
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const REGISTRY: Record<string, PromptTemplate<any, any>> = {
-  'market-evidence-critique': marketEvidenceCritiqueTemplate
+  'market-evidence-critique': marketEvidenceCritiqueTemplate,
+  // Executive Advisor V1 — four modes added in Pass 1. The endpoint
+  // file `server/api/ai/executive-advisor.post.ts` is the only
+  // dispatcher today; market-evidence-critique stays on its own
+  // legacy URL so the existing client requires no modification.
+  'daily-command-brief': dailyCommandBriefTemplate,
+  'whats-next': whatsNextTemplate,
+  'run-the-meeting': runTheMeetingTemplate,
+  'assign-the-work': assignTheWorkTemplate
 }
 
 /**
@@ -103,10 +141,29 @@ export const SUPPORTED_PROMPT_MODES: readonly string[] = Object.freeze(
   Object.keys(REGISTRY)
 )
 
-// Re-export the first template's payload / result types so the
-// endpoint can type its market-evidence handler without reaching
-// into the template module.
+// Re-export each template's payload / result types so endpoints
+// can type their handlers without reaching into individual
+// template modules.
 export type {
   MarketEvidenceCritiquePayload,
-  MarketEvidenceCritiqueResult
+  MarketEvidenceCritiqueResult,
+  DailyCommandBriefPayload,
+  DailyCommandBriefResult,
+  WhatsNextPayload,
+  WhatsNextResult,
+  RunTheMeetingPayload,
+  RunTheMeetingResult,
+  AssignTheWorkPayload,
+  AssignTheWorkResult
+}
+
+// Re-export the per-mode request-bound template factories so the
+// executive-advisor endpoint can construct a fresh template per
+// request (the action-card validator needs the deliverable
+// due-date map from the payload context).
+export {
+  buildDailyCommandBriefTemplate,
+  buildWhatsNextTemplate,
+  buildRunTheMeetingTemplate,
+  buildAssignTheWorkTemplate
 }

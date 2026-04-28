@@ -52,6 +52,13 @@ export default defineNuxtConfig({
       process.env.NUXT_AI_CRITIQUE_BASE_URL || 'https://api.anthropic.com',
     aiCritiqueModel:
       process.env.NUXT_AI_CRITIQUE_MODEL || 'claude-haiku-4-5-20251001',
+    // Executive Advisor V1 feature flag. The advisor endpoint is
+    // server-only in Pass 1 (no UI wiring). Default OFF — the endpoint
+    // returns a generic unavailable error when the flag is missing or
+    // false. Provider config is shared with the market-evidence
+    // critique endpoint above (same API key, base URL, model).
+    executiveAdvisorEnabled:
+      process.env.NUXT_EXECUTIVE_ADVISOR_ENABLED === 'true',
     public: {
       // Safe to ship to the browser. Firebase web config is not a secret.
       firebase: {

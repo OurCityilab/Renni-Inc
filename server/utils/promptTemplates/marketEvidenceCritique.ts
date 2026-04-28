@@ -278,6 +278,12 @@ export const marketEvidenceCritiqueTemplate: PromptTemplate<
   MarketEvidenceCritiqueResult
 > = {
   mode: 'market-evidence-critique',
+  // Stamped in the Executive Advisor Pass 1 sprint when
+  // PromptTemplate gained a templateVersion field. The market-
+  // evidence behavior itself is unchanged from the Architectural
+  // Scaffolding sprint; bumping versions on this template should
+  // be rare and only when prompt copy or response schema changes.
+  templateVersion: 'market-evidence-critique.v1.0.0',
   systemPrompt: buildSystemPrompt,
   userPromptBuilder: buildUserPrompt,
   responseSchema: validateResponse,

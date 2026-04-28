@@ -257,6 +257,25 @@ service cloud.firestore {
       allow update, delete: if isAdmin() || isCoCEO() || hasRole('cfo');
     }
 
+    // -------- aiAdvisorInvocations --------
+    // Server-side audit log for Executive Advisor calls. Written
+    // exclusively by the /api/ai/executive-advisor endpoint via the
+    // Firebase Admin SDK; clients have no read or write surface in
+    // V1. Admin / instructor reads happen through the Firebase
+    // Console or future server-side admin tooling. Chiefs do NOT
+    // get broad read access in V1 — when chief read is added later
+    // it must be scoped to the chief's own invocation metadata
+    // only (per the Pass 1 brief).
+    //
+    // Stored fields are minimal metadata only. The endpoint never
+    // writes the full prompt, the raw provider response, the
+    // Firebase ID token, unrelated student writing, or private
+    // profile data into this collection. See
+    // server/utils/executiveAdvisor/aiAdvisorInvocations.ts.
+    match /aiAdvisorInvocations/{invocationId} {
+      allow read, write: if false;
+    }
+
     // -------- feedback --------
     match /feedback/{id} {
       allow read: if isSignedIn();
