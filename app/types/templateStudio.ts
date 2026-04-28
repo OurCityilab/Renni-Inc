@@ -43,10 +43,16 @@ export interface TemplateStudioSection {
   // safe write-back to Working Draft. Intentionally narrow in V1:
   // only `customerSegmentBuilder` is supported, and only the Ch. 4
   // Customer Segments section opts in. The shape can grow as new
-  // section-specific QuickStart variants are needed; we deliberately
-  // do not generalize to a giant universal form engine until real
-  // student testing on this first variant says it's worth it.
-  guidedQuickStart?: GuidedQuickStartConfig
+  // chip-pick variants are needed; we deliberately do not generalize
+  // to a giant universal form engine until real student testing on
+  // this first variant says it's worth it.
+  //
+  // Renamed from `guidedQuickStart` to `chipPickQuickStart` in the
+  // Architectural Scaffolding sprint to make explicit that this is
+  // the LIGHTWEIGHT chip-pick pattern, not the upcoming full
+  // Customer Profile Builder pattern. Both will coexist; sections
+  // opt into one OR the other.
+  chipPickQuickStart?: ChipPickQuickStartConfig
   // Structured Evidence Standard V1 — optional per-section guidance shown
   // next to the structured-evidence editor in the Output Workspace.
   // Authors can leave them blank; the editor falls back to generic copy.
@@ -98,19 +104,23 @@ export interface TemplateStudioSection {
   expertGuidance?: ExpertGuidance
 }
 
-// GuidedQuickStartConfig — Customer Segments QuickStart Sprint.
+// ChipPickQuickStartConfig — Customer Segments QuickStart Sprint.
 //
 // Narrow-by-design V1 scaffolding metadata. The shape supports the
 // Customer Segments use case (chip-pick segments → needs → importance →
 // evidence → deterministic starter draft) without committing to a
 // universal form engine across all 99 requirements. Future sections
-// that opt in can add their own variant config without breaking
+// that opt in can add their own chip-pick sub-config without breaking
 // existing studios because every field is optional and the renderer
 // only fires when `enabled` is true and the matching builder config
 // is present.
 //
+// Renamed from `GuidedQuickStartConfig` in the Architectural
+// Scaffolding sprint to make explicit this is the lightweight
+// chip-pick pattern, not the forthcoming Customer Profile Builder.
+//
 // Posture (do not relax in V1):
-//   - never required: every studio without `guidedQuickStart` renders
+//   - never required: every studio without `chipPickQuickStart` renders
 //     exactly as before
 //   - never auto-saves: the QuickStart only emits a payload; the
 //     parent workspace decides when to assign and dirty-flag
@@ -120,7 +130,7 @@ export interface TemplateStudioSection {
 //   - never invokes AI; draft generation is a deterministic template
 //     with bracketed placeholders the student must fill in
 //   - never gates submit, status, approval, or Playbook readiness
-export interface GuidedQuickStartConfig {
+export interface ChipPickQuickStartConfig {
   enabled: boolean
   // Section-level mission / framing copy. Kept short so the surface
   // stays calm, not gamified.

@@ -1,11 +1,26 @@
 <script setup lang="ts">
-// SectionQuickStart — Customer Segments QuickStart Sprint.
+// ChipPickQuickStart — lightweight chip-pick scaffolding pattern.
+//
+// This is the LIGHTWEIGHT chip-pick variant of section scaffolding
+// (Customer Segments QuickStart in V1; future simple sections may
+// opt in via section.chipPickQuickStart metadata). It is NOT the
+// full Customer Profile Builder pattern — that pattern (forthcoming
+// in a separate sprint) renders a richer artifact, runs a
+// deterministic classifier, and routes through AI feedback. Both
+// patterns coexist; sections opt into one OR the other based on
+// their curriculum design.
+//
+// File renamed from SectionQuickStart.vue → ChipPickQuickStart.vue
+// in the Architectural Scaffolding sprint to make the pattern's
+// nature explicit. The metadata field on TemplateStudioSection was
+// renamed in the same pass: section.guidedQuickStart →
+// section.chipPickQuickStart.
 //
 // V1 scope (do not relax):
-//   - mounts ONLY when section.guidedQuickStart?.enabled is true
-//   - V1 only renders the customer-segment composer; future variants
-//     can branch on other guidedQuickStart.* sub-configs without
-//     changing this prop API
+//   - mounts ONLY when section.chipPickQuickStart?.enabled is true
+//   - V1 only renders the customer-segment composer sub-config;
+//     future chip-pick variants can branch on other sub-configs
+//     without changing this prop API
 //   - never auto-saves; emits an `apply` payload that the parent
 //     workspace assigns to the existing local draft + dirty-flag
 //   - never overwrites student text silently (append/replace/cancel
@@ -20,7 +35,7 @@
 import { computed, ref } from 'vue'
 import { useAuthStore } from '~/stores/auth'
 import type {
-  GuidedQuickStartConfig,
+  ChipPickQuickStartConfig,
   TemplateStudioSection
 } from '~/types/templateStudio'
 
@@ -91,8 +106,8 @@ const open = ref<boolean>(
   !viewerIsLeader.value && !sectionHasAnyContent.value
 )
 
-const config = computed<GuidedQuickStartConfig | null>(
-  () => props.section.guidedQuickStart ?? null
+const config = computed<ChipPickQuickStartConfig | null>(
+  () => props.section.chipPickQuickStart ?? null
 )
 const builder = computed(() => config.value?.customerSegmentBuilder ?? null)
 

@@ -1,30 +1,63 @@
-// Server-only AI critique endpoint for the Market Evidence Suite.
+// AI critique endpoint — Architectural Scaffolding sprint refactor.
+//
+// V1 endpoint that previously handled exactly one mode (market-
+// evidence critique) is now a thin router that:
+//   1. Verifies the Firebase ID token (existing safety posture).
+//   2. Reads optional `mode` from the request body, defaulting to
+//      `market-evidence-critique` so the existing
+//      MarketEvidenceCritiquePanel.vue client continues to work
+//      without modification.
+//   3. Resolves the prompt template from the registry.
+//   4. Enforces per-user daily call limit (25/day, in-memory).
+//   5. Validates the request body for the resolved mode.
+//   6. Loads BrandContext + ProgramContext from app/config.
+//   7. Builds the prompt via the template (system + user prompts
+//      both parameterized over brand and program).
+//   8. Enforces the template's per-request input-token budget
+//      (~4000 tokens, expressed as 16_000 chars).
+//   9. Calls the provider, validates the response via the
+//      template's responseSchema, and returns it verbatim.
+//
+// The endpoint filename remains `market-evidence-critique.post.ts`
+// so the existing client URL `/api/ai/market-evidence-critique` is
+// unchanged and no client modification is required. The brief
+// said the filename rename was cosmetic; we kept the URL stable
+// because changing it would have required a client diff that the
+// brief explicitly said to avoid.
 //
 // Posture (do not relax in V1):
 //   - read-only coach, never an approver
 //   - no Firestore writes, no auth-token forwarding, no streaming
-//   - provider call lives entirely on the server; the API key never
-//     leaves runtimeConfig
-//   - input is validated and size-capped before we burn a model call
-//   - output is JSON-only, schema-checked, and returned verbatim
+//   - provider call lives entirely on the server; the API key
+//     never leaves runtimeConfig
+//   - input is validated and size-capped before we burn a model
+//     call
+//   - output is JSON-only, schema-checked, returned verbatim
 //   - the caller MUST present a verified Firebase ID token; an
 //     unauthenticated request never reaches the provider
+//   - per-user daily call counter (25/day, UTC) gates a runaway
+//     client; pre-flight rejection does not consume the budget
 //
-// The endpoint targets Anthropic's Messages API (Anthropic-compatible
-// only — no provider abstraction in V1). The base URL and model are
-// configurable via runtimeConfig so a compatible host can be plugged
-// in without code changes, but the request shape and response parsing
-// assume Anthropic's `/v1/messages` schema.
+// The endpoint targets Anthropic's Messages API. The base URL and
+// model are configurable via runtimeConfig. The request shape and
+// response parsing assume Anthropic's `/v1/messages` schema.
 
-// Explicit imports (Soft Section Locking sprint typecheck cleanup):
-// see server/api/auth/provision.post.ts for the rationale.
+// Explicit imports (Soft Section Locking sprint typecheck cleanup).
 import { defineEventHandler, getHeader, readBody, createError } from 'h3'
 import { useRuntimeConfig } from 'nitropack/runtime'
 import { adminAuth } from '~~/server/utils/admin'
 import {
-  buildMarketEvidenceCritiquePrompt,
-  type MarketEvidenceCritiquePrompt
-} from '~~/server/utils/marketEvidenceCritiquePrompt'
+  resolvePromptTemplate,
+  type MarketEvidenceCritiquePayload,
+  type MarketEvidenceCritiqueResult
+} from '~~/server/utils/promptTemplates'
+import {
+  AI_DAILY_LIMIT,
+  recordSuccessfulCall,
+  withinDailyLimit
+} from '~~/server/utils/aiRateLimit'
+import { HOUSE_PHOENIX_BRAND_CONTEXT } from '~~/app/config/brandContext'
+import { RENAISSANCE_PROGRAM_CONTEXT } from '~~/app/config/programContext'
 import type {
   AiCritiqueEvidenceLinkInput,
   AiCritiqueRequirementInput,
@@ -32,23 +65,23 @@ import type {
   AiCritiqueUpstreamMarketEntry,
   MarketEvidenceCritiqueError,
   MarketEvidenceCritiqueErrorCode,
-  MarketEvidenceCritiqueRequest,
-  MarketEvidenceCritiqueResponse
+  MarketEvidenceCritiqueRequest
 } from '~~/app/types/aiCritique'
 
-// V1 limits. Generous enough that students can paste full source
-// notes; tight enough that a runaway request can't fan out into a
-// huge model bill. Tune in V2 if real usage demands more headroom.
-const MAX_TEXT_FIELD_CHARS = 10_000
-const MAX_PAYLOAD_CHARS = 40_000
+// V1 mode the legacy URL defaults to when `mode` is omitted from
+// the body. Existing MarketEvidenceCritiquePanel.vue does NOT send
+// `mode`, so backwards compatibility relies on this default.
+const DEFAULT_MODE = 'market-evidence-critique'
+
+// Per-field char caps. Tighter than the per-prompt budget so a
+// single bloated field can't push the prompt past
+// `template.maxInputChars`.
+const MAX_TEXT_FIELD_CHARS = 4_000
 const MAX_EVIDENCE_LINKS = 25
 const MAX_STRUCTURED_EVIDENCE = 25
 const MAX_MARKET_BUILDER_ENTRIES = 25
 const MAX_UPSTREAM_MARKET_ENTRIES = 25
 const MAX_REQUIREMENTS = 30
-const MAX_RESPONSE_TOKENS = 1500
-
-const ALLOWED_RISK_LEVELS = new Set(['low', 'medium', 'high'])
 
 function badRequest(
   code: MarketEvidenceCritiqueErrorCode,
@@ -62,11 +95,23 @@ function badRequest(
   })
 }
 
+function rateLimited(message: string): never {
+  const error: MarketEvidenceCritiqueError = {
+    code: 'ai_payload_too_large',
+    message
+  }
+  throw createError({
+    statusCode: 429,
+    statusMessage: message,
+    data: error
+  })
+}
+
 function unauthorized(message: string): never {
-  // Single safe message for any auth failure — present, malformed, or
-  // expired token, all surface the same prompt to the user. We never
-  // include token contents in the response so a misconfigured client
-  // can't echo a stale token back through logs.
+  // Single safe message for any auth failure — present, malformed,
+  // or expired token, all surface the same prompt to the user. We
+  // never include token contents in the response so a misconfigured
+  // client can't echo a stale token back through logs.
   const error: MarketEvidenceCritiqueError = {
     code: 'ai_unauthorized',
     message
@@ -135,7 +180,13 @@ function ensureMaxLen(text: string, field: string): string {
   return text
 }
 
-function validateRequest(raw: unknown): MarketEvidenceCritiqueRequest {
+// Mode-specific request validators. Future modes register their own
+// validator function here and the dispatcher calls the right one
+// based on the resolved mode. For V1, only `market-evidence-critique`
+// is supported.
+function validateMarketEvidenceRequest(
+  raw: unknown
+): MarketEvidenceCritiquePayload {
   if (!raw || typeof raw !== 'object') {
     badRequest('ai_invalid_request', 'Request body must be a JSON object.')
   }
@@ -252,10 +303,11 @@ function validateRequest(raw: unknown): MarketEvidenceCritiqueRequest {
       }
     })
 
-  // MarketBuilderEntry and the upstream Ch 7 entries are passed through
-  // verbatim — they're already-validated student data on disk. The cap
-  // bounds the payload size so a malicious / runaway request can't fan
-  // out, but we don't second-guess their internal shape.
+  // MarketBuilderEntry and the upstream Ch 7 entries are passed
+  // through verbatim — they're already-validated student data on
+  // disk. The cap bounds the payload size so a malicious / runaway
+  // request can't fan out, but we don't second-guess their internal
+  // shape.
   const marketBuilderEntries = asArray(
     body.marketBuilderEntries,
     'marketBuilderEntries'
@@ -303,7 +355,7 @@ function validateRequest(raw: unknown): MarketEvidenceCritiqueRequest {
     }
   }
 
-  const validated: MarketEvidenceCritiqueRequest = {
+  const validated: MarketEvidenceCritiquePayload = {
     deliverableId,
     deliverableTitle,
     chapterTitle,
@@ -316,9 +368,6 @@ function validateRequest(raw: unknown): MarketEvidenceCritiqueRequest {
     finalText,
     evidenceLinks: validatedEvidenceLinks,
     structuredEvidence: validatedStructuredEvidence,
-    // Cast through unknown — we've capped the count and the prompt
-    // builder JSON-stringifies the data, so any unexpected shape would
-    // surface as a model error rather than a server crash.
     marketBuilderEntries:
       marketBuilderEntries as MarketEvidenceCritiqueRequest['marketBuilderEntries'],
     upstreamCh7MarketEntries:
@@ -326,16 +375,6 @@ function validateRequest(raw: unknown): MarketEvidenceCritiqueRequest {
     upstreamCh8Context
   }
   return validated
-}
-
-function ensurePromptSize(prompt: MarketEvidenceCritiquePrompt): void {
-  const total = prompt.system.length + prompt.user.length
-  if (total > MAX_PAYLOAD_CHARS) {
-    badRequest(
-      'ai_payload_too_large',
-      'Section input is too large for the coach. Shorten source notes or critique one part at a time.'
-    )
-  }
 }
 
 interface AnthropicMessagesResponse {
@@ -347,7 +386,9 @@ async function callProvider(opts: {
   apiKey: string
   baseUrl: string
   model: string
-  prompt: MarketEvidenceCritiquePrompt
+  systemPrompt: string
+  userPrompt: string
+  maxOutputTokens: number
 }): Promise<string> {
   const url = `${opts.baseUrl.replace(/\/+$/, '')}/v1/messages`
   let res: Response
@@ -361,9 +402,9 @@ async function callProvider(opts: {
       },
       body: JSON.stringify({
         model: opts.model,
-        max_tokens: MAX_RESPONSE_TOKENS,
-        system: opts.prompt.system,
-        messages: [{ role: 'user', content: opts.prompt.user }]
+        max_tokens: opts.maxOutputTokens,
+        system: opts.systemPrompt,
+        messages: [{ role: 'user', content: opts.userPrompt }]
       })
     })
   } catch (e) {
@@ -401,90 +442,23 @@ async function callProvider(opts: {
   return text
 }
 
-function requireStringArray(value: unknown, field: string): string[] {
-  if (!Array.isArray(value)) {
-    malformedResponse(`AI response field "${field}" must be an array.`)
-  }
-  for (let i = 0; i < value.length; i += 1) {
-    if (typeof value[i] !== 'string') {
-      malformedResponse(`AI response field "${field}[${i}]" must be a string.`)
-    }
-  }
-  return value as string[]
-}
-
-function parseModelResponse(text: string): MarketEvidenceCritiqueResponse {
-  // Some models occasionally wrap JSON in ``` despite instructions; be
-  // forgiving and strip a leading code fence.
+function parseModelJson(text: string): unknown {
+  // Some models occasionally wrap JSON in ``` despite instructions;
+  // be forgiving and strip a leading code fence.
   const cleaned = text
     .replace(/^```(?:json)?\s*/i, '')
     .replace(/\s*```$/i, '')
     .trim()
-
-  let parsed: unknown
   try {
-    parsed = JSON.parse(cleaned)
+    return JSON.parse(cleaned)
   } catch {
     malformedResponse('AI response was not valid JSON.')
-  }
-  if (!parsed || typeof parsed !== 'object') {
-    malformedResponse('AI response was not a JSON object.')
-  }
-
-  const obj = parsed as Record<string, unknown>
-
-  // Strict schema check — every response field must be present with
-  // the expected type. Codex review flagged the prior soft fallbacks
-  // (`?? []`, `?? ''`) as cleaner-when-strict; this surfaces a
-  // malformed model response as ai_invalid_response instead of
-  // silently emitting an empty critique.
-  const strengths = requireStringArray(obj.strengths, 'strengths')
-  const missingEvidence = requireStringArray(
-    obj.missingEvidence,
-    'missingEvidence'
-  )
-  const weakAssumptions = requireStringArray(
-    obj.weakAssumptions,
-    'weakAssumptions'
-  )
-  const consistencyChecks = requireStringArray(
-    obj.consistencyChecks,
-    'consistencyChecks'
-  )
-  const questionsToAnswer = requireStringArray(
-    obj.questionsToAnswer,
-    'questionsToAnswer'
-  )
-  const nextValidationSteps = requireStringArray(
-    obj.nextValidationSteps,
-    'nextValidationSteps'
-  )
-
-  if (typeof obj.suggestedRevision !== 'string') {
-    malformedResponse('AI response field "suggestedRevision" must be a string.')
-  }
-  const suggestedRevision = obj.suggestedRevision as string
-
-  const riskRaw = typeof obj.riskLevel === 'string' ? obj.riskLevel : ''
-  if (!ALLOWED_RISK_LEVELS.has(riskRaw)) {
-    malformedResponse(`AI returned unexpected riskLevel: ${riskRaw || '(missing)'}.`)
-  }
-
-  return {
-    strengths,
-    missingEvidence,
-    weakAssumptions,
-    consistencyChecks,
-    questionsToAnswer,
-    suggestedRevision,
-    nextValidationSteps,
-    riskLevel: riskRaw as MarketEvidenceCritiqueResponse['riskLevel']
   }
 }
 
 // Pull `Authorization: Bearer <token>` from the request. We accept
-// only Bearer; anything else is rejected so a misuse case doesn't fall
-// through to the provider call.
+// only Bearer; anything else is rejected so a misuse case doesn't
+// fall through to the provider call.
 function readBearerToken(event: Parameters<typeof getHeader>[0]): string {
   const header = getHeader(event, 'authorization') || ''
   const match = /^Bearer\s+(.+)$/i.exec(header.trim())
@@ -498,16 +472,85 @@ function readBearerToken(event: Parameters<typeof getHeader>[0]): string {
   return token
 }
 
+// ----- Mode handlers -----------------------------------------------
+//
+// Each mode's handler:
+//   1. Validates the request body (mode-specific shape)
+//   2. Builds prompts via the resolved template + brand/program
+//      contexts
+//   3. Calls the provider
+//   4. Validates the response via template.responseSchema
+//
+// Future modes register a handler here. The endpoint dispatcher
+// stays thin.
+async function handleMarketEvidenceCritique(
+  raw: unknown,
+  apiKey: string,
+  baseUrl: string,
+  model: string
+): Promise<MarketEvidenceCritiqueResult> {
+  const template = resolvePromptTemplate('market-evidence-critique')
+  if (!template) {
+    // Should never happen — registry hardcodes this mode in V1.
+    badRequest('ai_invalid_request', 'AI mode is not configured.')
+  }
+  const validated = validateMarketEvidenceRequest(raw)
+
+  const systemPrompt = template.systemPrompt(
+    HOUSE_PHOENIX_BRAND_CONTEXT,
+    RENAISSANCE_PROGRAM_CONTEXT
+  )
+  const userPrompt = template.userPromptBuilder(
+    validated,
+    HOUSE_PHOENIX_BRAND_CONTEXT,
+    RENAISSANCE_PROGRAM_CONTEXT
+  )
+
+  const total = systemPrompt.length + userPrompt.length
+  if (total > template.maxInputChars) {
+    badRequest(
+      'ai_payload_too_large',
+      'Section input is too large for the coach. Shorten source notes or critique one part at a time.'
+    )
+  }
+
+  const text = await callProvider({
+    apiKey,
+    baseUrl,
+    model,
+    systemPrompt,
+    userPrompt,
+    maxOutputTokens: template.maxOutputTokens
+  })
+  const parsed = parseModelJson(text)
+  try {
+    return template.responseSchema(parsed) as MarketEvidenceCritiqueResult
+  } catch (e) {
+    malformedResponse(e instanceof Error ? e.message : 'AI response failed validation.')
+  }
+}
+
+// ----- Endpoint -----------------------------------------------------
 export default defineEventHandler(async (event) => {
   // 1. Auth gate. Codex review verdict was RED on the unauthenticated
   //    endpoint, so we verify a Firebase ID token before reading the
   //    provider key, parsing the body, or building any prompt. An
   //    unauthenticated caller never reaches a model invocation.
   const idToken = readBearerToken(event)
+  let uid: string
   try {
-    await adminAuth().verifyIdToken(idToken)
+    const decoded = await adminAuth().verifyIdToken(idToken)
+    uid = decoded.uid
   } catch {
     unauthorized('Sign in again to use AI critique.')
+  }
+
+  // 2. Per-user daily call limit. Pre-flight rejection here does not
+  //    consume the budget; only successful provider calls do.
+  if (!withinDailyLimit(uid)) {
+    rateLimited(
+      `Daily AI call limit reached (${AI_DAILY_LIMIT}/day). Try again tomorrow.`
+    )
   }
 
   const config = useRuntimeConfig()
@@ -530,15 +573,42 @@ export default defineEventHandler(async (event) => {
   }
 
   const raw = await readBody(event)
-  const validated = validateRequest(raw)
-  const prompt = buildMarketEvidenceCritiquePrompt(validated)
-  ensurePromptSize(prompt)
 
-  // The Firebase ID token never travels past this function — only the
-  // structured prompt payload reaches the provider. The token is not
-  // referenced inside callProvider, the prompt builder, or the
-  // returned response.
-  const text = await callProvider({ apiKey, baseUrl, model, prompt })
-  const parsed = parseModelResponse(text)
-  return parsed
+  // 3. Mode dispatch. The optional `mode` field on the request body
+  //    selects which prompt template handles the request. The legacy
+  //    market-evidence client does not send `mode`; we default to
+  //    `market-evidence-critique` so backwards compatibility holds.
+  let mode = DEFAULT_MODE
+  if (raw && typeof raw === 'object') {
+    const candidate = (raw as Record<string, unknown>).mode
+    if (typeof candidate === 'string' && candidate.length > 0) {
+      mode = candidate
+    }
+  }
+
+  const template = resolvePromptTemplate(mode)
+  if (!template) {
+    badRequest(
+      'ai_invalid_request',
+      `Unsupported AI mode "${mode}". Supported modes: market-evidence-critique.`
+    )
+  }
+
+  // 4. Mode-specific dispatch. V1 only routes `market-evidence-critique`;
+  //    future modes register their own handler here without growing
+  //    the dispatcher complexity.
+  let response: MarketEvidenceCritiqueResult
+  if (mode === 'market-evidence-critique') {
+    response = await handleMarketEvidenceCritique(raw, apiKey, baseUrl, model)
+  } else {
+    badRequest(
+      'ai_invalid_request',
+      `Mode "${mode}" is registered but no handler is wired. This is a server bug.`
+    )
+  }
+
+  // 5. Increment per-user daily counter on success.
+  recordSuccessfulCall(uid)
+
+  return response
 })

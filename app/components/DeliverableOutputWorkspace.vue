@@ -50,7 +50,7 @@ import SectionGuidanceSummary from '~/components/SectionGuidanceSummary.vue'
 import ExpertGuidanceCard from '~/components/ExpertGuidanceCard.vue'
 import PlaybookWritingScaffold from '~/components/PlaybookWritingScaffold.vue'
 import HelpMeUnderstand from '~/components/HelpMeUnderstand.vue'
-import SectionQuickStart from '~/components/SectionQuickStart.vue'
+import ChipPickQuickStart from '~/components/ChipPickQuickStart.vue'
 import MarketFitBuilder from '~/components/MarketFitBuilder.vue'
 import MarketFitReferencePanel, {
   type ReferencedMarketFitRow
@@ -542,8 +542,8 @@ function actionSummaryFor(s: TemplateStudioSection): string {
   return effectiveActionSummary(s)
 }
 
-// --- Customer Segments QuickStart Sprint: apply handler ----------
-// SectionQuickStart emits a payload describing where the generated
+// --- ChipPickQuickStart apply handler ----------------------------
+// ChipPickQuickStart emits a payload describing where the generated
 // starter draft should land (sourceNotes / draftText) and how
 // (set / append / replace). The workspace decides how to merge into
 // the existing local draft and dirty-flag — the QuickStart itself
@@ -2337,9 +2337,9 @@ function shouldOpenDefend(s: TemplateStudioSection): boolean {
           :deliverable-id="deliverable.id"
         />
 
-        <!-- Customer Segments QuickStart Sprint: guided builder.
+        <!-- ChipPickQuickStart — lightweight chip-pick scaffolding.
              Renders ONLY for sections that opt in via
-             section.guidedQuickStart.enabled (V1: Ch. 4 customer-segments
+             section.chipPickQuickStart.enabled (V1: Ch. 4 customer-segments
              only). Mounts above "Your team's thinking" so a student
              opening the section at home gets a chip-pick scaffolding
              flow that produces a starter draft they can edit before
@@ -2348,9 +2348,12 @@ function shouldOpenDefend(s: TemplateStudioSection): boolean {
              student writing without an explicit append/replace
              confirmation. The workspace's handleQuickStartApply
              merges the emitted payload and marks dirty so the
-             existing Save button stays in charge. -->
-        <SectionQuickStart
-          v-if="s.guidedQuickStart?.enabled"
+             existing Save button stays in charge.
+             This pattern is distinct from the upcoming Customer
+             Profile Builder pattern; sections opt into one or the
+             other via separate metadata fields. -->
+        <ChipPickQuickStart
+          v-if="s.chipPickQuickStart?.enabled"
           :section="s"
           :deliverable-id="deliverable.id"
           :current-source-notes="drafts[s.id]?.sourceNotes ?? ''"

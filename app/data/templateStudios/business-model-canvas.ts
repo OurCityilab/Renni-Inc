@@ -28,7 +28,9 @@ export const businessModelCanvas: TemplateStudio = {
       // Customer Segments QuickStart Sprint — only this section opts
       // in for V1. The renderer reads these options to seed chip
       // palettes; students can always enter a custom value.
-      guidedQuickStart: {
+      // Field renamed from `guidedQuickStart` to `chipPickQuickStart`
+      // in the Architectural Scaffolding sprint.
+      chipPickQuickStart: {
         enabled: true,
         title: 'Identify the customers',
         missionLabel: 'Mission',
