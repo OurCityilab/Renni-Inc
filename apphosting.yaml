@@ -72,3 +72,17 @@ env:
     value: claude-haiku-4-5-20251001
     availability:
       - RUNTIME
+
+  # Customer Profile Builder beta flag. Read at BUILD time by
+  # nuxt.config.ts (process.env.NUXT_CUSTOMER_PROFILE_BUILDER_ENABLED)
+  # and inlined into runtimeConfig.public.customerProfileBuilderEnabled.
+  # When `"true"`, the beta panel appears below the existing chip-pick
+  # QuickStart on the BMC customer-segments section. The existing
+  # ChipPickQuickStart is unaffected. RUNTIME availability is harmless
+  # future-proofing. To DISABLE: change the value to `"false"` (or
+  # remove this block) and redeploy.
+  - variable: NUXT_CUSTOMER_PROFILE_BUILDER_ENABLED
+    value: "true"
+    availability:
+      - BUILD
+      - RUNTIME
