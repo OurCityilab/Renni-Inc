@@ -114,6 +114,19 @@ async function save(e: RosterEntry) {
       department: draftDepartment.value,
       isChief: isChiefForRole(draftRole.value)
     })
+    // Section Task Assignment sprint: propagate the role / dept /
+    // isChief change to the user's `users/{uid}` doc so an active
+    // session (e.g. the former chief still logged in in another
+    // tab) loses chief-level UI capabilities immediately via the
+    // auth store's live profile subscription. Without this, the
+    // change only lands the next time they sign in. Best-effort —
+    // a sync failure does NOT block the roster save.
+    try {
+      await roster.syncUserFromRoster(e.email)
+    } catch {
+      // Non-fatal. The roster row is now correct; the user's
+      // session will pick up the change on next sign-in.
+    }
     editingEmail.value = null
   } catch (err) {
     rowError.value[e.email] = err instanceof Error ? err.message : String(err)

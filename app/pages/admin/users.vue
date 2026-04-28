@@ -2,12 +2,16 @@
 import { collection, getDocs } from 'firebase/firestore'
 import { computed, onMounted, ref } from 'vue'
 import { useAuthStore } from '~/stores/auth'
-import { useRoster } from '~/composables/useRoster'
-import type {
-  CollaborationRole,
-  EmailStatus,
-  RosterEntry
+import { isChiefForRole, useRoster } from '~/composables/useRoster'
+import {
+  DEPARTMENTS,
+  type CollaborationRole,
+  type Department,
+  type EmailStatus,
+  type Role,
+  type RosterEntry
 } from '~/types/models'
+import { hasRoleDataMismatch } from '~/utils/permissions'
 
 // Admin-only Access Manager (V1).
 //
@@ -236,6 +240,168 @@ async function clearAlternate(e: RosterEntry) {
   }
 }
 
+// --- Section Task Assignment sprint: manual Add user --------------
+// Admin / instructor can manually create a roster row when a
+// student missed signup or needs to be added outside the seed
+// flow. Creating the roster row does NOT create a Firebase Auth
+// account; the student still has to sign in once with the matching
+// Google account, at which point /api/auth/provision upserts their
+// users/{uid} doc.
+const ROLE_OPTIONS: Array<{ value: Role; label: string }> = [
+  { value: 'coceo', label: 'Co-CEO' },
+  { value: 'coo', label: 'COO' },
+  { value: 'cfo', label: 'CFO' },
+  { value: 'cmo', label: 'CMO' },
+  { value: 'csgo', label: 'Chief Strategy and Growth Officer' },
+  { value: 'member', label: 'member' },
+  { value: 'admin', label: 'admin / instructor' }
+]
+
+interface NewUserDraft {
+  email: string
+  displayName: string
+  role: Role
+  title: string
+  department: Department
+  alternateEmail: string
+  classSection: string
+  cohortGroup: string
+  collaborationRole: CollaborationRole | ''
+  accessNotes: string
+}
+
+function emptyNewUserDraft(): NewUserDraft {
+  return {
+    email: '',
+    displayName: '',
+    role: 'member',
+    title: '',
+    department: 'executive',
+    alternateEmail: '',
+    classSection: '',
+    cohortGroup: '',
+    collaborationRole: '',
+    accessNotes: ''
+  }
+}
+
+const adding = ref(false)
+const newUser = ref<NewUserDraft>(emptyNewUserDraft())
+const newUserError = ref<string | null>(null)
+const newUserSaving = ref(false)
+const newUserSuccess = ref<string | null>(null)
+
+function startAdd() {
+  newUser.value = emptyNewUserDraft()
+  newUserError.value = null
+  newUserSuccess.value = null
+  adding.value = true
+}
+
+function cancelAdd() {
+  adding.value = false
+  newUserError.value = null
+}
+
+async function submitNewUser() {
+  newUserError.value = null
+  newUserSuccess.value = null
+  const email = newUser.value.email.trim().toLowerCase()
+  const displayName = newUser.value.displayName.trim()
+  if (!displayName) {
+    newUserError.value = 'Display name is required.'
+    return
+  }
+  if (!email || !EMAIL_RE.test(email)) {
+    newUserError.value = 'A valid primary email is required.'
+    return
+  }
+  const alt = newUser.value.alternateEmail.trim().toLowerCase()
+  if (alt && !EMAIL_RE.test(alt)) {
+    newUserError.value = 'Alternate email is not a valid email address.'
+    return
+  }
+  if (alt && alt === email) {
+    newUserError.value =
+      'Alternate email cannot equal the primary email on this row.'
+    return
+  }
+  // Collision check against existing rows.
+  const collisionPrimary = entries.value.find(
+    (e) => e.email.toLowerCase() === email
+  )
+  if (collisionPrimary) {
+    newUserError.value = `A roster row already exists for ${email}. Edit that row instead.`
+    return
+  }
+  if (alt) {
+    const altCollision = entries.value.find(
+      (e) =>
+        e.email.toLowerCase() === alt ||
+        (e.alternateEmail || '').toLowerCase() === alt
+    )
+    if (altCollision) {
+      newUserError.value = `${alt} is already used by ${altCollision.displayName}.`
+      return
+    }
+  }
+  newUserSaving.value = true
+  try {
+    await roster.create({
+      email,
+      displayName,
+      role: newUser.value.role,
+      title: newUser.value.title.trim(),
+      department: newUser.value.department,
+      // isChief is DERIVED from role per the role map. Never
+      // accept the boolean as a separate input — the central
+      // permission helper treats role as the source of truth.
+      isChief: isChiefForRole(newUser.value.role),
+      alternateEmail: alt,
+      classSection: newUser.value.classSection.trim(),
+      cohortGroup: newUser.value.cohortGroup.trim(),
+      collaborationRole: newUser.value.collaborationRole,
+      accessNotes: newUser.value.accessNotes.trim()
+    })
+    newUserSuccess.value = `Roster row created for ${email}. The student must sign in with that Google account once for their session profile to provision.`
+    newUser.value = emptyNewUserDraft()
+  } catch (e) {
+    newUserError.value = e instanceof Error ? e.message : String(e)
+  } finally {
+    newUserSaving.value = false
+  }
+}
+
+// Role-data mismatch helpers — surface anomalies on each row so
+// admins can reconcile drift between the stored isChief flag and
+// the current role. The Fix button rewrites isChief to match the
+// role and propagates to users/{uid}.
+function rosterRowMismatch(e: RosterEntry): boolean {
+  return hasRoleDataMismatch(e)
+}
+
+const fixingMismatchEmail = ref<string | null>(null)
+async function fixMismatch(e: RosterEntry) {
+  fixingMismatchEmail.value = e.email
+  rowError.value[e.email] = ''
+  try {
+    await roster.update(e.email, {
+      isChief: isChiefForRole(e.role)
+    })
+    // Propagate to users/{uid} so a still-signed-in user picks up
+    // the corrected flag immediately.
+    try {
+      await roster.syncUserFromRoster(e.email)
+    } catch {
+      // Non-fatal.
+    }
+  } catch (err) {
+    rowError.value[e.email] = err instanceof Error ? err.message : String(err)
+  } finally {
+    fixingMismatchEmail.value = null
+  }
+}
+
 // Plain instructions an admin can paste into a message to a student
 // whose LTU email is blocked.
 const COPY_TEMPLATE = `Hi — I've added an alternate Google email for your Renni Command Center login.
@@ -308,7 +474,7 @@ async function copyTemplate() {
       </p>
     </section>
 
-    <!-- Search -->
+    <!-- Search + Add user trigger -->
     <div class="flex flex-wrap items-center gap-2">
       <input
         v-model="search"
@@ -319,7 +485,131 @@ async function copyTemplate() {
       <p class="text-xs text-neutral-500">
         {{ filtered.length }} of {{ entries.length }} roster {{ entries.length === 1 ? 'entry' : 'entries' }}
       </p>
+      <div class="ml-auto">
+        <button
+          v-if="auth.isAdmin && !adding"
+          type="button"
+          class="btn-primary text-sm"
+          @click="startAdd"
+        >+ Add user</button>
+      </div>
     </div>
+
+    <!-- Add user form. Admin / instructor only. Creates a new
+         roster row; does NOT create a Firebase Auth account. The
+         student must sign in once with the matching Google
+         account, at which point /api/auth/provision upserts their
+         users/{uid} doc. -->
+    <section
+      v-if="adding"
+      class="card space-y-3 border-phoenix-200 bg-phoenix-50/30"
+    >
+      <header class="space-y-0.5">
+        <h2 class="text-sm font-semibold text-phoenix-900">Add user</h2>
+        <p class="text-xs text-neutral-700">
+          Creates a roster entry that allows the student to sign in.
+          Does not create a Firebase Auth account — the student still
+          has to log in with the matching Google account at least once.
+        </p>
+      </header>
+      <div class="grid gap-2 sm:grid-cols-2">
+        <label class="text-xs font-medium text-neutral-800">
+          Display name <span class="text-rose-600">*</span>
+          <input
+            v-model="newUser.displayName"
+            type="text"
+            placeholder="e.g. Destiny Carter"
+            class="mt-1 w-full rounded border border-neutral-300 p-2 text-sm"
+          />
+        </label>
+        <label class="text-xs font-medium text-neutral-800">
+          Primary email <span class="text-rose-600">*</span>
+          <input
+            v-model="newUser.email"
+            type="email"
+            autocomplete="off"
+            placeholder="student@example.com"
+            class="mt-1 w-full rounded border border-neutral-300 p-2 text-sm"
+          />
+        </label>
+        <label class="text-xs font-medium text-neutral-800">
+          Alternate email (optional)
+          <input
+            v-model="newUser.alternateEmail"
+            type="email"
+            autocomplete="off"
+            placeholder="personal@gmail.com"
+            class="mt-1 w-full rounded border border-neutral-300 p-2 text-sm"
+          />
+          <span class="mt-1 block text-[11px] text-neutral-500">
+            Lets the student sign in with a second Google account if their
+            primary login is blocked.
+          </span>
+        </label>
+        <label class="text-xs font-medium text-neutral-800">
+          Role <span class="text-rose-600">*</span>
+          <select
+            v-model="newUser.role"
+            class="mt-1 w-full rounded border border-neutral-300 p-2 text-sm"
+          >
+            <option
+              v-for="opt in ROLE_OPTIONS"
+              :key="opt.value"
+              :value="opt.value"
+            >{{ opt.label }}</option>
+          </select>
+          <span class="mt-1 block text-[11px] text-neutral-500">
+            Chief flag is derived automatically from the role —
+            the central permission helper treats role as the source
+            of truth.
+          </span>
+        </label>
+        <label class="text-xs font-medium text-neutral-800">
+          Department <span class="text-rose-600">*</span>
+          <select
+            v-model="newUser.department"
+            class="mt-1 w-full rounded border border-neutral-300 p-2 text-sm"
+          >
+            <option v-for="d in DEPARTMENTS" :key="d" :value="d">{{ d }}</option>
+          </select>
+        </label>
+        <label class="text-xs font-medium text-neutral-800">
+          Title (optional)
+          <input
+            v-model="newUser.title"
+            type="text"
+            placeholder="e.g. Chief Financial Officer"
+            class="mt-1 w-full rounded border border-neutral-300 p-2 text-sm"
+          />
+        </label>
+        <label class="text-xs font-medium text-neutral-800 sm:col-span-2">
+          Notes (optional)
+          <input
+            v-model="newUser.accessNotes"
+            type="text"
+            placeholder="e.g. Manually added 2026-04-28; primary email pending IT setup"
+            class="mt-1 w-full rounded border border-neutral-300 p-2 text-sm"
+          />
+        </label>
+      </div>
+      <div class="flex flex-wrap items-center justify-between gap-2">
+        <p v-if="newUserError" class="text-sm text-rose-600">{{ newUserError }}</p>
+        <p v-else-if="newUserSuccess" class="text-sm text-emerald-700">{{ newUserSuccess }}</p>
+        <p v-else class="text-xs text-neutral-500">
+          Role and department determine the new user's permissions.
+          You can edit role / title / department later from
+          <NuxtLink to="/team" class="text-phoenix-700 underline">Team &amp; Role Management</NuxtLink>.
+        </p>
+        <div class="flex gap-2">
+          <button class="btn-secondary" @click="cancelAdd">Close</button>
+          <button
+            class="btn-primary"
+            :disabled="newUserSaving"
+            @click="submitNewUser"
+          >{{ newUserSaving ? 'Saving…' : 'Create user' }}</button>
+        </div>
+      </div>
+    </section>
 
     <p v-if="loading" class="text-sm text-neutral-500">Loading roster…</p>
 
@@ -360,6 +650,24 @@ async function copyTemplate() {
             </p>
           </div>
           <div class="flex shrink-0 flex-wrap items-center gap-2 text-xs">
+            <!-- Section Task Assignment sprint: surface role-data
+                 mismatches so admins can reconcile drift between
+                 the stored isChief flag and the current role. The
+                 central permission helper treats role as the
+                 source of truth, but the chip flags the
+                 inconsistency so it doesn't sit there forever. -->
+            <span
+              v-if="rosterRowMismatch(e)"
+              class="rounded-full border border-rose-300 bg-rose-50 px-2 py-0.5 uppercase tracking-wide text-rose-800"
+              title="The stored isChief flag does not match the current role."
+            >Role data mismatch</span>
+            <button
+              v-if="rosterRowMismatch(e)"
+              type="button"
+              class="text-xs text-rose-700 hover:underline"
+              :disabled="fixingMismatchEmail === e.email"
+              @click="fixMismatch(e)"
+            >{{ fixingMismatchEmail === e.email ? 'Fixing…' : 'Fix' }}</button>
             <span
               class="rounded-full border px-2 py-0.5 uppercase tracking-wide"
               :class="signupBadgeClass(e)"

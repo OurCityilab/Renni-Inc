@@ -6,8 +6,9 @@ import {
   signOut as firebaseSignOut,
   type User as FirebaseUser
 } from 'firebase/auth'
-import { doc, getDoc } from 'firebase/firestore'
+import { doc, getDoc, onSnapshot, type Unsubscribe } from 'firebase/firestore'
 import type { AppUser } from '~/types/models'
+import { isChief as profileIsChief } from '~/utils/permissions'
 
 export type AuthStatus =
   | 'loading'
@@ -22,6 +23,13 @@ interface AuthState {
   status: AuthStatus
   error: string | null
   _initPromise: Promise<void> | null
+  // Live `users/{uid}` subscription so role / department / isChief
+  // changes propagate to the active session without requiring a
+  // re-login. Without this, an admin who moves Chase from cfo →
+  // member sees the change on /team but Chase's still-open browser
+  // continues to call him a chief until he signs out and signs in
+  // again. See the Section Task Assignment sprint brief.
+  _profileUnsub: Unsubscribe | null
 }
 
 export const useAuthStore = defineStore('auth', {
@@ -30,12 +38,21 @@ export const useAuthStore = defineStore('auth', {
     profile: null,
     status: 'loading',
     error: null,
-    _initPromise: null
+    _initPromise: null,
+    _profileUnsub: null
   }),
   getters: {
     isSignedIn: (s) => !!s.user,
     isRostered: (s) => !!s.profile,
-    isChief: (s) => !!s.profile?.isChief,
+    // CURRENT-ROLE-WINS: derive isChief from the live `role` field
+    // via the centralized permission helper. The stored
+    // `profile.isChief` boolean is treated as display metadata
+    // only — if it has drifted from the role (admin changed role
+    // but the field hasn't synced yet), the role wins. This
+    // guarantees that a former chief immediately loses chief-
+    // level capabilities when their role is changed, even before
+    // the `isChief` field itself is rewritten.
+    isChief: (s) => profileIsChief(s.profile),
     isAdmin: (s) => s.profile?.role === 'admin',
     isCoCEO: (s) => s.profile?.role === 'coceo',
     department: (s) => s.profile?.department ?? null
@@ -53,10 +70,16 @@ export const useAuthStore = defineStore('auth', {
         onAuthStateChanged($firebase.auth, async (user) => {
           this.user = user
           if (!user) {
+            this._stopProfileSubscription()
             this.profile = null
             this.status = 'signed_out'
           } else if (!this.profile || this.profile.uid !== user.uid) {
             await this.loadOrProvisionProfile()
+            this._startProfileSubscription()
+          } else {
+            // Same user, but make sure the live subscription is
+            // active in case a hot-reload tore it down.
+            this._startProfileSubscription()
           }
           if (!resolved) {
             resolved = true
@@ -65,6 +88,52 @@ export const useAuthStore = defineStore('auth', {
         })
       })
       return this._initPromise
+    },
+
+    // Live subscription on the user's profile doc. When an admin
+    // changes role / isChief / department / title via /team, the
+    // subscription delivers the patched profile to the active
+    // session immediately; the next computed-property read by any
+    // permission gate sees the new role. Without this, a former
+    // chief retains chief-level UX until they sign out and back in.
+    //
+    // Idempotent: starting twice is a no-op; the existing
+    // unsubscribe is preserved so we don't leak listeners.
+    _startProfileSubscription() {
+      if (this._profileUnsub) return
+      if (!this.user) return
+      const { $firebase } = useNuxtApp()
+      const ref = doc($firebase.db, 'users', this.user.uid)
+      this._profileUnsub = onSnapshot(
+        ref,
+        (snap) => {
+          if (!snap.exists()) {
+            // Doc deleted — the user effectively lost access. Drop
+            // the profile so the UI re-routes through the
+            // not-rostered / signed-out flow on next nav.
+            this.profile = null
+            return
+          }
+          const next = {
+            uid: snap.id,
+            ...(snap.data() as Omit<AppUser, 'uid'>)
+          }
+          this.profile = next
+          if (this.status !== 'ready') this.status = 'ready'
+        },
+        () => {
+          // Snapshot error (e.g. transient network). Leave the
+          // existing profile intact rather than nuking it on a
+          // blip.
+        }
+      )
+    },
+
+    _stopProfileSubscription() {
+      if (this._profileUnsub) {
+        this._profileUnsub()
+        this._profileUnsub = null
+      }
     },
 
     async loadOrProvisionProfile() {
@@ -131,6 +200,7 @@ export const useAuthStore = defineStore('auth', {
     async signOut(options: { redirect?: boolean } = {}) {
       const redirect = options.redirect ?? true
       const { $firebase } = useNuxtApp()
+      this._stopProfileSubscription()
       await firebaseSignOut($firebase.auth)
       this.user = null
       this.profile = null

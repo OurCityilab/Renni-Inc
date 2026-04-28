@@ -23,7 +23,9 @@ import { useAuthStore } from '~/stores/auth'
 import { useDeliverables } from '~/composables/useDeliverables'
 import { getTemplateStudio } from '~/data/templateStudios'
 import DeliverableSectionWorkspace from '~/components/DeliverableSectionWorkspace.vue'
+import TaskCreateForm from '~/components/TaskCreateForm.vue'
 import { effectiveWhyThisMatters } from '~/utils/sectionGuidance'
+import { canAssignSectionTasks } from '~/utils/permissions'
 
 const route = useRoute()
 const auth = useAuthStore()
@@ -57,6 +59,39 @@ const sectionIndex = computed(() => {
     (s) => s.id === validSection.value!.id
   )
   return idx >= 0 ? idx + 1 : null
+})
+
+// Section Task Assignment sprint: gate the "Assign section as
+// task" affordance behind the centralized permission helper. The
+// helper derives chief status from the CURRENT role so a former
+// chief whose role was just changed cannot reach this control.
+// TaskCreateForm performs its own permission check too, so even
+// if a stale UI somehow shows the button, the form will refuse.
+const canAssignSection = computed<boolean>(() =>
+  canAssignSectionTasks(auth.profile)
+)
+
+// Toggle for the inline TaskCreateForm panel.
+const assigningOpen = ref(false)
+
+// Build a default definition-of-done string from the section's
+// completion criteria when authored. Falls back to a generic
+// "Complete the section" instruction. The chief is free to edit
+// before saving — TaskCreateForm exposes the field as a textarea.
+const sectionDefinitionOfDone = computed<string>(() => {
+  const sec = validSection.value
+  if (!sec) return ''
+  const criteria = sec.completionCriteria ?? []
+  if (criteria.length === 0) {
+    return `Save Final Playbook text for "${sec.title}" with at least the required inputs filled.`
+  }
+  return criteria.map((c) => `- ${c}`).join('\n')
+})
+
+const sectionAssignTitle = computed<string>(() => {
+  const sec = validSection.value
+  if (!sec) return ''
+  return `Complete: ${sec.title}`
 })
 
 // Guidance Compression Sprint: section-specific why-this-matters.
@@ -202,8 +237,42 @@ onBeforeRouteLeave(() => {
             :to="`/deliverables/${deliverable.id}`"
             class="rounded border border-neutral-300 bg-neutral-50 px-2 py-0.5 text-neutral-700 hover:bg-neutral-100"
           >← Chapter overview</NuxtLink>
+          <!-- Section Task Assignment sprint: chiefs / Co-CEOs /
+               admins can spawn a task tied to this exact section.
+               Hidden for regular members so the section workspace
+               UX stays clean. The TaskCreateForm itself re-checks
+               authorization, so a stale UI cannot mint tasks. -->
+          <button
+            v-if="canAssignSection"
+            type="button"
+            class="rounded border border-phoenix-300 bg-phoenix-50 px-2 py-0.5 font-medium text-phoenix-800 hover:bg-phoenix-100"
+            @click="assigningOpen = !assigningOpen"
+          >{{ assigningOpen ? 'Close assign panel' : '+ Assign section as task' }}</button>
         </div>
       </header>
+
+      <!-- Section Task Assignment sprint: review form. Nothing is
+           created until the chief clicks Save inside the form. All
+           prefilled fields are editable. The form locks the
+           deliverable picker so the task stays bound to this
+           chapter. -->
+      <section v-if="canAssignSection && assigningOpen" class="space-y-2">
+        <TaskCreateForm
+          :preset-title="sectionAssignTitle"
+          :preset-deliverable-id="deliverable.id"
+          :preset-playbook-chapter="deliverable.chapter"
+          :preset-department="deliverable.department"
+          :preset-definition-of-done="sectionDefinitionOfDone"
+          lock-deliverable
+          title="Assign this section as a task"
+          @created="assigningOpen = false"
+          @cancel="assigningOpen = false"
+        />
+        <p class="text-[11px] italic text-neutral-500">
+          Creates a task linked to the deliverable. The new task appears on Tasks,
+          Timeline, and the chapter overview. Edit any field above before saving.
+        </p>
+      </section>
 
       <DeliverableSectionWorkspace
         ref="workspaceRef"
