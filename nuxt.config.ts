@@ -77,7 +77,17 @@ export default defineNuxtConfig({
         storageBucket: process.env.NUXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
         messagingSenderId: process.env.NUXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
         appId: process.env.NUXT_PUBLIC_FIREBASE_APP_ID
-      }
+      },
+      // Customer Profile Builder beta feature flag. Default OFF.
+      // When OFF, no Customer Profile Builder UI renders and the
+      // existing chip-pick Customer Segments QuickStart remains the
+      // active student-facing path. When ON (set
+      // NUXT_CUSTOMER_PROFILE_BUILDER_ENABLED=true), the builder
+      // appears below the chip-pick QuickStart on the BMC
+      // customer-segments section as an opt-in beta panel. Lives on
+      // `runtimeConfig.public` so the client can read it.
+      customerProfileBuilderEnabled:
+        process.env.NUXT_CUSTOMER_PROFILE_BUILDER_ENABLED === 'true'
     }
   },
   nitro: {

@@ -51,6 +51,7 @@ import ExpertGuidanceCard from '~/components/ExpertGuidanceCard.vue'
 import PlaybookWritingScaffold from '~/components/PlaybookWritingScaffold.vue'
 import HelpMeUnderstand from '~/components/HelpMeUnderstand.vue'
 import ChipPickQuickStart from '~/components/ChipPickQuickStart.vue'
+import CustomerProfileBuilder from '~/components/CustomerProfileBuilder.vue'
 import MarketFitBuilder from '~/components/MarketFitBuilder.vue'
 import MarketFitReferencePanel, {
   type ReferencedMarketFitRow
@@ -97,6 +98,15 @@ const props = defineProps<{
 const auth = useAuthStore()
 const outputs = useDeliverableOutputs()
 const { data: output, loading } = outputs.watchOutput(() => props.deliverable.id)
+
+// Customer Profile Builder beta gate. Default OFF unless the
+// runtime config flag is explicitly set. The builder also requires
+// the section id to match `customer-segments` (see template). The
+// existing chip-pick QuickStart is unaffected by this gate.
+const runtimeConfig = useRuntimeConfig()
+const customerProfileBuilderEnabled = computed<boolean>(
+  () => runtimeConfig.public?.customerProfileBuilderEnabled === true
+)
 
 // In section-filter mode the chapter hub renders the orientation,
 // readiness, navigation, and preview; the workspace only renders the
@@ -2360,6 +2370,21 @@ function shouldOpenDefend(s: TemplateStudioSection): boolean {
           :current-draft-text="drafts[s.id]?.draftText ?? ''"
           :editing-enabled="editingEnabled && !isLockedByOther(s)"
           @apply="(payload) => handleQuickStartApply(s, payload)"
+        />
+
+        <!-- Customer Profile Builder beta panel.
+             Mounted ONLY when:
+               1. runtimeConfig.public.customerProfileBuilderEnabled
+                  is true (NUXT_CUSTOMER_PROFILE_BUILDER_ENABLED env
+                  var); AND
+               2. The active section id is `customer-segments` (the
+                  Ch. 4 BMC customer-segments slot).
+             Sits below the existing ChipPickQuickStart and never
+             replaces it. State is local to the component. No
+             Firestore writes. Copy Draft Starter writes to
+             clipboard only. -->
+        <CustomerProfileBuilder
+          v-if="customerProfileBuilderEnabled && s.id === 'customer-segments'"
         />
 
         <!-- Independent Student Mode: section-level mismatch warnings.

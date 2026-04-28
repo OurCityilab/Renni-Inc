@@ -287,3 +287,19 @@ export const NO_FIT_REASONS = {
   knownGap:
     'This combination of selections may sit in a known V1 gap (such as practical working households without children, or college-town renters).'
 } as const
+
+/**
+ * Message surfaced when `supporting-a-cause` is selected as a
+ * purchase motivation but neither corroborating signal is present
+ * (no `cause-driven` shopping behavior pick AND no
+ * `evidenceAboutCauseMotivation` flag). The classifier suppresses
+ * the Cause-First overlay in this case and surfaces this message in
+ * `contradictingSignals` so the team understands why CFS did not
+ * appear.
+ *
+ * Curriculum-coherent: students should not get a free CFS overlay
+ * from a single picklist choice; the cause claim needs at least one
+ * other behavioral or evidence anchor.
+ */
+export const CAUSE_FIRST_NOT_CORROBORATED_MESSAGE =
+  'You selected "supporting a cause" as a motivation, but the profile needs more evidence before we call this customer cause-led. Add "cause-driven" to shopping behavior, OR document why the supporter shows up.'

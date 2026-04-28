@@ -190,9 +190,19 @@ export interface ClassifierTeacherDebug {
   flooredBy: 'archetype' | 'evidence' | 'tie'
   /** Confidence floor that capped the final result, if any. */
   appliedFloor?: 'rural-fixed-income' | 'multigenerational-urban' | 'cause-first'
-  /** True when the Cause-First hard prerequisite blocked CFS from
-   *  consideration. */
+  /** True when CFS was dropped from consideration for ANY reason —
+   *  either the hard prerequisite was unmet OR the corroboration
+   *  check failed. See the `causeMotivationSelected` and
+   *  `causeCorroborated` fields below for the breakdown. */
   causeFirstPrerequisiteFailed: boolean
+  /** Hard-prereq breakdown: did the student select
+   *  `supporting-a-cause` as primary or secondary motivation? */
+  causeMotivationSelected: boolean
+  /** Corroboration breakdown: was at least one of `cause-driven`
+   *  shopping behavior OR `evidenceAboutCauseMotivation` flag
+   *  present? Only meaningful when `causeMotivationSelected` is
+   *  true. */
+  causeCorroborated: boolean
   /** Number of `other` write-in selections present in the input. */
   writeInCount: number
 }

@@ -50,6 +50,7 @@ import {
   type ArchetypeSignalMap
 } from '../data/customerProfileSignalMap'
 import {
+  CAUSE_FIRST_NOT_CORROBORATED_MESSAGE,
   CONFIDENCE_PHRASES,
   EXPLANATION_TEMPLATES,
   NO_FIT_REASONS,
@@ -113,8 +114,20 @@ export function classifyCustomerProfile(
     return buildInvalidOutput(validationError)
   }
 
-  // ---- 2. CFS hard prerequisite ----------------------------------
-  const causeFirstEligible = isCauseFirstEligible(selections)
+  // ---- 2. CFS hard prerequisite + corroboration check ------------
+  // CFS appears (as primary OR secondary overlay) only when BOTH:
+  //   A. supporting-a-cause is selected as primary OR secondary
+  //      purchase motivation (the hard prerequisite), AND
+  //   B1. cause-driven shopping-media behavior is selected, OR
+  //   B2. flags.evidenceAboutCauseMotivation === true.
+  //
+  // Without corroboration, a single picklist choice would make the
+  // CFS overlay nearly free. Curriculum lead's call: the cause claim
+  // needs at least one behavioral or evidence anchor before the
+  // classifier dignifies it with the overlay label.
+  const causeMotivationSelected = isCauseMotivationSelected(selections)
+  const causeCorroborated = hasCauseFirstCorroboration(selections, flags)
+  const causeFirstEligible = causeMotivationSelected && causeCorroborated
 
   // ---- 3–6. Score, cap, negative, normalize -----------------------
   const scoresRaw: Record<CustomerProfileArchetypeId, number> = {} as Record<
@@ -123,7 +136,8 @@ export function classifyCustomerProfile(
   >
   for (const archetypeId of CUSTOMER_PROFILE_ARCHETYPE_IDS) {
     if (archetypeId === 'cause-first-supporters' && !causeFirstEligible) {
-      // Hard-prereq drop. CFS does not appear in the score table.
+      // CFS dropped from consideration. Either the hard prereq is
+      // missing OR the corroboration check failed.
       scoresRaw[archetypeId] = -Infinity
       continue
     }
@@ -209,6 +223,14 @@ export function classifyCustomerProfile(
   }
 
   // ---- 12. Build explanation -------------------------------------
+  // If the student selected supporting-a-cause but corroboration is
+  // missing, surface a gentle note in contradictingSignals so the
+  // explanation explains why CFS overlay did NOT appear.
+  const causeUncorroboratedNote =
+    causeMotivationSelected && !causeCorroborated
+      ? CAUSE_FIRST_NOT_CORROBORATED_MESSAGE
+      : null
+
   const explanationFields = buildExplanationFields({
     primaryId: primary.id,
     secondary,
@@ -218,10 +240,16 @@ export function classifyCustomerProfile(
     flooredBy,
     appliedFloor,
     writeInCount,
-    finalConfidence
+    finalConfidence,
+    causeUncorroboratedNote
   })
 
   // ---- Teacher debug payload -------------------------------------
+  // `causeFirstPrerequisiteFailed` reports whether CFS was dropped
+  // from consideration for ANY reason (hard prereq missing OR
+  // corroboration missing). The breakdown is in
+  // `causeMotivationSelected` + `causeCorroborated` for finer-grained
+  // teacher review.
   const teacherDebug: ClassifierTeacherDebug = {
     scores: scoresNormalized,
     marginsToRunnerUp: computeAllMarginsToRunnerUp(ranked),
@@ -230,6 +258,8 @@ export function classifyCustomerProfile(
     flooredBy,
     appliedFloor,
     causeFirstPrerequisiteFailed: !causeFirstEligible,
+    causeMotivationSelected,
+    causeCorroborated,
     writeInCount
   }
 
@@ -314,13 +344,40 @@ function buildInvalidOutput(message: string): CustomerProfileClassifierOutput {
  * Cause-First eligibility (hard prerequisite)
  * ------------------------------------------------------------------ */
 
-function isCauseFirstEligible(
+/**
+ * Hard prerequisite test: the student selected `supporting-a-cause`
+ * as either the primary OR secondary purchase motivation. Necessary
+ * but not sufficient for CFS to appear; see
+ * `hasCauseFirstCorroboration` for the second gate.
+ */
+function isCauseMotivationSelected(
   selections: CustomerProfilePrimitiveSelections
 ): boolean {
   const m = selections['purchase-motivation']
   return (
     m.primary === 'supporting-a-cause' || m.secondary === 'supporting-a-cause'
   )
+}
+
+/**
+ * Corroboration test: at least one of the two cause anchors is
+ * present.
+ *   - `cause-driven` is among the shopping-media-behavior picks, OR
+ *   - `flags.evidenceAboutCauseMotivation === true`.
+ *
+ * Curriculum reason: a single "supporting a cause" picklist click is
+ * too cheap to justify a labeled CFS overlay. The student should
+ * ALSO show cause-aware behavior or have the team document why the
+ * supporter shows up.
+ */
+function hasCauseFirstCorroboration(
+  selections: CustomerProfilePrimitiveSelections,
+  flags: DocumentedEvidenceFlags
+): boolean {
+  const shoppingPicks = selections['shopping-media-behavior'] ?? []
+  if (shoppingPicks.includes('cause-driven')) return true
+  if (flags.evidenceAboutCauseMotivation === true) return true
+  return false
 }
 
 /* -------------------------------------------------------------------
@@ -651,6 +708,10 @@ interface ExplanationBuildInput {
   appliedFloor: ClassifierTeacherDebug['appliedFloor'] | undefined
   writeInCount: number
   finalConfidence: ConfidenceBand
+  /** Optional message about uncorroborated cause motivation. When
+   *  set, prepended to `contradictingSignals` so the student sees
+   *  why CFS overlay did not appear. */
+  causeUncorroboratedNote: string | null
 }
 
 interface ExplanationFields {
@@ -669,6 +730,11 @@ function buildExplanationFields(
 
   const top = collectTopContributingSignals(primaryId, selections)
   const contra = collectContradictingSignals(primaryId, selections)
+  if (input.causeUncorroboratedNote) {
+    // Prepend so this is the first contradicting signal the student
+    // sees — it explains why CFS overlay is absent.
+    contra.unshift(input.causeUncorroboratedNote)
+  }
 
   const confidenceWhy = composeConfidenceWhy(input)
   const whatToTestNext = composeWhatToTestNext(input)
@@ -676,7 +742,7 @@ function buildExplanationFields(
   const templateId = chooseTemplate(input)
   const template = EXPLANATION_TEMPLATES[templateId].template
 
-  const explanation = renderTemplate(template, {
+  let explanation = renderTemplate(template, {
     primaryName: primaryRecord.workingDisplayName,
     primaryShortName: primaryRecord.shortStudentFacingName,
     primaryOneLineSummary: primaryRecord.oneSentenceSummary,
@@ -692,6 +758,17 @@ function buildExplanationFields(
     confidenceWhy,
     whatToTestNext
   })
+
+  // If a CFS-uncorroborated note is present and the chosen template
+  // does not render `contradictingSignals` (e.g., the primary +
+  // secondary template), append the note so the student sees the
+  // CFS-suppression explanation regardless of template choice.
+  if (
+    input.causeUncorroboratedNote &&
+    !explanation.includes(input.causeUncorroboratedNote)
+  ) {
+    explanation = `${explanation}\n\nNote: ${input.causeUncorroboratedNote}`
+  }
 
   return {
     topContributingSignals: top,
@@ -713,10 +790,13 @@ function chooseTemplate(
   ) {
     return 'low-evidence-overlay'
   }
-  if (
-    collectContradictingSignalsCount(input.primaryId, input.selections) > 0 &&
-    !input.secondary
-  ) {
+  // Include the uncorroborated-cause note when deciding whether to
+  // use the contradictory-signals template, so the student sees the
+  // CFS-suppression note explained as a contradiction.
+  const contraCount =
+    collectContradictingSignalsCount(input.primaryId, input.selections) +
+    (input.causeUncorroboratedNote ? 1 : 0)
+  if (contraCount > 0 && !input.secondary) {
     return 'contradictory-signals'
   }
   if (input.secondary) return 'primary-with-secondary'

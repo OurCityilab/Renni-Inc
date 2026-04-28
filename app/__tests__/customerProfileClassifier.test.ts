@@ -463,6 +463,125 @@ test('Cause-First hard prerequisite — CFS does not appear without supporting-a
 })
 
 /* -------------------------------------------------------------------
+ * CFS overlay corroboration tightening
+ *
+ * Cause-First overlay requires BOTH:
+ *   A. supporting-a-cause selected as primary OR secondary motivation
+ *   B. cause-driven shopping-media OR evidenceAboutCauseMotivation flag
+ *
+ * Picking supporting-a-cause alone is not enough.
+ * ------------------------------------------------------------------ */
+
+test('CFS tightening — supporting-a-cause alone (no corroboration) → no CFS overlay', () => {
+  // Same shape as F6 BUT shopping-media excludes cause-driven AND
+  // no evidence flag. CFS must NOT appear.
+  const sel: CustomerProfilePrimitiveSelections = {
+    'life-stage': 'empty-nesters',
+    'household-composition': 'empty-nest',
+    urbanicity: 'outer-suburb',
+    'spending-capacity': 'affluent',
+    'housing-context': 'single-family-home',
+    'education-occupation': 'professional-managerial',
+    'shopping-media-behavior': [
+      'premium-retail',
+      'research-before-buying',
+      'brand-loyal'
+    ],
+    'purchase-motivation': {
+      primary: 'giftability',
+      secondary: 'supporting-a-cause'
+    },
+    'evidence-confidence': 'medium-some-evidence'
+  }
+
+  const out = classifyCustomerProfile(sel)
+  // Some primary archetype is returned (LSA most likely), but CFS
+  // overlay must be absent.
+  assert.notEqual(
+    out.secondaryArchetypeId,
+    'cause-first-supporters',
+    'CFS suppressed without corroboration'
+  )
+  // teacherDebug records the breakdown.
+  assert.equal(out.teacherDebug?.causeMotivationSelected, true)
+  assert.equal(out.teacherDebug?.causeCorroborated, false)
+  assert.equal(out.teacherDebug?.causeFirstPrerequisiteFailed, true)
+  // The student-facing explanation surfaces a gentle note about
+  // why CFS did not appear.
+  assert.ok(
+    /supporting a cause/i.test(out.explanation ?? '') &&
+      /needs more evidence/i.test(out.explanation ?? ''),
+    'explanation surfaces the CFS-uncorroborated note'
+  )
+  // The note appears as a contradicting signal.
+  assert.ok(
+    (out.contradictingSignals ?? []).some((s) =>
+      /needs more evidence/i.test(s)
+    ),
+    'contradictingSignals contains the CFS-uncorroborated note'
+  )
+})
+
+test('CFS tightening — supporting-a-cause + cause-driven shopping → CFS overlay appears', () => {
+  // Corroboration path B1 met (cause-driven shopping selected).
+  const sel: CustomerProfilePrimitiveSelections = {
+    'life-stage': 'empty-nesters',
+    'household-composition': 'empty-nest',
+    urbanicity: 'outer-suburb',
+    'spending-capacity': 'affluent',
+    'housing-context': 'single-family-home',
+    'education-occupation': 'professional-managerial',
+    'shopping-media-behavior': [
+      'premium-retail',
+      'cause-driven',
+      'research-before-buying'
+    ],
+    'purchase-motivation': {
+      primary: 'giftability',
+      secondary: 'supporting-a-cause'
+    },
+    'evidence-confidence': 'medium-some-evidence'
+  }
+
+  const out = classifyCustomerProfile(sel)
+  assert.equal(out.secondaryArchetypeId, 'cause-first-supporters')
+  assert.equal(out.secondaryIsOverlay, true)
+  assert.equal(out.teacherDebug?.causeCorroborated, true)
+  assert.equal(out.teacherDebug?.causeFirstPrerequisiteFailed, false)
+})
+
+test('CFS tightening — supporting-a-cause + evidence flag → CFS overlay appears', () => {
+  // Corroboration path B2 met (evidenceAboutCauseMotivation flag).
+  // Shopping does NOT include cause-driven; the flag is the only
+  // anchor.
+  const sel: CustomerProfilePrimitiveSelections = {
+    'life-stage': 'empty-nesters',
+    'household-composition': 'empty-nest',
+    urbanicity: 'outer-suburb',
+    'spending-capacity': 'affluent',
+    'housing-context': 'single-family-home',
+    'education-occupation': 'professional-managerial',
+    'shopping-media-behavior': [
+      'premium-retail',
+      'research-before-buying',
+      'brand-loyal'
+    ],
+    'purchase-motivation': {
+      primary: 'giftability',
+      secondary: 'supporting-a-cause'
+    },
+    'evidence-confidence': 'medium-some-evidence'
+  }
+
+  const out = classifyCustomerProfile(sel, {
+    evidenceAboutCauseMotivation: true
+  })
+  assert.equal(out.secondaryArchetypeId, 'cause-first-supporters')
+  assert.equal(out.secondaryIsOverlay, true)
+  assert.equal(out.teacherDebug?.causeCorroborated, true)
+})
+
+/* -------------------------------------------------------------------
  * MUH confidence floor
  * ------------------------------------------------------------------ */
 
