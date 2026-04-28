@@ -59,6 +59,15 @@ export default defineNuxtConfig({
     // critique endpoint above (same API key, base URL, model).
     executiveAdvisorEnabled:
       process.env.NUXT_EXECUTIVE_ADVISOR_ENABLED === 'true',
+    // Section Engine Feedback V1 feature flag. Layer 3 of the
+    // section-engine pattern (see app/types/sectionEngines.ts) is
+    // exposed via /api/ai/section-articulation-feedback. Default OFF
+    // — the endpoint returns ai_disabled when the flag is missing or
+    // false. Pass 1 ships the SHELL only: even with the flag on,
+    // the endpoint returns a deterministic safe-shape response and
+    // does not call a provider.
+    sectionEngineFeedbackEnabled:
+      process.env.NUXT_SECTION_ENGINE_FEEDBACK_ENABLED === 'true',
     public: {
       // Safe to ship to the browser. Firebase web config is not a secret.
       firebase: {
