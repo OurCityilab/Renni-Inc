@@ -186,6 +186,24 @@ service cloud.firestore {
     //   able to author output never grants approval rights, due-date
     //   edit rights, or admin powers. The status-based read-only lock
     //   on in_review / approved is preserved by deliverableOutputEditable.
+    //
+    // Soft Section Locking sprint: writes that touch the `sectionLocks`
+    // map flow through this same `allow create, update` branch — locks
+    // never bypass deliverableOutputEditable, so a user who can't
+    // author the deliverable can't acquire a lock on its sections, and
+    // approval/due-date semantics are unchanged.
+    //
+    // Stronger lock-ownership guarantees (lockedBy must equal
+    // request.auth.uid; expired locks may be taken over; only the
+    // owner of a lock may release it) are enforced in app code in
+    // app/composables/useDeliverableOutputs.ts. CEL has no map-iteration
+    // primitives that would let us encode "for each new sectionLocks
+    // entry, lockedBy must equal auth.uid" without listing every
+    // section id, so we follow the same pattern the bmc rule uses
+    // ("Section-level soft locking is enforced in app code on top of
+    // this") and rely on the writeable predicate above plus the
+    // updatedByUid / updatedByEmail audit fields on the parent doc
+    // for traceability.
     match /deliverableOutputs/{deliverableId} {
       allow read: if isSignedIn();
       allow create, update: if deliverableOutputEditable(deliverableId)

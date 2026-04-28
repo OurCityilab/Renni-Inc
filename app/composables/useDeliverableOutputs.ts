@@ -1,4 +1,5 @@
 import {
+  deleteField,
   doc,
   getDoc,
   onSnapshot,
@@ -27,9 +28,41 @@ import type {
   MarketFitBuilder,
   MarketScenarioLevel,
   PricingStrategyBuilder,
+  SectionLock,
   StructuredEvidenceEntry
 } from '~/types/models'
 import type { TemplateStudio } from '~/types/templateStudio'
+
+// Soft Section Locking sprint constants. Five-minute TTL: long enough
+// for a thinking pause, short enough that a forgotten tab doesn't
+// block teammates indefinitely. Refresh interval is intentionally
+// well below the TTL so a brief network hiccup during refresh doesn't
+// expire a lock the user is still actively holding.
+export const SECTION_LOCK_TTL_MS = 5 * 60 * 1000
+export const SECTION_LOCK_REFRESH_MS = 2 * 60 * 1000
+
+// Pure helpers exported alongside the composable so the workspace
+// doesn't have to duplicate "is this lock still alive" math.
+export function sectionLockIsExpired(
+  lock: SectionLock | null | undefined,
+  nowMs: number = Date.now()
+): boolean {
+  if (!lock) return true
+  const t = Date.parse(lock.lockedAt)
+  if (Number.isNaN(t)) return true
+  return nowMs - t > SECTION_LOCK_TTL_MS
+}
+
+export function sectionLockIsOwnedBy(
+  lock: SectionLock | null | undefined,
+  uid: string
+): boolean {
+  return Boolean(lock && lock.lockedBy === uid)
+}
+
+export type SectionLockAcquireResult =
+  | { acquired: true; lock: SectionLock }
+  | { acquired: false; currentLock: SectionLock }
 
 // Actor passed in by the page so this composable doesn't reach into the
 // auth store directly — keeps the Firestore writes' provenance explicit.
@@ -280,6 +313,15 @@ export function useDeliverableOutputs() {
 
   // Save one section. Uses dotted-path updateDoc so other sections are
   // untouched — no risk of a stale tab clobbering work in another section.
+  //
+  // Soft Section Locking sprint: before writing, we re-read the parent
+  // doc's sectionLocks map. If another user holds an unexpired lock on
+  // this section, the save is refused with a clear error so the
+  // student can copy their local draft somewhere safe before any
+  // refresh wipes it. When the actor holds the lock (or the lock has
+  // expired), the save succeeds and the same updateDoc call atomically
+  // clears the lock entry — no separate write, no window where the
+  // section is saved but the lock lingers.
   async function saveSection(
     deliverableId: string,
     sectionId: string,
@@ -287,6 +329,22 @@ export function useDeliverableOutputs() {
     actor: DeliverableOutputActor
   ): Promise<void> {
     const r = ref_(deliverableId)
+    const snap = await getDoc(r)
+    if (snap.exists()) {
+      const data = snap.data() as DeliverableOutput
+      const existing = data.sectionLocks?.[sectionId] ?? null
+      if (
+        existing &&
+        !sectionLockIsExpired(existing) &&
+        !sectionLockIsOwnedBy(existing, actor.uid)
+      ) {
+        throw new Error(
+          'Another student took over this section while you were editing. ' +
+            'Your changes are still here locally — copy them somewhere safe ' +
+            'before refreshing.'
+        )
+      }
+    }
     const now = new Date().toISOString()
     await updateDoc(r, {
       [`sections.${sectionId}.sectionId`]: sectionId,
@@ -298,9 +356,103 @@ export function useDeliverableOutputs() {
       [`sections.${sectionId}.updatedAt`]: now,
       [`sections.${sectionId}.updatedByUid`]: actor.uid,
       [`sections.${sectionId}.updatedByEmail`]: actor.email,
+      // Atomic lock release. deleteField() removes the map entry in
+      // the same write that persists the section payload — there is
+      // no observable window where the section is saved but the
+      // lock still says we're editing.
+      [`sectionLocks.${sectionId}`]: deleteField(),
       updatedAt: now,
       updatedByUid: actor.uid,
       updatedByEmail: actor.email
+    })
+  }
+
+  // ----------- Soft Section Locking sprint --------------------------
+  // acquire / refresh / release helpers. All three call sites live in
+  // DeliverableOutputWorkspace.vue. None of these touches the section
+  // payload — locks are independent map entries on the parent doc.
+
+  // Acquire (or take over an expired lock). Returns either the lock we
+  // now hold or the existing unexpired lock that blocks us.
+  async function acquireSectionLock(
+    deliverableId: string,
+    sectionId: string,
+    actor: DeliverableOutputActor,
+    displayName: string
+  ): Promise<SectionLockAcquireResult> {
+    const r = ref_(deliverableId)
+    const snap = await getDoc(r)
+    const existing = snap.exists()
+      ? ((snap.data() as DeliverableOutput).sectionLocks?.[sectionId] ?? null)
+      : null
+    if (
+      existing &&
+      !sectionLockIsExpired(existing) &&
+      !sectionLockIsOwnedBy(existing, actor.uid)
+    ) {
+      return { acquired: false, currentLock: existing }
+    }
+    const lock: SectionLock = {
+      lockedBy: actor.uid,
+      lockedByDisplayName: displayName || actor.email,
+      lockedByEmail: actor.email,
+      lockedAt: new Date().toISOString()
+    }
+    await updateDoc(r, {
+      [`sectionLocks.${sectionId}`]: lock
+    })
+    return { acquired: true, lock }
+  }
+
+  // Refresh the timestamp on a lock the actor already holds. If the
+  // lock has flipped to another user (rare race), the refresh fails
+  // softly — the workspace re-checks on the next snapshot and renders
+  // the locked-by-other banner. We never overwrite someone else's
+  // lock from a refresh path.
+  async function refreshSectionLock(
+    deliverableId: string,
+    sectionId: string,
+    actor: DeliverableOutputActor,
+    displayName: string
+  ): Promise<boolean> {
+    const r = ref_(deliverableId)
+    const snap = await getDoc(r)
+    if (!snap.exists()) return false
+    const existing =
+      (snap.data() as DeliverableOutput).sectionLocks?.[sectionId] ?? null
+    if (existing && !sectionLockIsOwnedBy(existing, actor.uid) && !sectionLockIsExpired(existing)) {
+      return false
+    }
+    const lock: SectionLock = {
+      lockedBy: actor.uid,
+      lockedByDisplayName: displayName || actor.email,
+      lockedByEmail: actor.email,
+      lockedAt: new Date().toISOString()
+    }
+    await updateDoc(r, {
+      [`sectionLocks.${sectionId}`]: lock
+    })
+    return true
+  }
+
+  // Release the lock if (and only if) the actor still owns it. We
+  // never clear someone else's lock from this path — if a takeover
+  // happened, the new holder's lock is left intact. Failure is
+  // non-fatal; the TTL is the safety net.
+  async function releaseSectionLock(
+    deliverableId: string,
+    sectionId: string,
+    actor: DeliverableOutputActor
+  ): Promise<void> {
+    const r = ref_(deliverableId)
+    const snap = await getDoc(r)
+    if (!snap.exists()) return
+    const existing =
+      (snap.data() as DeliverableOutput).sectionLocks?.[sectionId] ?? null
+    if (!existing) return
+    if (!sectionLockIsOwnedBy(existing, actor.uid)) return
+    await updateDoc(r, {
+      [`sectionLocks.${sectionId}`]: deleteField()
     })
   }
 
@@ -846,6 +998,9 @@ export function useDeliverableOutputs() {
     removeMarketBuilderEntry,
     saveMarketFitBuilder,
     saveBrandFitBuilder,
-    savePricingStrategyBuilder
+    savePricingStrategyBuilder,
+    acquireSectionLock,
+    refreshSectionLock,
+    releaseSectionLock
   }
 }

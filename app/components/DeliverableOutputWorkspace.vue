@@ -3,6 +3,10 @@ import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useAuthStore } from '~/stores/auth'
 import {
   useDeliverableOutputs,
+  sectionLockIsExpired,
+  sectionLockIsOwnedBy,
+  SECTION_LOCK_REFRESH_MS,
+  SECTION_LOCK_TTL_MS,
   type NewEvidenceLinkInput,
   type NewMarketBuilderInput,
   type NewStructuredEvidenceInput,
@@ -23,6 +27,7 @@ import type {
   MarketFitSegment,
   MarketScenarioLevel,
   PricingStrategyBuilder as PricingStrategyBuilderState,
+  SectionLock,
   StructuredEvidenceEntry
 } from '~/types/models'
 import type {
@@ -426,6 +431,16 @@ function markDirty(s: TemplateStudioSection) {
     lastSavedAt.value[s.id] = ''
     recentlySaved.value[s.id] = false
   }
+  // Soft Section Locking sprint: chapter-mode acquire-on-first-edit.
+  // Section-filter mode acquires on mount (see acquireOnMount watch
+  // below). In chapter mode many sections are visible at once; we
+  // delay acquisition until the student actually starts editing the
+  // section so a chief who's just scrolling past doesn't claim every
+  // lock on the page. Best-effort — failure is silent here; the
+  // banner + disabled-state derive from output.sectionLocks.
+  if (!sectionMode.value) {
+    void attemptAcquireLock(s)
+  }
 }
 
 function hasChanges(s: TemplateStudioSection): boolean {
@@ -444,6 +459,12 @@ function hasChanges(s: TemplateStudioSection): boolean {
 async function save(s: TemplateStudioSection) {
   if (!editingEnabled.value) return
   if (!auth.user || !auth.profile) return
+  // Soft Section Locking sprint: defensive guard. The Save button is
+  // already :disabled when locked-by-other, but a programmatic call
+  // (or a stale click after the lock changed mid-render) shouldn't
+  // slip through. saveSection in the composable also re-checks the
+  // lock against a fresh getDoc, so we have a server-side backstop.
+  if (isLockedByOther(s)) return
   const d = drafts.value[s.id]
   if (!d) return
   savingSectionId.value = s.id
@@ -466,6 +487,12 @@ async function save(s: TemplateStudioSection) {
     // hint stays visible until the next edit (markDirty clears it).
     lastSavedAt.value[s.id] = fmtSavedTime()
     recentlySaved.value[s.id] = true
+    // Soft Section Locking sprint: saveSection atomically clears
+    // sectionLocks.{sid} via deleteField() in the same updateDoc call.
+    // Mirror that locally so the per-section refresh timer stops and
+    // we don't try to re-release on the next unmount.
+    acquiredLockSectionIds.value.delete(s.id)
+    stopRefreshTimer(s.id)
   } catch (e) {
     sectionError.value[s.id] = e instanceof Error ? e.message : String(e)
   } finally {
@@ -610,6 +637,194 @@ function nextStepHint(s: TemplateStudioSection): string {
   return 'Saved.'
 }
 
+// --- Soft Section Locking sprint ----------------------------------
+// State: which sections this user currently holds a lock on, plus a
+// 30-second tick the template reads to render the live remaining-time
+// countdown on the locked-by-other banner. Lock objects themselves
+// live on output.sectionLocks (read-only from this component's
+// perspective); we just remember which ones we *acquired* so we know
+// what to release on unmount / before-unload / save.
+const acquiredLockSectionIds = ref<Set<string>>(new Set())
+const lockNowMs = ref<number>(Date.now())
+const lockRefreshTimers = new Map<string, ReturnType<typeof setInterval>>()
+let lockTickTimer: ReturnType<typeof setInterval> | null = null
+
+function currentSectionLock(s: TemplateStudioSection): SectionLock | null {
+  return output.value?.sectionLocks?.[s.id] ?? null
+}
+
+// "Locked by another user, and the lock is still alive." Drives the
+// banner and the disabled bindings on textareas / save / status row /
+// QuickStart inside the section card.
+function isLockedByOther(s: TemplateStudioSection): boolean {
+  const lock = currentSectionLock(s)
+  if (!lock) return false
+  if (sectionLockIsExpired(lock, lockNowMs.value)) return false
+  if (!auth.user) return true
+  return !sectionLockIsOwnedBy(lock, auth.user.uid)
+}
+
+// Remaining time until the active lock expires, in ms. Used by the
+// banner countdown. Returns 0 when there's no active lock or it has
+// already expired.
+function lockRemainingMs(s: TemplateStudioSection): number {
+  const lock = currentSectionLock(s)
+  if (!lock) return 0
+  const t = Date.parse(lock.lockedAt)
+  if (Number.isNaN(t)) return 0
+  return Math.max(0, t + SECTION_LOCK_TTL_MS - lockNowMs.value)
+}
+
+// "Try again in X minutes" copy for the banner. Floors to whole
+// minutes when ≥ 60s remain so the line stays calm; switches to
+// seconds once we're under a minute.
+function lockRemainingLabel(s: TemplateStudioSection): string {
+  const ms = lockRemainingMs(s)
+  if (ms <= 0) return 'any moment'
+  const sec = Math.ceil(ms / 1000)
+  if (sec >= 60) {
+    const min = Math.ceil(sec / 60)
+    return `${min} minute${min === 1 ? '' : 's'}`
+  }
+  return `${sec} second${sec === 1 ? '' : 's'}`
+}
+
+async function attemptAcquireLock(s: TemplateStudioSection): Promise<void> {
+  if (!editingEnabled.value) return
+  if (!auth.user || !auth.profile) return
+  if (acquiredLockSectionIds.value.has(s.id)) return
+  // Already-held check: if the live snapshot says we own it, just
+  // adopt it without a Firestore round-trip. Avoids spurious writes
+  // on rapid markDirty calls.
+  const existing = currentSectionLock(s)
+  if (
+    existing &&
+    sectionLockIsOwnedBy(existing, auth.user.uid) &&
+    !sectionLockIsExpired(existing, lockNowMs.value)
+  ) {
+    acquiredLockSectionIds.value.add(s.id)
+    startRefreshTimer(s)
+    return
+  }
+  try {
+    const result = await outputs.acquireSectionLock(
+      props.deliverable.id,
+      s.id,
+      {
+        uid: auth.user.uid,
+        email: auth.profile.email || auth.user.email || ''
+      },
+      auth.profile.displayName || auth.profile.email || auth.user.email || ''
+    )
+    if (result.acquired) {
+      acquiredLockSectionIds.value.add(s.id)
+      startRefreshTimer(s)
+    }
+    // If acquired === false, the live snapshot will show the other
+    // user's lock and the banner / disabled bindings render.
+    // Nothing else to do here.
+  } catch {
+    // Best-effort. A network blip during acquire just means the next
+    // markDirty (in chapter mode) or the periodic snapshot tick
+    // gives us another chance.
+  }
+}
+
+function startRefreshTimer(s: TemplateStudioSection): void {
+  if (lockRefreshTimers.has(s.id)) return
+  if (typeof window === 'undefined') return
+  const timer = setInterval(() => {
+    if (!auth.user || !auth.profile) return
+    if (!acquiredLockSectionIds.value.has(s.id)) {
+      stopRefreshTimer(s.id)
+      return
+    }
+    void outputs
+      .refreshSectionLock(
+        props.deliverable.id,
+        s.id,
+        {
+          uid: auth.user.uid,
+          email: auth.profile.email || auth.user.email || ''
+        },
+        auth.profile.displayName || auth.profile.email || auth.user.email || ''
+      )
+      .then((ok) => {
+        // If a takeover happened mid-refresh, drop our claim so the
+        // banner / disabled bindings update on the next snapshot.
+        if (!ok) {
+          acquiredLockSectionIds.value.delete(s.id)
+          stopRefreshTimer(s.id)
+        }
+      })
+      .catch(() => {
+        // Best-effort. TTL is the safety net.
+      })
+  }, SECTION_LOCK_REFRESH_MS)
+  lockRefreshTimers.set(s.id, timer)
+}
+
+function stopRefreshTimer(sectionId: string): void {
+  const t = lockRefreshTimers.get(sectionId)
+  if (t) {
+    clearInterval(t)
+    lockRefreshTimers.delete(sectionId)
+  }
+}
+
+async function releaseHeldLock(s: TemplateStudioSection): Promise<void> {
+  if (!auth.user || !auth.profile) return
+  if (!acquiredLockSectionIds.value.has(s.id)) return
+  acquiredLockSectionIds.value.delete(s.id)
+  stopRefreshTimer(s.id)
+  try {
+    await outputs.releaseSectionLock(props.deliverable.id, s.id, {
+      uid: auth.user.uid,
+      email: auth.profile.email || auth.user.email || ''
+    })
+  } catch {
+    // Best-effort; TTL is the safety net.
+  }
+}
+
+// Section-filter mode: the user has navigated to a single section to
+// edit, so acquire on mount. Chapter mode acquires on first edit (see
+// markDirty above). Watcher form so the page can swap section ids
+// without a re-mount and we still release+acquire correctly.
+watch(
+  () => [
+    props.sectionFilterId,
+    editingEnabled.value,
+    auth.user?.uid,
+    visibleSections.value.map((s) => s.id).join('|')
+  ],
+  () => {
+    if (!props.sectionFilterId) return
+    const s = visibleSections.value.find((x) => x.id === props.sectionFilterId)
+    if (s) void attemptAcquireLock(s)
+  },
+  { immediate: true }
+)
+
+// 30-second tick for the live countdown. The tick also opportunistically
+// re-attempts acquire on a section whose lock has just expired — a
+// student waiting out another user's lock should get edit access back
+// without a refresh once the TTL elapses.
+onMounted(() => {
+  if (typeof window === 'undefined') return
+  lockTickTimer = setInterval(() => {
+    lockNowMs.value = Date.now()
+    if (props.sectionFilterId) {
+      const s = visibleSections.value.find(
+        (x) => x.id === props.sectionFilterId
+      )
+      if (s && !isLockedByOther(s) && !acquiredLockSectionIds.value.has(s.id)) {
+        void attemptAcquireLock(s)
+      }
+    }
+  }, 30_000)
+})
+
 // --- Independent Student Mode: unsaved-changes guard --------------
 // "Any section dirty?" — drives the inline unsaved banner per
 // section AND a global beforeunload warning. Tab close / refresh
@@ -621,6 +836,20 @@ const anyDirty = computed<boolean>(() =>
 )
 
 function beforeUnloadHandler(e: BeforeUnloadEvent) {
+  // Soft Section Locking sprint: best-effort release on tab close /
+  // reload. We can't await the Firestore writes here — the browser
+  // doesn't wait — but firing the request gives most networks a
+  // 50–100ms window where the release lands. Failures fall back to
+  // the 5-minute TTL.
+  for (const sid of acquiredLockSectionIds.value) {
+    if (!auth.user || !auth.profile) break
+    void outputs
+      .releaseSectionLock(props.deliverable.id, sid, {
+        uid: auth.user.uid,
+        email: auth.profile.email || auth.user.email || ''
+      })
+      .catch(() => {})
+  }
   if (!anyDirty.value) return
   // Modern browsers ignore custom strings but require preventDefault
   // + returnValue assignment to actually prompt. Both are safe to
@@ -637,6 +866,27 @@ onMounted(() => {
 onBeforeUnmount(() => {
   if (typeof window !== 'undefined') {
     window.removeEventListener('beforeunload', beforeUnloadHandler)
+  }
+  // Soft Section Locking sprint: in-app navigation cleanup. Release
+  // every lock we still hold and stop every per-section refresh
+  // timer. The composable releaseSectionLock is no-op-on-takeover
+  // (only releases locks we still own), so this is safe even if a
+  // race already cleared our claim.
+  if (lockTickTimer) {
+    clearInterval(lockTickTimer)
+    lockTickTimer = null
+  }
+  for (const t of lockRefreshTimers.values()) clearInterval(t)
+  lockRefreshTimers.clear()
+  if (auth.user && auth.profile) {
+    const actor = {
+      uid: auth.user.uid,
+      email: auth.profile.email || auth.user.email || ''
+    }
+    for (const sid of acquiredLockSectionIds.value) {
+      void outputs.releaseSectionLock(props.deliverable.id, sid, actor).catch(() => {})
+    }
+    acquiredLockSectionIds.value.clear()
   }
 })
 
@@ -1993,6 +2243,35 @@ function shouldOpenDefend(s: TemplateStudioSection): boolean {
           </span>
         </p>
 
+        <!-- Soft Section Locking sprint: "X is editing this" banner.
+             Renders only when another user holds an unexpired lock on
+             this section. The countdown reads the lockNowMs reactive
+             tick (30 s) so the remaining-time line stays current
+             without a refresh. When the TTL elapses, isLockedByOther
+             flips to false, this banner clears, edit access is
+             restored, and the section-mode acquire watcher takes the
+             lock. The PUBLISHABLE gold container, HelpMeUnderstand,
+             full section guide, cross-chapter references, and other
+             read surfaces remain visible and interactive — they're
+             read-only by nature. -->
+        <div
+          v-if="isLockedByOther(s)"
+          class="rounded-md border border-rose-200 bg-rose-50/40 p-3 text-sm text-rose-900"
+          role="status"
+          aria-live="polite"
+        >
+          <p class="font-semibold">
+            {{ currentSectionLock(s)?.lockedByDisplayName || currentSectionLock(s)?.lockedByEmail || 'Another student' }}
+            is editing this section right now.
+          </p>
+          <p class="mt-1 text-xs text-rose-800">
+            You can read but not edit. Try again in
+            <span class="font-semibold">{{ lockRemainingLabel(s) }}</span>,
+            or check with
+            {{ currentSectionLock(s)?.lockedByDisplayName || 'them' }}.
+          </p>
+        </div>
+
         <!-- Sprint 2: Think / Draft / Defend phasing.
              Display-only reorganization. None of the underlying save
              paths, builder mounts, or read-only states change — the
@@ -2076,7 +2355,7 @@ function shouldOpenDefend(s: TemplateStudioSection): boolean {
           :deliverable-id="deliverable.id"
           :current-source-notes="drafts[s.id]?.sourceNotes ?? ''"
           :current-draft-text="drafts[s.id]?.draftText ?? ''"
-          :editing-enabled="editingEnabled"
+          :editing-enabled="editingEnabled && !isLockedByOther(s)"
           @apply="(payload) => handleQuickStartApply(s, payload)"
         />
 
@@ -2133,7 +2412,7 @@ function shouldOpenDefend(s: TemplateStudioSection): boolean {
                 <textarea
                   v-model="drafts[s.id].sourceNotes"
                   rows="3"
-                  :disabled="!editingEnabled"
+                  :disabled="!editingEnabled || isLockedByOther(s)"
                   class="mt-1 w-full rounded border border-neutral-300 p-2 text-sm disabled:bg-neutral-50"
                   placeholder="e.g. Customers at TechTown said the beanies felt premium. Three asked about price."
                   @input="markDirty(s)"
@@ -2202,7 +2481,7 @@ function shouldOpenDefend(s: TemplateStudioSection): boolean {
                 <textarea
                   v-model="drafts[s.id].draftText"
                   rows="4"
-                  :disabled="!editingEnabled"
+                  :disabled="!editingEnabled || isLockedByOther(s)"
                   class="mt-1 w-full rounded border border-neutral-300 p-2 text-sm disabled:bg-neutral-50"
                   placeholder="e.g. House Phoenix beanies are priced for the Civic Premium Buyer at TechTown. Vendor cost is $X; we sell at $Y."
                   @input="markDirty(s)"
@@ -2233,7 +2512,7 @@ function shouldOpenDefend(s: TemplateStudioSection): boolean {
                 <textarea
                   v-model="drafts[s.id].finalText"
                   rows="5"
-                  :disabled="!editingEnabled"
+                  :disabled="!editingEnabled || isLockedByOther(s)"
                   class="mt-1 w-full rounded border border-amber-300 bg-white p-2 text-sm disabled:bg-neutral-50"
                   placeholder="The polished version another team could use next semester."
                   @input="markDirty(s)"
@@ -2265,8 +2544,10 @@ function shouldOpenDefend(s: TemplateStudioSection): boolean {
                     'rounded border px-3 py-1 text-xs',
                     drafts[s.id].status === 'in_progress'
                       ? 'border-sky-400 bg-sky-50 text-sky-900 font-semibold'
-                      : 'border-neutral-300 bg-white text-neutral-700 hover:bg-neutral-50'
+                      : 'border-neutral-300 bg-white text-neutral-700 hover:bg-neutral-50',
+                    isLockedByOther(s) ? 'opacity-50 cursor-not-allowed' : ''
                   ]"
+                  :disabled="isLockedByOther(s)"
                   @click="setSectionStatus(s, 'in_progress')"
                 >Still working</button>
                 <button
@@ -2275,8 +2556,10 @@ function shouldOpenDefend(s: TemplateStudioSection): boolean {
                     'rounded border px-3 py-1 text-xs',
                     drafts[s.id].status === 'ready'
                       ? 'border-emerald-400 bg-emerald-50 text-emerald-900 font-semibold'
-                      : 'border-neutral-300 bg-white text-neutral-700 hover:bg-neutral-50'
+                      : 'border-neutral-300 bg-white text-neutral-700 hover:bg-neutral-50',
+                    isLockedByOther(s) ? 'opacity-50 cursor-not-allowed' : ''
                   ]"
+                  :disabled="isLockedByOther(s)"
                   @click="setSectionStatus(s, 'ready')"
                 >Ready for review</button>
                 <button
@@ -2285,8 +2568,10 @@ function shouldOpenDefend(s: TemplateStudioSection): boolean {
                     'rounded border px-3 py-1 text-xs',
                     stuckPanelOpen[s.id]
                       ? 'border-rose-400 bg-rose-50 text-rose-900 font-semibold'
-                      : 'border-neutral-300 bg-white text-neutral-700 hover:bg-neutral-50'
+                      : 'border-neutral-300 bg-white text-neutral-700 hover:bg-neutral-50',
+                    isLockedByOther(s) ? 'opacity-50 cursor-not-allowed' : ''
                   ]"
+                  :disabled="isLockedByOther(s)"
                   @click="toggleStuckPanel(s)"
                 >I'm stuck</button>
               </div>
@@ -2340,7 +2625,7 @@ function shouldOpenDefend(s: TemplateStudioSection): boolean {
               <button
                 v-if="editingEnabled"
                 class="btn-primary text-xs"
-                :disabled="savingSectionId === s.id || !hasChanges(s)"
+                :disabled="savingSectionId === s.id || !hasChanges(s) || isLockedByOther(s)"
                 @click="save(s)"
               >
                 {{ savingSectionId === s.id ? 'Saving…' : 'Save section' }}
@@ -3216,7 +3501,7 @@ function shouldOpenDefend(s: TemplateStudioSection): boolean {
               :section-id="s.id"
               :section-title="s.title"
               :initial="persistedMarketFit(s)"
-              :editing-enabled="editingEnabled"
+              :editing-enabled="editingEnabled && !isLockedByOther(s)"
               :guidance="s.marketFit?.guidance ?? null"
             />
           </div>
@@ -3249,7 +3534,7 @@ function shouldOpenDefend(s: TemplateStudioSection): boolean {
               :section-id="s.id"
               :section-title="s.title"
               :initial="persistedBrandFit(s)"
-              :editing-enabled="editingEnabled"
+              :editing-enabled="editingEnabled && !isLockedByOther(s)"
               :guidance="s.brandFit?.guidance ?? null"
               :market-fit-context="persistedMarketFit(s)"
             />
@@ -3280,7 +3565,7 @@ function shouldOpenDefend(s: TemplateStudioSection): boolean {
               :section-id="s.id"
               :section-title="s.title"
               :initial="persistedPricingStrategy(s)"
-              :editing-enabled="editingEnabled"
+              :editing-enabled="editingEnabled && !isLockedByOther(s)"
               :guidance="s.pricingStrategy?.guidance ?? null"
               :ch7-market-fit="ch7MarketFitForPricing"
               :ch7-market-entries="ch7MarketEntriesForPricing"

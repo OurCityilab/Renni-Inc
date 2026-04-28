@@ -16,6 +16,10 @@
 // in without code changes, but the request shape and response parsing
 // assume Anthropic's `/v1/messages` schema.
 
+// Explicit imports (Soft Section Locking sprint typecheck cleanup):
+// see server/api/auth/provision.post.ts for the rationale.
+import { defineEventHandler, getHeader, readBody, createError } from 'h3'
+import { useRuntimeConfig } from 'nitropack/runtime'
 import { adminAuth } from '~~/server/utils/admin'
 import {
   buildMarketEvidenceCritiquePrompt,

@@ -1053,12 +1053,30 @@ export interface DeliverableOutputSection {
   updatedByEmail?: string | null
 }
 
+// Soft Section Locking sprint. One lock per (deliverable, section).
+// Stored as a map on the parent deliverableOutputs doc — same doc the
+// workspace already watches — so reads stay cheap and the save path
+// can release the lock atomically with the section payload write.
+//
+// TTL is enforced in application logic (5 minutes); the rules only
+// gate auth + deliverableOutputEditable. Time stays as an ISO string
+// for parity with every other audit field on this doc — it's compared
+// to Date.now() client-side, not to request.time in rules.
+export interface SectionLock {
+  lockedBy: string
+  lockedByDisplayName: string
+  lockedByEmail: string
+  lockedAt: IsoTimestamp
+}
+
 export interface DeliverableOutput {
   id: string
   deliverableId: string
   studioVersion?: string | null
   studioTitleSnapshot?: string | null
   sections: Record<string, DeliverableOutputSection>
+  // Optional. Section-id keys; missing keys mean no active lock.
+  sectionLocks?: Record<string, SectionLock>
   createdAt?: IsoTimestamp | null
   createdByUid?: string | null
   createdByEmail?: string | null

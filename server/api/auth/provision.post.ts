@@ -1,3 +1,9 @@
+// Explicit imports (Soft Section Locking sprint typecheck cleanup):
+// the project's root tsconfig extends only the client-facing
+// .nuxt/tsconfig.json, which doesn't surface Nitro/h3 auto-imports
+// to tsc. These are no-ops at runtime (Nitro injects the same names
+// globally) but keep `npm run typecheck` exit 0.
+import { defineEventHandler, readBody, createError } from 'h3'
 import { adminAuth, adminDb } from '~~/server/utils/admin'
 import type { AppUser, Department, Role } from '~~/app/types/models'
 

@@ -1,3 +1,7 @@
+// Explicit imports (Soft Section Locking sprint typecheck cleanup):
+// see server/api/auth/provision.post.ts for the rationale.
+import { createError } from 'h3'
+import { useRuntimeConfig } from 'nitropack/runtime'
 import admin from 'firebase-admin'
 
 let cached: admin.app.App | null = null
