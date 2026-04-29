@@ -11,3 +11,11 @@ node_modules
 *.pem
 *.key
 .DS_Store
+
+# Claude Code agent state (per-session scratch). Not part of the
+# repo's source of truth; safe to ignore so it stops appearing as
+# untracked in `git status`.
+.claude/
+
+# Firebase emulator / CLI debug log written when tools run locally.
+firebase-debug.log

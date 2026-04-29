@@ -1,31 +1,49 @@
 <!--
-  Customer Profile Builder (Beta) — V1 UI for Layer 1 + Layer 2.
+  Customer Profile Builder (Beta) — guided multi-profile UI.
 
   PURPOSE
   -------
-  Lets a student compose ONE customer profile from the V1 primitive
-  model and view the deterministic classifier explanation. No AI, no
-  Firestore, no auto-save, no Working-Draft mutation. The Copy Draft
-  Starter button is clipboard-only. State is local to the component.
+  Lets a student compose UP TO THREE customer profiles (Primary,
+  Secondary, Tertiary) using the V1 primitive model and the
+  deterministic classifier. Designed for a high school student to
+  complete one decision at a time.
 
   WIRING
   ------
   Mounted by DeliverableOutputWorkspace.vue ONLY when:
     1. runtimeConfig.public.customerProfileBuilderEnabled === true
     2. The active section id is `customer-segments`
-  Both gates are checked at the parent level; this component itself
-  assumes the host already validated the conditions.
 
   POSTURE (do not relax)
   ----------------------
     - Pure UI + classifier call. No Firestore, no AI, no network.
-    - Local component state. No persistence in V1.
-    - Never overwrites Working Draft. Copy Draft Starter always
-      writes to clipboard.
-    - Numeric scores are NEVER shown to students. The teacher debug
-      panel is gated by `isChief` and is collapsed by default.
-    - Stereotype guardrail and PRIZM-inspired disclaimer are visible
-      and prominent.
+    - Local component state per slot. No persistence in V1.
+    - Never overwrites Working Draft. Copy buttons write to clipboard
+      only. No "Add to Working Draft" path in this pass.
+    - Numeric scores are NEVER shown to students. Teacher Debug is
+      gated by `isChief` and is collapsed by default.
+    - Stereotype guardrail and PRIZM-inspired disclaimer remain
+      visible above the form.
+
+  STRUCTURE
+  ---------
+    - Three slot tabs at top (Primary / Secondary / Tertiary) with
+      completion badges. Default active slot is Primary.
+    - Active slot's form is grouped into 6 numbered accordion steps:
+        1. Who are they? (life-stage, household-composition,
+           education-occupation)
+        2. Where do they live? (urbanicity, housing-context)
+        3. How much flexibility do they have? (spending-capacity,
+           conditional tight-budget-detail)
+        4. How do they shop? (shopping-media-behavior, 1–3 picks)
+        5. Why would they buy? (purchase-motivation primary +
+           optional secondary)
+        6. How strong is our evidence? (evidence-confidence)
+    - Per-slot Analyze button → per-slot result panel.
+    - Combined-copy button surfaces once at least one slot is
+      analyzed.
+    - Teacher Debug (chief/admin only) shows which slot is being
+      debugged plus the v0.1 debug payload.
 -->
 <template>
   <section
@@ -37,7 +55,7 @@
         id="cpb-beta-heading"
         class="text-base font-semibold text-amber-900"
       >
-        Try the Customer Profile Builder
+        Customer Profile Builder
         <span
           class="ml-2 inline-flex items-center rounded bg-amber-200 px-1.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-amber-900"
         >
@@ -45,7 +63,7 @@
         </span>
       </h3>
       <p class="text-xs text-amber-800">
-        Use this to build a more detailed customer profile. Your current
+        Build the customer profile one decision at a time. Your current
         QuickStart still works.
       </p>
     </header>
@@ -54,197 +72,329 @@
     <p
       class="mb-2 rounded border border-amber-200 bg-white/60 p-2 text-xs text-amber-900"
     >
-      This is a PRIZM-inspired / ESRI-inspired learning tool. It helps you
-      reason about customer patterns, but it is not actual PRIZM or ESRI
-      segmentation.
+      This is a PRIZM-inspired / ESRI-inspired learning tool. It helps
+      you reason about customer patterns, but it is not actual PRIZM or
+      ESRI segmentation.
     </p>
 
     <!-- Required stereotype guardrail -->
     <p
       class="mb-4 rounded border border-amber-200 bg-white/60 p-2 text-xs text-amber-900"
     >
-      <strong>Stereotype guardrail:</strong> Store choices are clues, not
-      proof. Do not assume someone's income, values, race, politics, or
-      identity from one store or one behavior.
+      <strong>Stereotype guardrail:</strong> Store choices are clues,
+      not proof. Do not assume someone's income, values, race, politics,
+      or identity from one store or one behavior.
     </p>
 
-    <!-- ===== Primitive form ===== -->
-    <div class="space-y-4">
-      <fieldset
-        v-for="axis in renderableAxes"
-        :key="axis.id"
-        class="rounded border border-stone-200 bg-white p-3"
+    <!-- ===== Slot tabs (Primary / Secondary / Tertiary) ===== -->
+    <div
+      class="mb-3 flex flex-wrap gap-2"
+      role="tablist"
+      aria-label="Customer profile slots"
+    >
+      <button
+        v-for="slot in slotIds"
+        :key="slot"
+        type="button"
+        role="tab"
+        :aria-selected="activeSlot === slot"
+        class="flex items-center gap-2 rounded border px-3 py-1.5 text-xs font-medium transition-colors"
+        :class="
+          activeSlot === slot
+            ? 'border-amber-500 bg-amber-100 text-amber-900'
+            : 'border-stone-300 bg-white text-stone-700 hover:bg-stone-50'
+        "
+        @click="activeSlot = slot"
       >
-        <legend class="px-1 text-sm font-semibold text-stone-900">
-          {{ axis.label }}
-          <span v-if="!axis.required" class="text-xs font-normal text-stone-500"
-            >(optional)</span
-          >
-        </legend>
-        <p class="mb-2 text-xs text-stone-700">{{ axis.studentPrompt }}</p>
-
-        <!-- Single-select (radios) for non-motivation axes -->
-        <div
-          v-if="
-            axis.inputType === 'single-select' &&
-            axis.id !== 'purchase-motivation'
-          "
-          class="space-y-1"
+        <span class="font-semibold">{{ slotLabels[slot] }}</span>
+        <span
+          class="rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase"
+          :class="slotBadgeClass(slot)"
         >
-          <label
-            v-for="opt in axis.options ?? []"
-            :key="opt.id"
-            class="flex items-start gap-2 rounded px-1 py-0.5 hover:bg-stone-50"
-          >
-            <input
-              type="radio"
-              :name="`cpb-${axis.id}`"
-              :value="opt.id"
-              :checked="singleSelectValue(axis.id) === opt.id"
-              class="mt-1"
-              @change="setSingleSelect(axis.id, opt.id)"
-            />
-            <span class="text-xs">
-              <span class="font-medium text-stone-800">{{ opt.label }}</span>
-              <span v-if="opt.helperText" class="block text-stone-500">{{
-                opt.helperText
-              }}</span>
-            </span>
-          </label>
-        </div>
-
-        <!-- Multi-select (checkboxes) for shopping-media -->
-        <div
-          v-else-if="axis.inputType === 'multi-select'"
-          class="space-y-1"
+          {{ slotBadgeText(slot) }}
+        </span>
+        <span v-if="slot !== 'primary'" class="text-[10px] text-stone-500"
+          >(optional)</span
         >
-          <p
-            v-if="axis.minSelections || axis.maxSelections"
-            class="mb-1 text-[11px] text-stone-500"
-          >
-            Pick {{ axis.minSelections ?? 1 }}–{{
-              axis.maxSelections ?? '∞'
-            }}.
-          </p>
-          <label
-            v-for="opt in axis.options ?? []"
-            :key="opt.id"
-            class="flex items-start gap-2 rounded px-1 py-0.5 hover:bg-stone-50"
-          >
-            <input
-              type="checkbox"
-              :value="opt.id"
-              :checked="shoppingPicks.includes(opt.id)"
-              :disabled="
-                !shoppingPicks.includes(opt.id) &&
-                shoppingPicks.length >= (axis.maxSelections ?? 99)
+      </button>
+    </div>
+
+    <!-- ===== Active slot: 6 grouped step accordions ===== -->
+    <div class="space-y-3">
+      <details
+        v-for="step in steps"
+        :key="step.id"
+        :open="openSteps[step.id]"
+        class="rounded border border-stone-200 bg-white"
+        @toggle="(e) => syncOpenState(step.id, e)"
+      >
+        <summary
+          class="flex cursor-pointer items-center justify-between gap-2 rounded-t bg-stone-50 px-3 py-2 text-sm font-semibold text-stone-900 hover:bg-stone-100"
+        >
+          <span class="flex items-center gap-2">
+            <span
+              class="inline-flex h-6 w-6 items-center justify-center rounded-full text-[11px] font-bold"
+              :class="
+                isStepComplete(step)
+                  ? 'bg-green-100 text-green-800'
+                  : 'bg-stone-200 text-stone-700'
               "
-              class="mt-1"
-              @change="toggleMultiSelect(axis.id, opt.id)"
-            />
-            <span class="text-xs">
-              <span class="font-medium text-stone-800">{{ opt.label }}</span>
-              <span v-if="opt.helperText" class="block text-stone-500">{{
-                opt.helperText
-              }}</span>
+            >
+              {{ isStepComplete(step) ? '✓' : step.number }}
             </span>
-          </label>
-        </div>
+            <span>{{ step.title }}</span>
+          </span>
+          <span class="text-[10px] uppercase text-stone-500">
+            {{ isStepComplete(step) ? 'complete' : 'open me' }}
+          </span>
+        </summary>
 
-        <!-- Special case: purchase-motivation has primary + optional secondary -->
-        <div
-          v-else-if="axis.id === 'purchase-motivation'"
-          class="space-y-3"
-        >
-          <div>
-            <label class="mb-1 block text-[11px] font-semibold text-stone-700"
-              >Primary motivation (required)</label
-            >
-            <select
-              v-model="motivationPrimary"
-              class="w-full rounded border border-stone-300 bg-white p-1 text-xs"
-            >
-              <option value="">Select one…</option>
-              <option
-                v-for="opt in axis.options ?? []"
-                :key="opt.id"
-                :value="opt.id"
+        <div class="space-y-4 p-3">
+          <fieldset
+            v-for="axisId in step.axisIds"
+            :key="axisId"
+            class="rounded border border-stone-200 bg-stone-50/40 p-3"
+          >
+            <legend class="px-1 text-xs font-semibold text-stone-900">
+              {{ axisById(axisId)?.label }}
+              <span
+                v-if="!axisById(axisId)?.required"
+                class="text-[10px] font-normal text-stone-500"
+                >(optional)</span
               >
-                {{ opt.label }}
-              </option>
-            </select>
-          </div>
-          <div>
-            <label class="mb-1 block text-[11px] font-semibold text-stone-700"
-              >Secondary motivation (optional)</label
+            </legend>
+            <p class="mb-2 text-xs text-stone-700">
+              {{ axisById(axisId)?.studentPrompt }}
+            </p>
+
+            <!-- Conditional axis (tight-budget-detail) hidden when
+                 gating value is not met. -->
+            <p
+              v-if="
+                axisById(axisId)?.conditionalOn &&
+                !isConditionalGateMet(axisById(axisId)!)
+              "
+              class="text-[11px] italic text-stone-500"
             >
-            <select
-              v-model="motivationSecondary"
-              class="w-full rounded border border-stone-300 bg-white p-1 text-xs"
+              This question only appears when the previous answer is
+              "{{ conditionalGateLabel(axisById(axisId)!) }}".
+            </p>
+
+            <!-- Single-select (radios) for non-motivation axes -->
+            <div
+              v-else-if="
+                axisById(axisId)?.inputType === 'single-select' &&
+                axisId !== 'purchase-motivation'
+              "
+              class="space-y-1"
             >
-              <option value="">No secondary motivation</option>
-              <option
-                v-for="opt in (axis.options ?? []).filter(
-                  (o) => o.id !== motivationPrimary
-                )"
+              <label
+                v-for="opt in axisById(axisId)?.options ?? []"
                 :key="opt.id"
-                :value="opt.id"
+                class="flex items-start gap-2 rounded px-1 py-1 hover:bg-white"
               >
-                {{ opt.label }}
-              </option>
-            </select>
+                <input
+                  type="radio"
+                  :name="`cpb-${activeSlot}-${axisId}`"
+                  :value="opt.id"
+                  :checked="singleSelectValue(axisId) === opt.id"
+                  class="mt-1"
+                  @change="setSingleSelect(axisId, opt.id)"
+                />
+                <span class="text-xs">
+                  <span class="font-medium text-stone-800">{{
+                    opt.label
+                  }}</span>
+                  <span
+                    v-if="opt.helperText"
+                    class="block text-stone-500"
+                    >{{ opt.helperText }}</span
+                  >
+                </span>
+              </label>
+            </div>
+
+            <!-- Multi-select (checkboxes) for shopping-media -->
+            <div
+              v-else-if="axisById(axisId)?.inputType === 'multi-select'"
+              class="space-y-1"
+            >
+              <p
+                v-if="
+                  axisById(axisId)?.minSelections ||
+                  axisById(axisId)?.maxSelections
+                "
+                class="mb-1 text-[11px] text-stone-500"
+              >
+                Pick {{ axisById(axisId)?.minSelections ?? 1 }}–{{
+                  axisById(axisId)?.maxSelections ?? '∞'
+                }}.
+              </p>
+              <label
+                v-for="opt in axisById(axisId)?.options ?? []"
+                :key="opt.id"
+                class="flex items-start gap-2 rounded px-1 py-1 hover:bg-white"
+              >
+                <input
+                  type="checkbox"
+                  :value="opt.id"
+                  :checked="activeSlotShoppingPicks.includes(opt.id)"
+                  :disabled="
+                    !activeSlotShoppingPicks.includes(opt.id) &&
+                    activeSlotShoppingPicks.length >=
+                      (axisById(axisId)?.maxSelections ?? 99)
+                  "
+                  class="mt-1"
+                  @change="toggleShoppingPick(opt.id)"
+                />
+                <span class="text-xs">
+                  <span class="font-medium text-stone-800">{{
+                    opt.label
+                  }}</span>
+                  <span
+                    v-if="opt.helperText"
+                    class="block text-stone-500"
+                    >{{ opt.helperText }}</span
+                  >
+                </span>
+              </label>
+            </div>
+
+            <!-- Purchase motivation (primary + optional secondary) -->
+            <div
+              v-else-if="axisId === 'purchase-motivation'"
+              class="space-y-3"
+            >
+              <div>
+                <label
+                  class="mb-1 block text-[11px] font-semibold text-stone-700"
+                  >Primary motivation (required)</label
+                >
+                <select
+                  :value="activeSlotMotivationPrimary"
+                  class="w-full rounded border border-stone-300 bg-white p-1 text-xs"
+                  @change="
+                    setMotivationPrimary(
+                      ($event.target as HTMLSelectElement).value
+                    )
+                  "
+                >
+                  <option value="">Select one…</option>
+                  <option
+                    v-for="opt in axisById(axisId)?.options ?? []"
+                    :key="opt.id"
+                    :value="opt.id"
+                  >
+                    {{ opt.label }}
+                  </option>
+                </select>
+              </div>
+              <div>
+                <label
+                  class="mb-1 block text-[11px] font-semibold text-stone-700"
+                  >Secondary motivation (optional)</label
+                >
+                <select
+                  :value="activeSlotMotivationSecondary"
+                  class="w-full rounded border border-stone-300 bg-white p-1 text-xs"
+                  @change="
+                    setMotivationSecondary(
+                      ($event.target as HTMLSelectElement).value
+                    )
+                  "
+                >
+                  <option value="">No secondary motivation</option>
+                  <option
+                    v-for="opt in (axisById(axisId)?.options ?? []).filter(
+                      (o) => o.id !== activeSlotMotivationPrimary
+                    )"
+                    :key="opt.id"
+                    :value="opt.id"
+                  >
+                    {{ opt.label }}
+                  </option>
+                </select>
+              </div>
+            </div>
+          </fieldset>
+
+          <div class="flex items-center justify-between">
+            <button
+              v-if="step.number < totalSteps"
+              type="button"
+              class="rounded border border-stone-300 bg-white px-2 py-1 text-xs font-medium text-stone-700 hover:bg-stone-50"
+              @click="advanceFromStep(step)"
+            >
+              Continue to step {{ step.number + 1 }}
+            </button>
+            <span v-else class="text-xs italic text-stone-500">
+              All decisions made. Use the Analyze button below.
+            </span>
+            <span
+              v-if="!isStepComplete(step)"
+              class="text-[11px] text-amber-700"
+              >Some decisions still needed.</span
+            >
           </div>
         </div>
-      </fieldset>
+      </details>
 
       <button
         type="button"
         class="w-full rounded bg-amber-600 px-3 py-2 text-sm font-semibold text-white hover:bg-amber-700 disabled:cursor-not-allowed disabled:bg-stone-400"
-        :disabled="!canAnalyze"
+        :disabled="!canAnalyzeActive"
         @click="analyze"
       >
-        Analyze profile
+        Analyze {{ slotLabels[activeSlot] }}
       </button>
-      <p v-if="!canAnalyze" class="text-[11px] text-stone-500">
+      <p v-if="!canAnalyzeActive" class="text-[11px] text-stone-500">
         {{ analyzeHint }}
       </p>
     </div>
 
-    <!-- ===== Result ===== -->
+    <!-- ===== Per-slot result ===== -->
     <div
-      v-if="result"
+      v-if="activeSlotResult"
       class="mt-5 rounded border border-amber-300 bg-white p-4"
       aria-live="polite"
     >
-      <h4 class="mb-2 text-sm font-semibold text-stone-900">Result</h4>
+      <h4 class="mb-2 text-sm font-semibold text-stone-900">
+        Result for {{ slotLabels[activeSlot] }}
+      </h4>
 
-      <!-- Confident classification -->
-      <div v-if="result.status === 'ready'" class="space-y-3 text-xs">
+      <div
+        v-if="activeSlotResult.status === 'ready'"
+        class="space-y-3 text-xs"
+      >
         <div>
-          <span class="font-semibold text-stone-700">Primary:</span>
+          <span class="font-semibold text-stone-700">Primary archetype:</span>
           <span class="ml-1 text-stone-900">
-            {{ archetypeName(result.primaryArchetypeId) }}
+            {{ archetypeName(activeSlotResult.primaryArchetypeId) }}
           </span>
           <span
             class="ml-2 inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase"
-            :class="confidenceChipClass"
+            :class="confidenceChipClass(activeSlotResult.confidence)"
           >
-            Confidence: {{ result.confidence }}
+            Confidence: {{ activeSlotResult.confidence }}
           </span>
         </div>
         <p class="text-stone-700">
-          {{ archetypeSummary(result.primaryArchetypeId) }}
+          {{ archetypeSummary(activeSlotResult.primaryArchetypeId) }}
         </p>
 
-        <div v-if="result.secondaryArchetypeId">
+        <div v-if="activeSlotResult.secondaryArchetypeId">
           <span class="font-semibold text-stone-700">
-            {{ result.secondaryIsOverlay ? 'Overlay:' : 'Close runner-up:' }}
+            {{
+              activeSlotResult.secondaryIsOverlay
+                ? 'Overlay:'
+                : 'Close runner-up:'
+            }}
           </span>
           <span class="ml-1 text-stone-900">
-            {{ archetypeName(result.secondaryArchetypeId) }}
+            {{ archetypeName(activeSlotResult.secondaryArchetypeId) }}
           </span>
           <p
-            v-if="result.secondaryIsOverlay"
+            v-if="activeSlotResult.secondaryIsOverlay"
             class="mt-1 italic text-stone-600"
           >
             The customer's engagement is also driven by the cause behind
@@ -252,64 +402,79 @@
           </p>
         </div>
 
-        <div v-if="topSignals.length">
+        <div v-if="(activeSlotResult.topContributingSignals ?? []).length">
           <p class="font-semibold text-stone-700">What pointed us here:</p>
           <ul class="ml-4 list-disc space-y-0.5">
-            <li v-for="(s, i) in topSignals" :key="`top-${i}`">{{ s }}</li>
-          </ul>
-        </div>
-
-        <div v-if="contradictingSignals.length">
-          <p class="font-semibold text-stone-700">What pulled away:</p>
-          <ul class="ml-4 list-disc space-y-0.5">
-            <li v-for="(s, i) in contradictingSignals" :key="`con-${i}`">
+            <li
+              v-for="(s, i) in activeSlotResult.topContributingSignals ?? []"
+              :key="`top-${i}`"
+            >
               {{ s }}
             </li>
           </ul>
         </div>
 
-        <p v-if="result.confidenceWhyItIsThisLevel" class="text-stone-700">
+        <div v-if="(activeSlotResult.contradictingSignals ?? []).length">
+          <p class="font-semibold text-stone-700">What pulled away:</p>
+          <ul class="ml-4 list-disc space-y-0.5">
+            <li
+              v-for="(s, i) in activeSlotResult.contradictingSignals ?? []"
+              :key="`con-${i}`"
+            >
+              {{ s }}
+            </li>
+          </ul>
+        </div>
+
+        <p
+          v-if="activeSlotResult.confidenceWhyItIsThisLevel"
+          class="text-stone-700"
+        >
           <span class="font-semibold">Why this confidence:</span>
-          {{ result.confidenceWhyItIsThisLevel }}
+          {{ activeSlotResult.confidenceWhyItIsThisLevel }}
         </p>
 
-        <p v-if="result.whatToTestNext" class="text-stone-700">
+        <p v-if="activeSlotResult.whatToTestNext" class="text-stone-700">
           <span class="font-semibold">What to test next:</span>
-          {{ result.whatToTestNext }}
+          {{ activeSlotResult.whatToTestNext }}
         </p>
 
-        <!-- Draft scaffold -->
+        <!-- Per-slot draft starter -->
         <div class="mt-4 rounded border border-stone-200 bg-stone-50 p-3">
           <p class="mb-1 text-[11px] font-semibold uppercase text-stone-600">
-            Draft starter
+            Draft starter for {{ slotLabels[activeSlot] }}
           </p>
-          <p class="whitespace-pre-line text-stone-800">{{ draftStarter }}</p>
-          <div class="mt-2 flex items-center gap-2">
+          <p class="whitespace-pre-line text-stone-800">
+            {{ slotDraftStarter(activeSlot) }}
+          </p>
+          <div class="mt-2 flex flex-wrap items-center gap-2">
             <button
               type="button"
               class="rounded border border-stone-300 bg-white px-2 py-1 text-xs font-medium text-stone-800 hover:bg-stone-100"
-              @click="copyDraftStarter"
+              @click="copySingleDraft(activeSlot)"
             >
-              {{ copyButtonLabel }}
+              {{ copyButtonLabels[activeSlot] }}
             </button>
             <span class="text-[11px] text-stone-500">
-              Copies to clipboard. Paste into your Working Draft when ready —
-              we will not write into the section for you.
+              Copies to clipboard. Paste into your Working Draft when
+              ready — we will not write into the section for you.
             </span>
           </div>
         </div>
       </div>
 
-      <!-- No confident fit -->
-      <div v-else-if="result.status === 'not_available'" class="space-y-2 text-xs">
+      <div
+        v-else-if="activeSlotResult.status === 'not_available'"
+        class="space-y-2 text-xs"
+      >
         <p class="font-semibold text-stone-900">
           We could not confidently match this profile to a V1 archetype.
         </p>
-        <div v-if="(result.closestArchetypeIds ?? []).length">
+        <div v-if="(activeSlotResult.closestArchetypeIds ?? []).length">
           <p class="text-stone-700">Closest archetypes:</p>
           <ol class="ml-4 list-decimal space-y-0.5">
             <li
-              v-for="id in result.closestArchetypeIds ?? []"
+              v-for="id in activeSlotResult.closestArchetypeIds ?? []"
               :key="id"
             >
               {{ archetypeName(id) }}
@@ -317,31 +482,64 @@
           </ol>
         </div>
         <p class="text-stone-700">
-          Gather more evidence on the customer or flag this combination to
-          your team as a possible gap for a future tranche.
+          Gather more evidence on the customer or flag this combination
+          to your team as a possible gap.
         </p>
       </div>
     </div>
 
-    <!-- ===== Teacher debug (chief / admin only) ===== -->
+    <!-- ===== Combined copy across analyzed slots ===== -->
+    <div
+      v-if="analyzedSlotIds.length > 0"
+      class="mt-4 rounded border border-amber-300 bg-amber-50 p-3"
+    >
+      <p class="mb-1 text-[11px] font-semibold uppercase text-amber-900">
+        Combined draft — {{ analyzedSlotIds.length }} of 3 profile{{
+          analyzedSlotIds.length === 1 ? '' : 's'
+        }}
+        analyzed
+      </p>
+      <p class="mb-2 whitespace-pre-line text-xs text-stone-800">
+        {{ combinedDraft }}
+      </p>
+      <button
+        type="button"
+        class="rounded border border-amber-400 bg-white px-2 py-1 text-xs font-medium text-amber-900 hover:bg-amber-100"
+        @click="copyCombinedDraft"
+      >
+        {{ combinedCopyLabel }}
+      </button>
+      <span class="ml-2 text-[11px] text-stone-500">
+        Includes only the profiles you have analyzed.
+      </span>
+    </div>
+
+    <!-- ===== Teacher Debug (chiefs / admins only) ===== -->
     <details
-      v-if="result && isChief"
+      v-if="activeSlotResult && isChief"
       class="mt-4 rounded border border-stone-300 bg-stone-50 p-2 text-xs"
     >
       <summary class="cursor-pointer font-semibold text-stone-700">
-        Teacher debug
+        Teacher debug — {{ slotLabels[activeSlot] }}
       </summary>
       <div class="mt-2 space-y-2 text-stone-800">
         <p class="text-[11px] italic text-stone-500">
           Visible to chiefs and admins only. Not shown to students.
+          Switch slot tabs to debug other profiles.
         </p>
         <div>
-          <p class="font-semibold">Ranked archetypes (normalized scores):</p>
+          <p class="font-semibold">
+            Ranked archetypes (normalized scores):
+          </p>
           <ol class="ml-4 list-decimal">
             <li
               v-for="entry in rankedDebugEntries"
               :key="entry.id"
-              :class="entry.id === result?.primaryArchetypeId ? 'font-semibold' : ''"
+              :class="
+                entry.id === activeSlotResult?.primaryArchetypeId
+                  ? 'font-semibold'
+                  : ''
+              "
             >
               {{ archetypeName(entry.id) }} — {{ entry.score }}
             </li>
@@ -349,39 +547,28 @@
         </div>
         <p>
           <span class="font-semibold">Final confidence:</span>
-          {{ result?.confidence }}
+          {{ activeSlotResult?.confidence }}
           (archetype-derived
-          {{ result?.teacherDebug?.archetypeDerivedConfidence }} ·
+          {{ activeSlotResult?.teacherDebug?.archetypeDerivedConfidence }} ·
           evidence-derived
-          {{ result?.teacherDebug?.evidenceDerivedConfidence }} · floored by
-          {{ result?.teacherDebug?.flooredBy }})
+          {{ activeSlotResult?.teacherDebug?.evidenceDerivedConfidence }} ·
+          floored by
+          {{ activeSlotResult?.teacherDebug?.flooredBy }})
         </p>
-        <p v-if="result?.teacherDebug?.appliedFloor">
+        <p v-if="activeSlotResult?.teacherDebug?.appliedFloor">
           <span class="font-semibold">Applied floor:</span>
-          {{ result?.teacherDebug?.appliedFloor }}
+          {{ activeSlotResult?.teacherDebug?.appliedFloor }}
         </p>
-        <p v-if="(result?.teacherDebug?.writeInCount ?? 0) > 0">
+        <p v-if="(activeSlotResult?.teacherDebug?.writeInCount ?? 0) > 0">
           <span class="font-semibold">Write-in count:</span>
-          {{ result?.teacherDebug?.writeInCount }}
+          {{ activeSlotResult?.teacherDebug?.writeInCount }}
         </p>
         <p>
-          <span class="font-semibold">CFS overlay:</span>
-          {{ cfsDebugLine }}
+          <span class="font-semibold">Cause-First overlay:</span>
+          <span :class="cfsReasonClass">{{ cfsReasonLabel }}</span>
+          —
+          {{ cfsReasonExplanation }}
         </p>
-        <div v-if="topSignals.length">
-          <p class="font-semibold">Top contributing signals:</p>
-          <ul class="ml-4 list-disc">
-            <li v-for="(s, i) in topSignals" :key="`tdtop-${i}`">{{ s }}</li>
-          </ul>
-        </div>
-        <div v-if="contradictingSignals.length">
-          <p class="font-semibold">Contradicting signals:</p>
-          <ul class="ml-4 list-disc">
-            <li v-for="(s, i) in contradictingSignals" :key="`tdcon-${i}`">
-              {{ s }}
-            </li>
-          </ul>
-        </div>
       </div>
     </details>
   </section>
@@ -403,8 +590,15 @@ import type {
 const authStore = useAuthStore()
 const isChief = computed(() => authStore.isChief)
 
-// ---- Local state -------------------------------------------------
-// All state local. No Firestore, no persistence.
+// ---- Slot model (Primary / Secondary / Tertiary) ----------------
+
+type SlotId = 'primary' | 'secondary' | 'tertiary'
+const slotIds: readonly SlotId[] = ['primary', 'secondary', 'tertiary']
+const slotLabels: Record<SlotId, string> = {
+  primary: 'Primary customer',
+  secondary: 'Secondary customer',
+  tertiary: 'Tertiary customer'
+}
 
 interface FormState {
   'life-stage': string
@@ -417,153 +611,362 @@ interface FormState {
   'evidence-confidence': string
 }
 
-const form = reactive<FormState>({
-  'life-stage': '',
-  'household-composition': '',
-  urbanicity: '',
-  'spending-capacity': '',
-  'tight-budget-detail': '',
-  'housing-context': '',
-  'education-occupation': '',
-  'evidence-confidence': ''
-})
-const shoppingPicks = ref<string[]>([])
-const motivationPrimary = ref<string>('')
-const motivationSecondary = ref<string>('')
-const result = ref<CustomerProfileClassifierOutput | null>(null)
-const copyButtonLabel = ref<string>('Copy draft starter')
+interface SlotState {
+  form: FormState
+  shoppingPicks: string[]
+  motivationPrimary: string
+  motivationSecondary: string
+  result: CustomerProfileClassifierOutput | null
+}
 
-// ---- Axis rendering ---------------------------------------------
+function blankForm(): FormState {
+  return {
+    'life-stage': '',
+    'household-composition': '',
+    urbanicity: '',
+    'spending-capacity': '',
+    'tight-budget-detail': '',
+    'housing-context': '',
+    'education-occupation': '',
+    'evidence-confidence': ''
+  }
+}
+
+function blankSlot(): SlotState {
+  return {
+    form: blankForm(),
+    shoppingPicks: [],
+    motivationPrimary: '',
+    motivationSecondary: '',
+    result: null
+  }
+}
+
+const slots = reactive<Record<SlotId, SlotState>>({
+  primary: blankSlot(),
+  secondary: blankSlot(),
+  tertiary: blankSlot()
+})
+
+const activeSlot = ref<SlotId>('primary')
+
+const copyButtonLabels = reactive<Record<SlotId, string>>({
+  primary: 'Copy draft starter',
+  secondary: 'Copy draft starter',
+  tertiary: 'Copy draft starter'
+})
+const combinedCopyLabel = ref<string>('Copy all completed profiles')
+
+// ---- Step model (6 grouped sections) ----------------------------
+
+interface StepConfig {
+  id: string
+  number: number
+  title: string
+  axisIds: string[]
+}
+
+const steps: StepConfig[] = [
+  {
+    id: 'who',
+    number: 1,
+    title: 'Step 1 — Who are they?',
+    axisIds: ['life-stage', 'household-composition', 'education-occupation']
+  },
+  {
+    id: 'where',
+    number: 2,
+    title: 'Step 2 — Where do they live?',
+    axisIds: ['urbanicity', 'housing-context']
+  },
+  {
+    id: 'flexibility',
+    number: 3,
+    title: 'Step 3 — How much flexibility do they have?',
+    axisIds: ['spending-capacity', 'tight-budget-detail']
+  },
+  {
+    id: 'shopping',
+    number: 4,
+    title: 'Step 4 — How do they shop?',
+    axisIds: ['shopping-media-behavior']
+  },
+  {
+    id: 'why',
+    number: 5,
+    title: 'Step 5 — Why would they buy?',
+    axisIds: ['purchase-motivation']
+  },
+  {
+    id: 'evidence',
+    number: 6,
+    title: 'Step 6 — How strong is our evidence?',
+    axisIds: ['evidence-confidence']
+  }
+]
+const totalSteps = steps.length
+
+// Step-open state is shared across slots. Step 1 open by default;
+// Continue button advances to the next step.
+const openSteps = reactive<Record<string, boolean>>({
+  who: true,
+  where: false,
+  flexibility: false,
+  shopping: false,
+  why: false,
+  evidence: false
+})
+
+function syncOpenState(stepId: string, event: Event): void {
+  const target = event.target as HTMLDetailsElement | null
+  if (!target) return
+  openSteps[stepId] = target.open
+}
+
+function advanceFromStep(step: StepConfig): void {
+  openSteps[step.id] = false
+  const next = steps.find((s) => s.number === step.number + 1)
+  if (next) openSteps[next.id] = true
+}
+
+// ---- Active-slot derived helpers --------------------------------
 
 const allAxes = CUSTOMER_PROFILE_BUILDER_VARIANT.axes
+const axisIndex: Record<string, PrimitiveAxisConfig> = Object.fromEntries(
+  allAxes.map((a) => [a.id, a])
+)
 
-const renderableAxes = computed<PrimitiveAxisConfig[]>(() => {
-  return allAxes.filter((axis) => {
-    if (!axis.conditionalOn) return true
-    const gateValue = (form as Record<string, string>)[axis.conditionalOn.axisId]
-    return gateValue === axis.conditionalOn.valueId
-  })
-})
+function axisById(id: string): PrimitiveAxisConfig | undefined {
+  return axisIndex[id]
+}
+
+function isConditionalGateMet(axis: PrimitiveAxisConfig): boolean {
+  if (!axis.conditionalOn) return true
+  const slot = slots[activeSlot.value]
+  const gateValue = (slot.form as unknown as Record<string, string>)[axis.conditionalOn.axisId]
+  return gateValue === axis.conditionalOn.valueId
+}
+
+function conditionalGateLabel(axis: PrimitiveAxisConfig): string {
+  if (!axis.conditionalOn) return ''
+  const gateAxis = axisById(axis.conditionalOn.axisId)
+  const opt = (gateAxis?.options ?? []).find(
+    (o) => o.id === axis.conditionalOn?.valueId
+  )
+  return opt?.label ?? axis.conditionalOn.valueId
+}
 
 function singleSelectValue(axisId: string): string {
-  return (form as Record<string, string>)[axisId] ?? ''
+  const slot = slots[activeSlot.value]
+  return (slot.form as unknown as Record<string, string>)[axisId] ?? ''
 }
 
 function setSingleSelect(axisId: string, optionId: string): void {
-  ;(form as Record<string, string>)[axisId] = optionId
+  const slot = slots[activeSlot.value]
+  ;(slot.form as unknown as Record<string, string>)[axisId] = optionId
   // When spending-capacity moves OFF tight, clear tight-budget-detail.
   if (axisId === 'spending-capacity' && optionId !== 'tight') {
-    form['tight-budget-detail'] = ''
+    slot.form['tight-budget-detail'] = ''
   }
 }
 
-function toggleMultiSelect(axisId: string, optionId: string): void {
-  if (axisId !== 'shopping-media-behavior') return
-  const idx = shoppingPicks.value.indexOf(optionId)
-  if (idx === -1) shoppingPicks.value.push(optionId)
-  else shoppingPicks.value.splice(idx, 1)
+const activeSlotShoppingPicks = computed<string[]>(
+  () => slots[activeSlot.value].shoppingPicks
+)
+
+function toggleShoppingPick(optionId: string): void {
+  const slot = slots[activeSlot.value]
+  const idx = slot.shoppingPicks.indexOf(optionId)
+  if (idx === -1) slot.shoppingPicks.push(optionId)
+  else slot.shoppingPicks.splice(idx, 1)
 }
 
-// ---- Validation -------------------------------------------------
+const activeSlotMotivationPrimary = computed<string>(
+  () => slots[activeSlot.value].motivationPrimary
+)
+const activeSlotMotivationSecondary = computed<string>(
+  () => slots[activeSlot.value].motivationSecondary
+)
 
-const canAnalyze = computed(() => {
-  const requiredSingleSelects: (keyof FormState)[] = [
-    'life-stage',
-    'household-composition',
-    'urbanicity',
-    'spending-capacity',
-    'housing-context',
-    'education-occupation',
-    'evidence-confidence'
-  ]
+function setMotivationPrimary(value: string): void {
+  const slot = slots[activeSlot.value]
+  slot.motivationPrimary = value
+  // If the new primary equals the secondary, clear the secondary so
+  // students don't end up with the same motivation in both slots.
+  if (slot.motivationSecondary === value) {
+    slot.motivationSecondary = ''
+  }
+}
+
+function setMotivationSecondary(value: string): void {
+  slots[activeSlot.value].motivationSecondary = value
+}
+
+// ---- Step completion --------------------------------------------
+
+function isAxisComplete(slot: SlotState, axisId: string): boolean {
+  const axis = axisById(axisId)
+  if (!axis) return true
+  if (axis.conditionalOn) {
+    const gateValue = (slot.form as unknown as Record<string, string>)[
+      axis.conditionalOn.axisId
+    ]
+    if (gateValue !== axis.conditionalOn.valueId) {
+      // Gate not met — axis is not required for this profile.
+      return true
+    }
+  }
+  if (axisId === 'shopping-media-behavior') {
+    return slot.shoppingPicks.length >= (axis.minSelections ?? 1)
+  }
+  if (axisId === 'purchase-motivation') {
+    return Boolean(slot.motivationPrimary)
+  }
+  if (!axis.required) {
+    // Optional non-conditional axes count as complete regardless.
+    return true
+  }
+  const value = (slot.form as unknown as Record<string, string>)[axisId]
+  return Boolean(value)
+}
+
+function isStepComplete(step: StepConfig): boolean {
+  const slot = slots[activeSlot.value]
+  return step.axisIds.every((id) => isAxisComplete(slot, id))
+}
+
+// ---- Validation --------------------------------------------------
+
+const requiredSingleSelects: (keyof FormState)[] = [
+  'life-stage',
+  'household-composition',
+  'urbanicity',
+  'spending-capacity',
+  'housing-context',
+  'education-occupation',
+  'evidence-confidence'
+]
+
+function isSlotReady(slotId: SlotId): boolean {
+  const slot = slots[slotId]
   for (const axis of requiredSingleSelects) {
-    if (!form[axis]) return false
+    if (!slot.form[axis]) return false
   }
-  if (form['spending-capacity'] === 'tight' && !form['tight-budget-detail']) {
+  if (slot.form['spending-capacity'] === 'tight' && !slot.form['tight-budget-detail']) {
     return false
   }
-  if (shoppingPicks.value.length < 1 || shoppingPicks.value.length > 3) {
+  if (slot.shoppingPicks.length < 1 || slot.shoppingPicks.length > 3) {
     return false
   }
-  if (!motivationPrimary.value) return false
+  if (!slot.motivationPrimary) return false
   return true
-})
+}
+
+const canAnalyzeActive = computed(() => isSlotReady(activeSlot.value))
 
 const analyzeHint = computed(() => {
-  if (canAnalyze.value) return ''
+  if (canAnalyzeActive.value) return ''
+  const slot = slots[activeSlot.value]
   const missing: string[] = []
-  if (!form['life-stage']) missing.push('life stage')
-  if (!form['household-composition']) missing.push('household composition')
-  if (!form.urbanicity) missing.push('urbanicity')
-  if (!form['spending-capacity']) missing.push('spending capacity')
+  if (!slot.form['life-stage']) missing.push('life stage')
+  if (!slot.form['household-composition']) missing.push('household composition')
+  if (!slot.form.urbanicity) missing.push('urbanicity')
+  if (!slot.form['spending-capacity']) missing.push('spending capacity')
   if (
-    form['spending-capacity'] === 'tight' &&
-    !form['tight-budget-detail']
+    slot.form['spending-capacity'] === 'tight' &&
+    !slot.form['tight-budget-detail']
   ) {
     missing.push('tight-budget detail')
   }
-  if (!form['housing-context']) missing.push('housing context')
-  if (!form['education-occupation']) missing.push('education / occupation')
-  if (shoppingPicks.value.length < 1) missing.push('1–3 shopping behaviors')
-  if (!motivationPrimary.value) missing.push('primary motivation')
-  if (!form['evidence-confidence']) missing.push('evidence confidence')
+  if (!slot.form['housing-context']) missing.push('housing context')
+  if (!slot.form['education-occupation']) missing.push('education / occupation')
+  if (slot.shoppingPicks.length < 1)
+    missing.push('1–3 shopping behaviors')
+  if (!slot.motivationPrimary) missing.push('primary motivation')
+  if (!slot.form['evidence-confidence']) missing.push('evidence confidence')
   return `Still needed: ${missing.join(', ')}.`
 })
 
+// ---- Slot-status badge ------------------------------------------
+
+function slotBadgeText(slotId: SlotId): string {
+  if (slots[slotId].result) return 'analyzed'
+  if (isSlotReady(slotId)) return 'ready'
+  // Any field touched at all?
+  const slot = slots[slotId]
+  const touched =
+    Object.values(slot.form).some((v) => v !== '') ||
+    slot.shoppingPicks.length > 0 ||
+    slot.motivationPrimary !== ''
+  return touched ? 'in progress' : 'not started'
+}
+
+function slotBadgeClass(slotId: SlotId): string {
+  if (slots[slotId].result) return 'bg-green-100 text-green-800'
+  if (isSlotReady(slotId)) return 'bg-amber-100 text-amber-800'
+  return 'bg-stone-200 text-stone-700'
+}
+
 // ---- Classifier call --------------------------------------------
 
-function analyze(): void {
-  if (!canAnalyze.value) return
-  const selections: CustomerProfilePrimitiveSelections = {
-    'life-stage': form['life-stage'],
-    'household-composition': form['household-composition'],
-    urbanicity: form.urbanicity,
-    'spending-capacity': form['spending-capacity'],
-    ...(form['spending-capacity'] === 'tight'
-      ? { 'tight-budget-detail': form['tight-budget-detail'] }
+function buildSelections(
+  slotId: SlotId
+): CustomerProfilePrimitiveSelections | null {
+  if (!isSlotReady(slotId)) return null
+  const slot = slots[slotId]
+  return {
+    'life-stage': slot.form['life-stage'],
+    'household-composition': slot.form['household-composition'],
+    urbanicity: slot.form.urbanicity,
+    'spending-capacity': slot.form['spending-capacity'],
+    ...(slot.form['spending-capacity'] === 'tight'
+      ? { 'tight-budget-detail': slot.form['tight-budget-detail'] }
       : {}),
-    'housing-context': form['housing-context'],
-    'education-occupation': form['education-occupation'],
-    'shopping-media-behavior': [...shoppingPicks.value],
+    'housing-context': slot.form['housing-context'],
+    'education-occupation': slot.form['education-occupation'],
+    'shopping-media-behavior': [...slot.shoppingPicks],
     'purchase-motivation': {
-      primary: motivationPrimary.value,
-      ...(motivationSecondary.value
-        ? { secondary: motivationSecondary.value }
+      primary: slot.motivationPrimary,
+      ...(slot.motivationSecondary
+        ? { secondary: slot.motivationSecondary }
         : {})
     },
-    'evidence-confidence': form[
+    'evidence-confidence': slot.form[
       'evidence-confidence'
     ] as CustomerProfilePrimitiveSelections['evidence-confidence']
   }
-  // V1: no documentedEvidenceFlags surfaced in UI yet (teacher / curriculum-
-  // managed input). Pass empty flags object.
-  result.value = classifyCustomerProfile(selections, {})
-  copyButtonLabel.value = 'Copy draft starter'
+}
+
+function analyze(): void {
+  const selections = buildSelections(activeSlot.value)
+  if (!selections) return
+  // V1: no documentedEvidenceFlags surfaced in UI yet.
+  slots[activeSlot.value].result = classifyCustomerProfile(selections, {})
+  copyButtonLabels[activeSlot.value] = 'Copy draft starter'
 }
 
 // ---- Result helpers ---------------------------------------------
 
+const activeSlotResult = computed<CustomerProfileClassifierOutput | null>(
+  () => slots[activeSlot.value].result
+)
+
 function archetypeName(id?: string): string {
   if (!id) return ''
-  const record = CUSTOMER_PROFILE_ARCHETYPE_BY_ID[id as CustomerProfileArchetypeId]
+  const record =
+    CUSTOMER_PROFILE_ARCHETYPE_BY_ID[id as CustomerProfileArchetypeId]
   return record?.workingDisplayName ?? id
 }
 
 function archetypeSummary(id?: string): string {
   if (!id) return ''
-  const record = CUSTOMER_PROFILE_ARCHETYPE_BY_ID[id as CustomerProfileArchetypeId]
+  const record =
+    CUSTOMER_PROFILE_ARCHETYPE_BY_ID[id as CustomerProfileArchetypeId]
   return record?.oneSentenceSummary ?? ''
 }
 
-const topSignals = computed<string[]>(
-  () => result.value?.topContributingSignals ?? []
-)
-const contradictingSignals = computed<string[]>(
-  () => result.value?.contradictingSignals ?? []
-)
-
-const confidenceChipClass = computed(() => {
-  switch (result.value?.confidence) {
+function confidenceChipClass(band?: string): string {
+  switch (band) {
     case 'high':
       return 'bg-green-100 text-green-800'
     case 'medium':
@@ -572,54 +975,127 @@ const confidenceChipClass = computed(() => {
     default:
       return 'bg-stone-200 text-stone-700'
   }
-})
+}
 
 // ---- Draft scaffold ---------------------------------------------
 
-const draftStarter = computed(() => {
-  if (!result.value || result.value.status !== 'ready') return ''
-  const primaryName = archetypeName(result.value.primaryArchetypeId)
-  const motivationLabel =
-    motivationLabelById(motivationPrimary.value) || '___'
-  const evidenceLabel = evidenceLabelById(form['evidence-confidence']) || '___'
-  const topThree = (topSignals.value.slice(0, 3) || []).map((s) =>
-    s.toLowerCase()
-  )
-  const reasons =
-    topThree.length === 0
-      ? '___, ___, and ___'
-      : topThree.length === 1
-        ? `${topThree[0]}`
-        : topThree.length === 2
-          ? `${topThree[0]} and ${topThree[1]}`
-          : `${topThree[0]}, ${topThree[1]}, and ${topThree[2]}`
-  const next = result.value.whatToTestNext || '___'
-  return [
-    `Our primary customer may fit the ${primaryName} profile.`,
-    `We think this because ${reasons}.`,
-    `This customer may value ${motivationLabel}.`,
-    `The strongest evidence we have is ${evidenceLabel}.`,
-    `The biggest assumption we still need to test is ${next}`
-  ].join(' ')
-})
-
 function motivationLabelById(id: string): string {
   if (!id) return ''
-  const axis = allAxes.find((a) => a.id === 'purchase-motivation')
+  const axis = axisById('purchase-motivation')
   const opt = (axis?.options ?? []).find((o) => o.id === id)
   return opt ? opt.label.toLowerCase() : id
 }
 
 function evidenceLabelById(id: string): string {
   if (!id) return ''
-  const axis = allAxes.find((a) => a.id === 'evidence-confidence')
+  const axis = axisById('evidence-confidence')
   const opt = (axis?.options ?? []).find((o) => o.id === id)
   return opt ? opt.label.toLowerCase() : id
 }
 
-async function copyDraftStarter(): Promise<void> {
-  const text = draftStarter.value
+function slotLabelOrder(slotId: SlotId): string {
+  switch (slotId) {
+    case 'primary':
+      return 'primary'
+    case 'secondary':
+      return 'secondary'
+    case 'tertiary':
+      return 'tertiary'
+  }
+}
+
+function slotDraftStarter(slotId: SlotId): string {
+  const slot = slots[slotId]
+  if (!slot.result || slot.result.status !== 'ready') return ''
+  const primaryName = archetypeName(slot.result.primaryArchetypeId)
+  const motivationLabel =
+    motivationLabelById(slot.motivationPrimary) || '___'
+  const evidenceLabel =
+    evidenceLabelById(slot.form['evidence-confidence']) || '___'
+  const top = (slot.result.topContributingSignals ?? []).slice(0, 3).map((s) =>
+    s.toLowerCase()
+  )
+  const reasons =
+    top.length === 0
+      ? '___, ___, and ___'
+      : top.length === 1
+        ? top[0]!
+        : top.length === 2
+          ? `${top[0]} and ${top[1]}`
+          : `${top[0]}, ${top[1]}, and ${top[2]}`
+  const next = slot.result.whatToTestNext || '___'
+  return [
+    `Our ${slotLabelOrder(slotId)} customer may fit the ${primaryName} profile.`,
+    `We think this because ${reasons}.`,
+    `This customer may value ${motivationLabel}.`,
+    `The strongest evidence we have is ${evidenceLabel}.`,
+    `The biggest assumption we still need to test is ${next}`
+  ].join(' ')
+}
+
+// ---- Combined draft (across all analyzed slots) -----------------
+
+const analyzedSlotIds = computed<SlotId[]>(() =>
+  slotIds.filter((id) => slots[id].result?.status === 'ready')
+)
+
+const combinedDraft = computed<string>(() => {
+  const ids = analyzedSlotIds.value
+  if (ids.length === 0) return ''
+
+  // Per the brief format: per-slot "may fit" sentence, plus shared
+  // strongest-evidence + biggest-assumption tail. The shared tail
+  // uses the FIRST analyzed slot's evidence/assumption — that's the
+  // simplest deterministic choice; teacher / curriculum lead can
+  // refine later.
+  const first = slots[ids[0]!]
+  const evidenceLabel =
+    evidenceLabelById(first.form['evidence-confidence']) || '___'
+  const next = first.result?.whatToTestNext || '___'
+
+  const sentences: string[] = []
+  for (const id of ids) {
+    const slot = slots[id]
+    if (!slot.result || slot.result.status !== 'ready') continue
+    const reasonsList = (slot.result.topContributingSignals ?? []).slice(0, 3)
+    const reasons =
+      reasonsList.length === 0
+        ? '___'
+        : reasonsList.map((s) => s.toLowerCase()).join('; ')
+    sentences.push(
+      `Our ${slotLabelOrder(id)} customer may fit the ${archetypeName(
+        slot.result.primaryArchetypeId
+      )} profile because ${reasons}.`
+    )
+  }
+
+  return [
+    ...sentences,
+    `The strongest evidence we have is ${evidenceLabel}.`,
+    `The biggest assumption we still need to test is ${next}.`
+  ].join(' ')
+})
+
+async function copySingleDraft(slotId: SlotId): Promise<void> {
+  const text = slotDraftStarter(slotId)
   if (!text) return
+  await writeToClipboard(text, (label) => {
+    copyButtonLabels[slotId] = label
+  })
+}
+
+async function copyCombinedDraft(): Promise<void> {
+  const text = combinedDraft.value
+  if (!text) return
+  await writeToClipboard(text, (label) => {
+    combinedCopyLabel.value = label
+  })
+}
+
+async function writeToClipboard(
+  text: string,
+  setLabel: (label: string) => void
+): Promise<void> {
   try {
     if (
       typeof navigator !== 'undefined' &&
@@ -627,22 +1103,22 @@ async function copyDraftStarter(): Promise<void> {
       typeof navigator.clipboard.writeText === 'function'
     ) {
       await navigator.clipboard.writeText(text)
-      copyButtonLabel.value = 'Copied ✓'
+      setLabel('Copied ✓')
       window.setTimeout(() => {
-        copyButtonLabel.value = 'Copy draft starter'
+        setLabel('Copy draft starter')
       }, 2000)
     } else {
-      copyButtonLabel.value = 'Copy unavailable — select and copy manually'
+      setLabel('Copy unavailable — select and copy manually')
     }
   } catch {
-    copyButtonLabel.value = 'Copy failed — try again'
+    setLabel('Copy failed — try again')
   }
 }
 
 // ---- Teacher-debug helpers --------------------------------------
 
 const rankedDebugEntries = computed<{ id: string; score: number }[]>(() => {
-  const scores = result.value?.teacherDebug?.scores
+  const scores = activeSlotResult.value?.teacherDebug?.scores
   if (!scores) return []
   return Object.entries(scores)
     .map(([id, score]) => ({ id, score: Math.round(Number(score)) }))
@@ -650,21 +1126,67 @@ const rankedDebugEntries = computed<{ id: string; score: number }[]>(() => {
     .sort((a, b) => b.score - a.score)
 })
 
-const cfsDebugLine = computed<string>(() => {
-  const debug = result.value?.teacherDebug
-  if (!debug) return '—'
-  if (!debug.causeMotivationSelected) {
-    return 'not eligible — supporting-a-cause not selected as a motivation.'
+type CfsReason =
+  | 'not-eligible'
+  | 'selected-not-corroborated'
+  | 'overlay-applied'
+  | 'primary-applied'
+  | 'eligible-not-selected'
+
+const cfsReason = computed<CfsReason>(() => {
+  const result = activeSlotResult.value
+  const debug = result?.teacherDebug
+  if (!debug) return 'not-eligible'
+  if (!debug.causeMotivationSelected) return 'not-eligible'
+  if (!debug.causeCorroborated) return 'selected-not-corroborated'
+  if (result?.secondaryArchetypeId === 'cause-first-supporters') {
+    return 'overlay-applied'
   }
-  if (!debug.causeCorroborated) {
-    return 'eligible by motivation but suppressed — no cause-driven shopping pick AND no evidenceAboutCauseMotivation flag.'
+  if (result?.primaryArchetypeId === 'cause-first-supporters') {
+    return 'primary-applied'
   }
-  if (result.value?.secondaryArchetypeId === 'cause-first-supporters') {
-    return 'overlay applied (motivation + corroboration both present).'
+  return 'eligible-not-selected'
+})
+
+const cfsReasonLabel = computed<string>(() => {
+  switch (cfsReason.value) {
+    case 'not-eligible':
+      return 'NOT ELIGIBLE'
+    case 'selected-not-corroborated':
+      return 'SELECTED BUT NOT CORROBORATED'
+    case 'overlay-applied':
+      return 'OVERLAY APPLIED'
+    case 'primary-applied':
+      return 'PRIMARY APPLIED'
+    case 'eligible-not-selected':
+      return 'ELIGIBLE BUT NOT CHOSEN'
   }
-  if (result.value?.primaryArchetypeId === 'cause-first-supporters') {
-    return 'CFS as primary (rare path).'
+})
+
+const cfsReasonClass = computed<string>(() => {
+  switch (cfsReason.value) {
+    case 'overlay-applied':
+    case 'primary-applied':
+      return 'inline-flex rounded bg-green-100 px-1.5 py-0.5 text-[10px] font-bold uppercase text-green-800'
+    case 'selected-not-corroborated':
+      return 'inline-flex rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-bold uppercase text-amber-900'
+    default:
+      return 'inline-flex rounded bg-stone-200 px-1.5 py-0.5 text-[10px] font-bold uppercase text-stone-700'
   }
-  return 'eligible and corroborated, but another archetype took both primary and secondary slots.'
+})
+
+const cfsReasonExplanation = computed<string>(() => {
+  switch (cfsReason.value) {
+    case 'not-eligible':
+      return 'supporting-a-cause was not selected as primary or secondary motivation.'
+    case 'selected-not-corroborated':
+      return 'supporting-a-cause was selected but neither cause-driven shopping nor evidenceAboutCauseMotivation flag is present.'
+    case 'overlay-applied':
+      return 'CFS overlay attached as secondary (motivation + corroboration both present).'
+    case 'primary-applied':
+      return 'CFS as primary (rare path — no other archetype cleared the fit threshold).'
+    case 'eligible-not-selected':
+      return 'CFS was eligible but another archetype took both primary and secondary slots.'
+  }
 })
 </script>
