@@ -95,6 +95,15 @@ export interface TemplateStudioSection {
     enabled: boolean
     guidance?: string
   }
+  // Key Activities Builder visibility metadata. Same opt-in pattern.
+  // V1 enables this only on Ch. 4 BMC Key Activities — the BMC's
+  // repeatable-business framing benefits from a small categorized
+  // chip-pick + reasons builder so students don't default to
+  // "ship-the-pop-up" tasks. Independent of every other builder.
+  keyActivities?: {
+    enabled: boolean
+    guidance?: string
+  }
   // Expert Chapter Guidance (Sprint — Expert Guidance). Optional
   // additive metadata that lifts a section from "static template"
   // to "guided by a field expert." Curriculum content only — no

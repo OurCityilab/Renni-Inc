@@ -326,6 +326,28 @@ export function pickRecipe(
   section: TemplateStudioSection | null
 ): Recipe {
   // Section-driven recipes — most specific first.
+  // Key Activities Builder pilot: gated on the per-section flag so
+  // the recipe only fires on the BMC Ch. 4 key-activities slot. Other
+  // chapters that happen to share section ids never trigger it.
+  if (section?.keyActivities?.enabled) {
+    return {
+      doThis:
+        'Choose the 5–7 activities Renni Inc. must do well as a retail company, then explain why they matter.',
+      howToDoIt: [
+        'Open the Key Activities Builder.',
+        'Pick activities from product, operations, sales channels, marketing, and learning.',
+        'Choose the 5–7 that matter most.',
+        'Add a short reason for each.',
+        'Copy the draft starter into Working Draft.',
+        'Edit it in your own words.',
+        'Save your work, then ask your chief to review it.'
+      ],
+      doneWhenFallback:
+        'Your answer names 5–7 repeatable business activities, not just pop-up tasks, and explains why they matter for Renni Inc.',
+      buttonLabel: 'Open Key Activities Builder'
+    }
+  }
+
   if (section?.id === 'customer-segments') {
     return {
       doThis:
@@ -640,6 +662,11 @@ export function pickAnchorIdForSection(
   section: TemplateStudioSection,
   customerProfileBuilderEnabled: boolean
 ): string {
+  // Key Activities Builder is checked first when its per-section flag
+  // is on, mirroring its position in the recipe library.
+  if (section.keyActivities?.enabled) {
+    return `kab-${section.id}`
+  }
   if (customerProfileBuilderEnabled && section.id === 'customer-segments') {
     return `cpb-${section.id}`
   }

@@ -284,33 +284,62 @@ export const businessModelCanvas: TemplateStudio = {
       id: 'key-activities',
       title: 'Key activities',
       lesson:
-        'Key activities are the work the company has to actually do — design, ordering, baking, staffing the table, posting on social, pitching to retailers.',
+        'Key activities are the things Renni Inc. must do well — repeatedly — to operate as a student-run retail company. Think product, operations, sales channels, marketing, and learning. Not just one event.',
+      whyThisMatters:
+        'The Business Model Canvas describes the BUSINESS, not a single launch. The TechTown pop-up is one sales channel. Phoenix Nest is another possible retail channel. Naming the activities Renni Inc. needs to repeat is what makes the company handoff-ready for the next cohort.',
+      actionSummary:
+        'List the 5–7 activities Renni Inc. must do well to operate as a student-run retail company.',
+      // V1: opt this section in to the new Key Activities Builder. The
+      // builder mounts a small categorized chip-pick + reasons surface
+      // so students think in business-activity terms, not pop-up tasks.
+      keyActivities: {
+        enabled: true,
+        guidance:
+          'Pick 5–7 activities across product, operations, sales channels, marketing, and learning. The TechTown pop-up is one sales channel; Phoenix Nest is another possible retail channel. Your answer should describe the business, not just one event.'
+      },
       studentPrompts: [
-        'List the 5–7 activities Renni Inc. has to do well to ship the pop-up.',
-        'Mark which activities run before, during, and after pop-up day.',
-        'Flag any activity the team is unsure how to do yet.'
+        'List the 5–7 activities Renni Inc. must do well to operate as a student-run retail company.',
+        'Cover product, operations, sales channels (TechTown, Phoenix Nest), marketing, and learning.',
+        'Add a one-line reason each activity matters for the business.'
       ],
       completionCriteria: [
-        'Activities cover before, during, and after the pop-up.',
-        'At least one activity has an honest "still figuring out" note if appropriate.'
+        'Names 5–7 repeatable business activities, not just pop-up tasks.',
+        'Each activity has a one-line reason it matters for Renni Inc.',
+        'Activities span at least three of: product, operations, sales channels, marketing, learning.'
       ],
       expertGuidance: {
         expertRole: 'COO / operations lead',
         whyThisMatters:
-          'Key activities are what the team has to do well. Naming them honestly catches the things nobody currently owns before they slip on May 27.',
+          'Key activities describe how Renni Inc. earns its money REPEATEDLY. TechTown is one channel; Phoenix Nest is another; future events are others still. Naming the underlying activities is what lets the next cohort run the company, not re-invent it.',
         whatToGather: [
-          '5–7 activities across before / during / after the pop-up.',
-          'Owner per activity (named student, not "the team").',
-          'Honest "still figuring out" note where the team has not done it before.'
+          '5–7 activities Renni Inc. must do well as a student-run retail company.',
+          'Coverage across product, operations, sales channels, marketing, and learning.',
+          'A one-line reason each activity matters for the business.'
         ],
-        weakAnswerLooksLike: '"Designing, baking, selling, marketing." — generic verbs, no owner.',
-        strongAnswerLooksLike: 'A short list per phase with owner per activity and uncertainty flagged where appropriate.',
-        expertPushback: ['Which activity has no owner today?', 'Which activity is the team newest at and has not rehearsed?'],
-        commonMistakes: ['Optimistic ownership ("the team" / "all of us").', 'Skipping post-event activities.'],
-        decisionSupported: 'Where the team allocates time before, during, and after pop-up day.',
-        connectsTo: ['Chapter 9 — operations readiness', 'Chapter 12 — strategy / next-semester recommendations'],
+        weakAnswerLooksLike:
+          '"Set up the booth, bake cookies, post on social, sell stuff." — single-event tasks, not repeatable business activities.',
+        strongAnswerLooksLike:
+          '"Source apparel · prepare baked goods · track inventory · sell through TechTown and Phoenix Nest channels · collect customer feedback · review pricing each cycle · document handoff for next cohort." — describes the BUSINESS.',
+        expertPushback: [
+          'Which of these activities still matters if TechTown does not happen this semester?',
+          'Which activity would the next cohort have to repeat?',
+          'Where does Phoenix Nest fit — as an activity, or a channel an activity feeds?'
+        ],
+        commonMistakes: [
+          'Listing pop-up day tasks instead of repeatable business activities.',
+          'Treating TechTown as the whole business instead of one sales channel.',
+          'Skipping learning activities (feedback, pricing review, handoff).'
+        ],
+        decisionSupported:
+          'Which activities Renni Inc. needs to staff, document, and hand off so the company runs cohort to cohort.',
+        connectsTo: [
+          'Chapter 9 — operations readiness',
+          'Chapter 11 — Phoenix Nest carry pitch',
+          'Chapter 12 — strategy / next-semester recommendations'
+        ],
         ownerHint: 'COO',
-        doneLooksLike: 'Each activity has a named owner and a phase. "Still figuring out" notes are honest.'
+        doneLooksLike:
+          'A short list of 5–7 repeatable activities that span product, operations, channels, marketing, and learning — each with a one-line reason it matters.'
       }
     },
     {

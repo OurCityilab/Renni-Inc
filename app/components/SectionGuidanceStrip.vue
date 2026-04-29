@@ -80,6 +80,13 @@ interface NextStepCta {
 
 const nextStepCta = computed<NextStepCta>(() => {
   const s = props.section
+  // Key Activities Builder is checked first when its per-section flag
+  // is on, mirroring the priority used by `pickAnchorIdForSection` in
+  // app/utils/studentNextActions.ts so the leader-facing strip and
+  // the student-facing recipe panel both deeplink to the same anchor.
+  if (s.keyActivities?.enabled) {
+    return { label: 'Open Key Activities Builder', anchorId: `kab-${s.id}` }
+  }
   if (customerProfileBuilderEnabled.value && s.id === 'customer-segments') {
     return { label: 'Open Customer Builder', anchorId: `cpb-${s.id}` }
   }

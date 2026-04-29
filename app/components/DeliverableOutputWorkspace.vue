@@ -52,6 +52,7 @@ import PlaybookWritingScaffold from '~/components/PlaybookWritingScaffold.vue'
 import HelpMeUnderstand from '~/components/HelpMeUnderstand.vue'
 import ChipPickQuickStart from '~/components/ChipPickQuickStart.vue'
 import CustomerProfileBuilder from '~/components/CustomerProfileBuilder.vue'
+import KeyActivitiesBuilder from '~/components/KeyActivitiesBuilder.vue'
 import MarketFitBuilder from '~/components/MarketFitBuilder.vue'
 import MarketFitReferencePanel, {
   type ReferencedMarketFitRow
@@ -2413,6 +2414,27 @@ function shouldOpenDefend(s: TemplateStudioSection): boolean {
             result into the draft.
           </p>
           <CustomerProfileBuilder />
+        </div>
+
+        <!-- Key Activities Builder (V1 pilot, BMC Ch. 4 only).
+             Mounts when `section.keyActivities?.enabled` is true. V1
+             ships this flag enabled only on Ch. 4 BMC's
+             `key-activities` section, so the builder never appears on
+             Value Propositions or any other BMC block. Local state
+             only; no Firestore writes; no AI; copy-only draft starter.
+             The kab-<id> wrapper id matches the anchor pickAnchorId-
+             ForSection points at, so the SectionRecipePanel CTA can
+             smooth-scroll the student into this builder. -->
+        <div
+          v-if="s.keyActivities?.enabled"
+          :id="`kab-${s.id}`"
+          class="space-y-1"
+        >
+          <p class="text-[11px] italic text-neutral-600">
+            Use this first if you are stuck. Then paste the draft
+            starter into Working Draft and edit it in your own words.
+          </p>
+          <KeyActivitiesBuilder />
         </div>
 
         <!-- Independent Student Mode: section-level mismatch warnings.
