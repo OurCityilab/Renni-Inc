@@ -79,11 +79,23 @@
 
     <!-- Required stereotype guardrail -->
     <p
-      class="mb-4 rounded border border-amber-200 bg-white/60 p-2 text-xs text-amber-900"
+      class="mb-2 rounded border border-amber-200 bg-white/60 p-2 text-xs text-amber-900"
     >
       <strong>Stereotype guardrail:</strong> Store choices are clues,
       not proof. Do not assume someone's income, values, race, politics,
       or identity from one store or one behavior.
+    </p>
+
+    <!-- Builder framing: students need to know this is a thinking tool,
+         not a publishing tool. Keeps the same posture as the rest of
+         the file (no auto-save, no submit, no approval). -->
+    <p
+      class="mb-4 rounded border border-stone-200 bg-white/70 p-2 text-xs text-stone-800"
+    >
+      <strong>How to use this:</strong> the builder helps you
+      <em>think</em> through who the customer is. Your final answer
+      still needs your judgment and any evidence you have. The builder
+      does not submit or approve anything.
     </p>
 
     <!-- ===== Slot tabs (Primary / Secondary / Tertiary) ===== -->
@@ -455,9 +467,11 @@
             >
               {{ copyButtonLabels[activeSlot] }}
             </button>
-            <span class="text-[11px] text-stone-500">
-              Copies to clipboard. Paste into your Working Draft when
-              ready — we will not write into the section for you.
+            <span class="text-[11px] text-stone-600">
+              Copies to clipboard. <strong>Paste into your Working
+              Draft for Customer Segments</strong>, then edit it in
+              your own words and add any evidence you have. The
+              builder does not write into the section for you.
             </span>
           </div>
         </div>
@@ -509,8 +523,10 @@
       >
         {{ combinedCopyLabel }}
       </button>
-      <span class="ml-2 text-[11px] text-stone-500">
+      <span class="ml-2 text-[11px] text-stone-600">
         Includes only the profiles you have analyzed.
+        <strong>Paste into your Working Draft for Customer Segments</strong>
+        and edit in your own words.
       </span>
     </div>
 

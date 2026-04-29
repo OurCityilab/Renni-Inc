@@ -23,6 +23,8 @@ import { useAuthStore } from '~/stores/auth'
 import { useDeliverables } from '~/composables/useDeliverables'
 import { getTemplateStudio } from '~/data/templateStudios'
 import DeliverableSectionWorkspace from '~/components/DeliverableSectionWorkspace.vue'
+import SectionGuidanceStrip from '~/components/SectionGuidanceStrip.vue'
+import SectionGuidanceCards from '~/components/SectionGuidanceCards.vue'
 import TaskCreateForm from '~/components/TaskCreateForm.vue'
 import { effectiveWhyThisMatters } from '~/utils/sectionGuidance'
 import { canAssignSectionTasks } from '~/utils/permissions'
@@ -206,50 +208,52 @@ onBeforeRouteLeave(() => {
 
     <!-- Valid section — render the focused workspace. -->
     <template v-else>
-      <!-- Compact sticky header: chapter context + breadcrumb back +
-           why-this-matters connection.
-           Guidance Compression Sprint: the why-this-matters callout
-           is now section-specific. effectiveWhyThisMatters prefers
-           section.whyThisMatters → derives from section.lesson →
-           falls back to studio.whyItMatters only when neither
-           section-level field is meaningful. The "Build this section
-           in three steps…" framing was removed because the workspace
-           below already labels Think / Draft / Defend on its own
-           accordions; repeating it here pushed the writing surface
-           below the fold. -->
-      <header class="card space-y-1">
-        <p class="text-xs uppercase tracking-wide text-neutral-500">
-          {{ studio.title }}
-          <span v-if="sectionIndex"> · Section {{ sectionIndex }} of {{ studio.sections.length }}</span>
-        </p>
-        <h1 class="text-lg font-semibold text-neutral-900">
-          {{ validSection.title }}
-        </h1>
-        <p
-          v-if="whyForSection"
-          class="rounded-md border border-phoenix-200 bg-phoenix-50/40 p-2 text-xs text-phoenix-900"
-        >
-          <span class="font-semibold uppercase tracking-wide text-phoenix-700">Why this matters:</span>
-          {{ whyForSection }}
-        </p>
-        <div class="flex flex-wrap items-center gap-2 text-xs">
-          <NuxtLink
-            :to="`/deliverables/${deliverable.id}`"
-            class="rounded border border-neutral-300 bg-neutral-50 px-2 py-0.5 text-neutral-700 hover:bg-neutral-100"
-          >← Chapter overview</NuxtLink>
-          <!-- Section Task Assignment sprint: chiefs / Co-CEOs /
-               admins can spawn a task tied to this exact section.
-               Hidden for regular members so the section workspace
-               UX stays clean. The TaskCreateForm itself re-checks
-               authorization, so a stale UI cannot mint tasks. -->
-          <button
-            v-if="canAssignSection"
-            type="button"
-            class="rounded border border-phoenix-300 bg-phoenix-50 px-2 py-0.5 font-medium text-phoenix-800 hover:bg-phoenix-100"
-            @click="assigningOpen = !assigningOpen"
-          >{{ assigningOpen ? 'Close assign panel' : '+ Assign section as task' }}</button>
-        </div>
-      </header>
+      <!-- Action-first guidance strip. Replaces the prior chapter-
+           context header. Renders the section title, the one
+           plain-language next action, the reviewer, and the
+           current workflow status. Display-only; never overrides
+           save / submit / approval / permission paths. -->
+      <SectionGuidanceStrip
+        :deliverable="deliverable"
+        :studio="studio"
+        :section="validSection"
+        :section-index="sectionIndex"
+      />
+
+      <!-- Chapter context + back-link + chief-only assign affordance.
+           Kept as a separate compact row so the strip above stays
+           dominated by the next action. -->
+      <div class="flex flex-wrap items-center gap-2 text-xs">
+        <p class="mr-1 text-neutral-500">{{ studio.title }}</p>
+        <NuxtLink
+          :to="`/deliverables/${deliverable.id}`"
+          class="rounded border border-neutral-300 bg-neutral-50 px-2 py-0.5 text-neutral-700 hover:bg-neutral-100"
+        >← Chapter overview</NuxtLink>
+        <!-- Section Task Assignment sprint: chiefs / Co-CEOs /
+             admins can spawn a task tied to this exact section.
+             Hidden for regular members so the section workspace
+             UX stays clean. The TaskCreateForm itself re-checks
+             authorization, so a stale UI cannot mint tasks. -->
+        <button
+          v-if="canAssignSection"
+          type="button"
+          class="rounded border border-phoenix-300 bg-phoenix-50 px-2 py-0.5 font-medium text-phoenix-800 hover:bg-phoenix-100"
+          @click="assigningOpen = !assigningOpen"
+        >{{ assigningOpen ? 'Close assign panel' : '+ Assign section as task' }}</button>
+      </div>
+
+      <!-- Why this matters — moved into a collapsible per the
+           cognitive-load brief. Students who want the deeper "why"
+           can open it; the default view stays action-first. -->
+      <details
+        v-if="whyForSection"
+        class="rounded-md border border-phoenix-200 bg-phoenix-50/40 px-3 py-2 text-xs text-phoenix-900"
+      >
+        <summary class="cursor-pointer font-semibold uppercase tracking-wide text-phoenix-700">
+          Why this matters
+        </summary>
+        <p class="mt-1 text-phoenix-900">{{ whyForSection }}</p>
+      </details>
 
       <!-- Section Task Assignment sprint: review form. Nothing is
            created until the chief clicks Save inside the form. All
@@ -280,6 +284,16 @@ onBeforeRouteLeave(() => {
         :studio="studio"
         :section-id="validSection.id"
         :can-edit="canEdit"
+      />
+
+      <!-- Compact guidance cards: What good looks like / Done when /
+           Who reviews · What happens next. Sit below the workspace
+           so the writing surface stays visually dominant. Pure
+           display; never gates submit, approval, or save. -->
+      <SectionGuidanceCards
+        :deliverable="deliverable"
+        :studio="studio"
+        :section="validSection"
       />
     </template>
   </main>
