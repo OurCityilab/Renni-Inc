@@ -12,6 +12,21 @@ body,
   height: 100%;
 }
 
+/* Layout-fix V3: prevent any descendant from forcing horizontal
+   overflow at the document level. Without this, a single overflowing
+   child (a long unbreakable token, a wide nav row, a future
+   third-party embed) can push `<body>` wider than the viewport, and
+   `mx-auto` on every page wrapper then centers content inside that
+   over-wide body — which renders as "main content squeezed into a
+   narrow far-right column with empty whitespace on the left." This
+   is a structural fix; no descendant can break the layout horizontally
+   regardless of content length. Vertical overflow is unaffected. */
+html,
+body {
+  max-width: 100vw;
+  overflow-x: hidden;
+}
+
 body {
   @apply bg-neutral-50 text-neutral-900 antialiased;
 }

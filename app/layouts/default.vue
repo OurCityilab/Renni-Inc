@@ -112,11 +112,25 @@ const navGroups = computed<NavGroup[]>(() => {
     whitespace on the left. Putting the nav on its own row removes the
     flex contention completely. `overflow-x-auto` + `whitespace-nowrap`
     keeps long nav rows usable on narrow screens.
+
+    V3 (P0 dashboard layout fix): the V2 "nav-on-its-own-row" fix
+    eliminated the nav-driven overflow case but left the layout still
+    vulnerable to ANY future overflow source (a long task title, an
+    unbreakable URL, a third-party embed, a data-dependent string).
+    V3 hardens the structure with two defenses: (a) `overflow-x-hidden`
+    on `<html>` and `<body>` in main.css so the document itself
+    cannot scroll horizontally regardless of any descendant; and (b)
+    `w-full min-w-0 max-w-full overflow-x-hidden` on the layout root
+    + main + main-inner wrappers so each layout level is allowed to
+    shrink below intrinsic content width and clips any rogue
+    descendant in place rather than propagating its width upward.
+    The combination makes the "centered-far-right-column" failure
+    mode structurally impossible.
   -->
-  <div class="min-h-full flex flex-col">
+  <div class="min-h-full w-full max-w-full min-w-0 flex flex-col overflow-x-hidden">
     <header class="border-b border-neutral-200 bg-white">
-      <div class="mx-auto w-full max-w-6xl px-4">
-        <div class="flex h-14 items-center justify-between gap-3">
+      <div class="mx-auto w-full min-w-0 max-w-6xl px-4">
+        <div class="flex h-14 items-center justify-between gap-3 min-w-0">
           <NuxtLink to="/" class="flex min-w-0 items-center gap-2">
             <span
               class="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-phoenix-600 text-sm font-bold text-white"
@@ -155,13 +169,13 @@ const navGroups = computed<NavGroup[]>(() => {
         </nav>
       </div>
     </header>
-    <main class="min-w-0 flex-1">
-      <div class="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 lg:px-8">
+    <main class="min-w-0 max-w-full w-full flex-1 overflow-x-hidden">
+      <div class="mx-auto w-full min-w-0 max-w-6xl px-4 py-6 sm:px-6 lg:px-8 break-words">
         <slot />
       </div>
     </main>
     <footer class="border-t border-neutral-200 bg-white">
-      <div class="mx-auto w-full max-w-6xl px-4 py-3 text-xs text-neutral-500 sm:px-6 lg:px-8">
+      <div class="mx-auto w-full min-w-0 max-w-6xl px-4 py-3 text-xs text-neutral-500 sm:px-6 lg:px-8">
         Renaissance × Renni Inc. — Command Center
       </div>
     </footer>
