@@ -240,11 +240,21 @@ function buildCardForTask(
     task
   )
   const recipe = pickRecipe(task, deliverable, studio, section)
-  const buttonHref =
+  // Append `?taskId=<id>` so the section page can read it from the
+  // route query and thread the task back into buildSectionRecipe()
+  // — the dashboard → section continuity path. The deliverable
+  // detail page ignores unknown query params, so the same suffix is
+  // safe on both deeplink shapes. Skipped on the `/tasks` fallback
+  // because the tasks list page does not consume per-task query.
+  const baseHref =
     deepLinkForTask({
       deliverableId: task.deliverableId ?? null,
       requirementId: task.requirementId ?? null
     }) ?? '/tasks'
+  const buttonHref =
+    baseHref === '/tasks'
+      ? baseHref
+      : `${baseHref}?taskId=${encodeURIComponent(task.id)}`
 
   // Department-fallback cards have a tighter "kind" override so the
   // chip reads honestly even when the underlying task is "not-started"

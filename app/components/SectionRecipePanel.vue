@@ -20,7 +20,7 @@
 -->
 <script setup lang="ts">
 import { computed } from 'vue'
-import type { Deliverable } from '~/types/models'
+import type { Deliverable, Task } from '~/types/models'
 import type {
   TemplateStudio,
   TemplateStudioSection
@@ -34,6 +34,12 @@ const props = defineProps<{
   deliverable: Deliverable
   studio: TemplateStudio
   section: TemplateStudioSection
+  /** Optional task threaded in from the route's `?taskId=` query.
+   *  When present, `buildSectionRecipe` uses the task's
+   *  `definitionOfDone` (when set) for the "Done when" line — closing
+   *  the dashboard → section continuity loop so the panel matches
+   *  the exact card the student clicked. */
+  task?: Task | null
 }>()
 
 const runtimeConfig = useRuntimeConfig()
@@ -46,6 +52,7 @@ const recipe = computed<SectionRecipeModel>(() =>
     deliverable: props.deliverable,
     section: props.section,
     studio: props.studio,
+    task: props.task ?? null,
     customerProfileBuilderEnabled: customerProfileBuilderEnabled.value
   })
 )

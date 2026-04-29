@@ -21,6 +21,7 @@ import { computed, ref, watch } from 'vue'
 import { useRoute, onBeforeRouteLeave } from 'vue-router'
 import { useAuthStore } from '~/stores/auth'
 import { useDeliverables } from '~/composables/useDeliverables'
+import { useTasks } from '~/composables/useTasks'
 import { getTemplateStudio } from '~/data/templateStudios'
 import DeliverableSectionWorkspace from '~/components/DeliverableSectionWorkspace.vue'
 import SectionGuidanceStrip from '~/components/SectionGuidanceStrip.vue'
@@ -29,6 +30,7 @@ import SectionRecipePanel from '~/components/SectionRecipePanel.vue'
 import TaskCreateForm from '~/components/TaskCreateForm.vue'
 import { effectiveWhyThisMatters } from '~/utils/sectionGuidance'
 import { canAssignSectionTasks } from '~/utils/permissions'
+import type { Task } from '~/types/models'
 
 // Leader gate. Used to keep the existing SectionGuidanceStrip /
 // SectionGuidanceCards visible to chiefs/admins for the richer review
@@ -51,6 +53,26 @@ const studio = computed(() =>
 const validSection = computed(() => {
   if (!studio.value) return null
   return studio.value.sections.find((s) => s.id === sectionId.value) ?? null
+})
+
+// Dashboard → section continuity: read `?taskId=<id>` from the route
+// query and resolve it against the existing task watcher. Pure read;
+// when the query is missing, malformed, or the id doesn't resolve,
+// `taskFromQuery` stays null and SectionRecipePanel falls back to
+// section-level recipe behavior. No fetch, no Firestore write, no
+// console noise on miss — `find` simply returns undefined.
+const tasks = useTasks()
+const { data: liveTasks } = tasks.watchAll()
+const taskIdFromQuery = computed<string | null>(() => {
+  const raw = route.query.taskId
+  if (typeof raw !== 'string') return null
+  const trimmed = raw.trim()
+  return trimmed.length > 0 ? trimmed : null
+})
+const taskFromQuery = computed<Task | null>(() => {
+  const id = taskIdFromQuery.value
+  if (!id) return null
+  return liveTasks.value.find((t) => t.id === id) ?? null
 })
 
 // Drafting access — V2. Mirrors the deliverableOutputs Firestore
@@ -238,6 +260,7 @@ onBeforeRouteLeave(() => {
         :deliverable="deliverable"
         :studio="studio"
         :section="validSection"
+        :task="taskFromQuery"
       />
 
       <!-- Action-first guidance strip. Replaces the prior chapter-
