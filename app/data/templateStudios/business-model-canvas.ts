@@ -124,7 +124,7 @@ export const businessModelCanvas: TemplateStudio = {
       id: 'value-propositions',
       title: 'Value propositions',
       lesson:
-        'Value propositions are the promises the business keeps. Tie each one to a real product — beanies, sweatshirts, t-shirts, baked goods, donations — so the canvas matches what the pop-up actually sells.',
+        'Value propositions are the promises Renni Inc. keeps to its customers. Tie each one to a real product — beanies, sweatshirts, t-shirts, baked goods, donations — so the canvas matches what the BUSINESS sells, not just one event.',
       studentPrompts: [
         'Write one value proposition per segment.',
         'Tie each value proposition to a specific product or experience.',
@@ -167,11 +167,11 @@ export const businessModelCanvas: TemplateStudio = {
       id: 'channels',
       title: 'Channels',
       lesson:
-        'Channels are how customers reach the brand. TechTown is the main channel today, Phoenix Nest is the wholesale channel, and student/community reach is how word spreads.',
+        'Channels are where Renni Inc. customers find, buy, receive, and respond. TechTown is one sales channel, Phoenix Nest is another possible retail-carry channel, and student / community reach is how word spreads. Channels are not the same as activities — they are the routes the business uses, repeatedly.',
       studentPrompts: [
-        'List every channel: TechTown pop-up, Phoenix Nest pitch, social media, community word-of-mouth.',
+        'List every channel: TechTown pop-up, Phoenix Nest pitch, school / community events, social media, word-of-mouth.',
         'Mark which channels exist today vs. which are aspirational.',
-        'Note which channels are best for awareness vs. actually closing a sale.'
+        'Note which channels are best for awareness vs. closing a sale vs. fulfillment vs. follow-up.'
       ],
       completionCriteria: [
         'TechTown pop-up is named.',
@@ -211,7 +211,7 @@ export const businessModelCanvas: TemplateStudio = {
       id: 'customer-relationships',
       title: 'Customer relationships',
       lesson:
-        'Customer relationships describe how the brand treats customers — at the pop-up table, online, and after the sale. Relationships are how a one-time buyer becomes a repeat buyer or advocate.',
+        'Customer relationships describe how Renni Inc. treats customers — at TechTown, through Phoenix Nest carry, online, and after the sale. Relationships are how a one-time buyer becomes a repeat buyer or advocate, and they apply across every sales channel, not just one event.',
       studentPrompts: [
         'How are customers treated at the TechTown table — fast checkout, personal pitch, both?',
         'What happens after a sale? Receipts, follow-up, none?',
@@ -244,7 +244,7 @@ export const businessModelCanvas: TemplateStudio = {
       id: 'revenue-streams',
       title: 'Revenue streams',
       lesson:
-        'Revenue streams are how the business takes money in. Product sales and donations are different streams — the canvas should treat them separately.',
+        'Revenue streams are how Renni Inc. takes money in across every channel. Product sales (TechTown direct, Phoenix Nest carry if it lands, school events) and donations are different streams — the canvas should treat them separately, with the recording rule named per stream.',
       studentPrompts: [
         'List each revenue stream: beanies, sweatshirts, t-shirts, baked goods, donations.',
         'For each stream, name how money is captured (Square, cash, donation form).',
@@ -346,7 +346,7 @@ export const businessModelCanvas: TemplateStudio = {
       id: 'key-resources',
       title: 'Key resources',
       lesson:
-        'Key resources are what the company needs to do those activities — people, designs, vendors, the Square device, the booth, the kitchen for baked goods.',
+        'Key resources are the assets, people, tools, systems, data, and inventory Renni Inc. depends on to run the business — not just the supplies for a single event. Think about what would still need to exist if the next cohort took over tomorrow.',
       studentPrompts: [
         'List people resources (chiefs, members, advisors).',
         'List physical resources (booth, signage, Square POS, oven, kitchen).',
@@ -380,7 +380,7 @@ export const businessModelCanvas: TemplateStudio = {
       id: 'key-partners',
       title: 'Key partners',
       lesson:
-        'Partners do work the team cannot or should not do alone — vendors, advisors, the school, TechTown, Phoenix Nest, payment processors.',
+        'Key partners are the business-enabling relationships Renni Inc. depends on — vendors, advisors, the school, TechTown, Phoenix Nest, and Square as the external POS partner. These are not one-time helpers; they are relationships the business returns to.',
       studentPrompts: [
         'Name garment, baking, and printing vendors.',
         'Name advisors, teachers, and any community partners.',
@@ -415,10 +415,11 @@ export const businessModelCanvas: TemplateStudio = {
       id: 'cost-structure',
       title: 'Cost structure',
       lesson:
-        'Cost structure connects directly to the pricing and break-even chapter. List the costs and tie them to the unit cost / fixed cost work that already lives on /pricing.',
+        'Renni Inc.\'s cost structure has four buckets: FIXED costs (booth fee, signage, recurring fees), VARIABLE costs that scale with sales (per-unit beanie / shirt / baked-goods cost), PRODUCT costs (materials, packaging, sourcing), and EVENT costs unique to a single channel (transport, day-of supplies). Tie each cost to the unit-cost / fixed-cost work that already lives in Ch. 7 / 8 and /pricing.',
       studentPrompts: [
         'List variable costs per product (blanks, prints, ingredients, packaging).',
         'List fixed costs (booth, signage, kitchen rental, advisor honoraria).',
+        'List event costs that only apply to one channel (e.g., TechTown transport).',
         'Cross-check: do these costs match the unit costs and fixed-cost shares on /pricing?'
       ],
       requiredInputs: ['Variable costs', 'Fixed costs', '/pricing cross-check'],

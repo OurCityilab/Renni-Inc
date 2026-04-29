@@ -98,6 +98,21 @@ function jumpToWorkSurface(): void {
       </span>
     </header>
 
+    <div v-if="recipe.outputFormat">
+      <p class="text-[11px] font-semibold uppercase tracking-wide text-neutral-500">
+        Output format
+      </p>
+      <p class="mt-0.5 text-sm font-semibold text-phoenix-900 break-words">
+        {{ recipe.outputFormat }}
+      </p>
+      <p
+        v-if="recipe.outputExample"
+        class="mt-1 rounded border border-stone-200 bg-stone-50 p-2 font-mono text-[11px] text-stone-700 break-words"
+      >
+        {{ recipe.outputExample }}
+      </p>
+    </div>
+
     <div>
       <p class="text-[11px] font-semibold uppercase tracking-wide text-neutral-500">
         Do this

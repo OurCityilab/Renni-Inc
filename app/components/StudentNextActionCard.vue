@@ -77,6 +77,15 @@ function chipClass(kind: NextActionCardModel['kind']): string {
       </p>
     </div>
 
+    <div v-if="card.outputFormat">
+      <p class="text-[11px] font-semibold uppercase tracking-wide text-neutral-500">
+        Output format
+      </p>
+      <p class="mt-0.5 text-sm font-semibold text-phoenix-900 break-words">
+        {{ card.outputFormat }}
+      </p>
+    </div>
+
     <div>
       <p class="text-[11px] font-semibold uppercase tracking-wide text-neutral-500">
         Do this
