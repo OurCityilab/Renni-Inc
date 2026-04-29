@@ -86,6 +86,8 @@ const navGroups = computed<NavGroup[]>(() => {
     adminItems.push({ to: '/c-suite', label: 'C-Suite', hint: 'Leadership KPI dashboard (approvals, overdue, by department)' })
   if (auth.isChief || auth.isAdmin)
     adminItems.push({ to: '/c-suite-advisor', label: 'C-Suite Advisor', hint: 'Daily operating coach — Today\'s Moves, owner lanes, Intelligence Sync' })
+  if (auth.isChief || auth.isAdmin)
+    adminItems.push({ to: '/c-suite/project-navigator', label: 'Project Navigator', hint: 'Read-only work-state map — what is blocked, overdue, in review, and what to push on next' })
   if (auth.isAdmin) adminItems.push({ to: '/team', label: 'Team', hint: 'Roster + roles' })
   if (auth.isAdmin) adminItems.push({ to: '/admin/users', label: 'Users', hint: 'Access manager — alternate approved emails, signup status' })
   if (adminItems.length) groups.push({ label: 'Admin', items: adminItems })
