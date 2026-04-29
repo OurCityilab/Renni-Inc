@@ -17,6 +17,12 @@ export const operationsReadiness: TemplateStudio = {
       title: 'What are we actually bringing?',
       lesson:
         'Inventory is the bet. Count what we have, note what is missing, decide what to order.',
+      operationsChecklist: {
+        enabled: true,
+        kind: 'inventory',
+        guidance:
+          'Build the inventory checklist. Item, quantity, location, owner, issue/risk, and packed?-checkbox per row. Use it pre-event AND day-of to track packing.'
+      },
       studentPrompts: [
         'How many of each product do we physically have right now?',
         'What is ordered but not delivered? When does it arrive?',
@@ -54,6 +60,12 @@ export const operationsReadiness: TemplateStudio = {
         'SOP = Standard Operating Procedure. Write the steps someone who was not in planning meetings could follow.',
       example:
         '08:00 — Load van. 09:00 — Arrive TechTown. 09:15 — Set up table, signage, card reader. 10:00 — Open. 12:00 — Inventory check. 16:00 — Close, count cash, pack out. 17:00 — Handoff.',
+      operationsChecklist: {
+        enabled: true,
+        kind: 'day-of-sop',
+        guidance:
+          'Build the day-of SOP step by step in time order. Each row is a time / step with owner, materials, done signal, and backup. A new student should be able to read it and run a block.'
+      },
       studentPrompts: [
         'Who is on shift at each block?',
         'What is the Square setup step-by-step? Who owns the card reader?',
@@ -89,6 +101,12 @@ export const operationsReadiness: TemplateStudio = {
       title: 'Baked goods — food safety',
       lesson:
         'Humble Oven baked goods need separate handling. Temperature, allergens, labeling, and sell-by timing matter.',
+      operationsChecklist: {
+        enabled: true,
+        kind: 'baked-goods-sop',
+        guidance:
+          'Build the baked-goods SOP. Each row is a step with food-safety concern, owner, materials, done signal, and backup notes. The builder shows a clear "this is not legal food-safety advice — follow school, event, and instructor requirements" warning above the table.'
+      },
       studentPrompts: [
         'What baked goods are we selling? Who baked them and when?',
         'What allergens need labels at the table?',
@@ -125,6 +143,12 @@ export const operationsReadiness: TemplateStudio = {
       title: 'Handoff to next cohort',
       lesson:
         'Continuity is the Playbook\'s real point. Write what would have saved you a week if the last cohort had written it down.',
+      operationsChecklist: {
+        enabled: true,
+        kind: 'continuity',
+        guidance:
+          'Build the continuity checklist. Each row is an item / process — current status, owner, link / location, warning / risk, and the next step. A reader should be able to act in week one without asking for clarification.'
+      },
       studentPrompts: [
         'What surprised your team during planning?',
         'What is the single most useful thing next cohort should know first?',

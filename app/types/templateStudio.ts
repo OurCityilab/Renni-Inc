@@ -104,6 +104,40 @@ export interface TemplateStudioSection {
     enabled: boolean
     guidance?: string
   }
+  // Finance Table Builder visibility metadata. Same opt-in pattern.
+  // The `kind` selector picks which finance table the shared
+  // FinanceTableBuilder renders for this section:
+  //   unit-cost          — Ch. 8 unit-cost: per-product cost rollup.
+  //   break-even         — Ch. 7 margin-and-break-even / Ch. 8
+  //                        break-even: margin + break-even units.
+  //   revenue-scenarios  — Ch. 8 revenue-scenarios: low/target/stretch.
+  //   donation-scenarios — Ch. 8 donation-scenarios: donor count × gift.
+  //   kpi                — Ch. 8 key-financial-kpis: KPI definitions.
+  // Local component state, copy-only output. No Firestore writes.
+  financeTable?: {
+    enabled: boolean
+    kind: 'unit-cost' | 'break-even' | 'revenue-scenarios' | 'donation-scenarios' | 'kpi'
+    guidance?: string
+  }
+  // Operations Checklist / SOP Builder visibility metadata. Same
+  // opt-in pattern. The `kind` selector picks which checklist /
+  // SOP shape the shared OperationsChecklistBuilder renders:
+  //   inventory       — Ch. 9 inventory: item · quantity · location ·
+  //                     owner · issue · packed?
+  //   day-of-sop      — Ch. 9 day-of-sop: time · step · owner ·
+  //                     materials · done signal · backup.
+  //   baked-goods-sop — Ch. 9 baked-goods-sop: step · food safety
+  //                     concern · owner · materials · done signal ·
+  //                     backup. Carries the "not legal food-safety
+  //                     advice" student-facing warning.
+  //   continuity      — Ch. 9 continuity: item / process · status ·
+  //                     owner · link · warning · next step.
+  // Local component state, copy-only output. No Firestore writes.
+  operationsChecklist?: {
+    enabled: boolean
+    kind: 'inventory' | 'day-of-sop' | 'baked-goods-sop' | 'continuity'
+    guidance?: string
+  }
   // Expert Chapter Guidance (Sprint — Expert Guidance). Optional
   // additive metadata that lifts a section from "static template"
   // to "guided by a field expert." Curriculum content only — no

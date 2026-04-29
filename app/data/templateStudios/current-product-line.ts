@@ -82,15 +82,22 @@ export const currentProductLine: TemplateStudio = {
       id: 'margin-and-break-even',
       title: 'Margin and break-even',
       lesson:
-        'Pricing without margin reasoning is just a sticker number. Connect each price back to unit cost, contribution margin, and break-even units from the pricing engine.',
+        'Pricing without margin reasoning is just a sticker number. Connect each price back to unit cost, contribution margin, and break-even units.',
+      financeTable: {
+        enabled: true,
+        kind: 'break-even',
+        guidance:
+          'Build the break-even table number-first. Show unit cost, sale price, unit margin, fixed-cost share, and units-to-break-even per product. The builder warns when margin is zero or negative — fix the price before continuing.'
+      },
       studentPrompts: [
         'For each product, name the unit cost, sale price, and contribution margin.',
-        'Explain how each product clears its break-even (or what the team will do if it does not).',
-        'Reference the pricing/break-even chapter so readers can dig in if they want detail.'
+        'Show units-to-break-even per product, with the assumption labeled.',
+        'Below the table, write 2–3 sentences explaining the math the team will defend.'
       ],
       completionCriteria: [
-        'Margin is named per product.',
-        'Break-even is named per product or pointed to the pricing chapter.'
+        'Each product has unit cost, sale price, unit margin, and units-to-break-even.',
+        'Every assumption is labeled.',
+        'Below the table, a short explanation defends the math.'
       ]
     },
     {

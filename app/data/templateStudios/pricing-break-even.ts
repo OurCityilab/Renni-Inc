@@ -19,6 +19,12 @@ export const pricingBreakEven: TemplateStudio = {
         'Unit cost is every dollar spent per item before markup — blank garment, printing, baking ingredients, packaging. If an expense only exists because we sold the unit, it belongs here.',
       example:
         'A House Phoenix beanie: $4 blank + $3 print + $1 tag = $8 unit cost.',
+      financeTable: {
+        enabled: true,
+        kind: 'unit-cost',
+        guidance:
+          'Build the unit-cost table per product. Material/product cost, labor or prep, packaging/fees, and other — the builder sums to the total per row. Cite vendor quotes; label assumptions.'
+      },
       studentPrompts: [
         'Ask the vendor for an updated quote — do not use last cohort\'s number.',
         'Is there a per-unit packaging or tag cost you forgot?'
@@ -87,6 +93,12 @@ export const pricingBreakEven: TemplateStudio = {
         'Break-even units = fixed cost share ÷ (sale price − unit cost). Below that number, the product loses money on allocated overhead.',
       example:
         'If T-shirt fixed cost share is $200 and contribution margin is $15, break-even is 14 units. We plan 25 → safe margin of 11.',
+      financeTable: {
+        enabled: true,
+        kind: 'break-even',
+        guidance:
+          'Build the break-even table number-first. Show unit cost, sale price, unit margin (calculated), fixed cost / goal, and units-to-break-even (calculated). Warns when sale price ≤ unit cost — fix the price before continuing.'
+      },
       studentPrompts: [
         'Does every product clear its break-even with room?',
         'If one product is "Behind plan", what will we do — drop price, push marketing, or cut it?'
@@ -103,6 +115,12 @@ export const pricingBreakEven: TemplateStudio = {
         'A single revenue number is a guess. Three scenarios — low, target, and stretch — let the team prepare for the best and the worst without sounding overconfident.',
       example:
         'Target: $1,800 (target conversion at planned inventory). Low: $1,100 (half-conversion / weather). Stretch: $2,400 (sellout on at least one product).',
+      financeTable: {
+        enabled: true,
+        kind: 'revenue-scenarios',
+        guidance:
+          'Build the revenue scenarios table. One row per product per scenario (Low / Target / Stretch). The builder calculates revenue = quantity × price. Label every assumption and mark confidence.'
+      },
       studentPrompts: [
         'Build a low / target / stretch revenue scenario from /pricing inputs.',
         'For each scenario, name the assumption that drives it — foot traffic, conversion rate, sellout pattern.',
@@ -138,6 +156,12 @@ export const pricingBreakEven: TemplateStudio = {
       title: 'Donation scenarios',
       lesson:
         'Donations are a separate revenue stream with their own scenario logic — donor count, average gift, and how the team prompts a donation at the table without making customers feel pressured.',
+      financeTable: {
+        enabled: true,
+        kind: 'donation-scenarios',
+        guidance:
+          'Build the donation scenarios table. Donor type, count, average gift — the builder calculates total = count × gift per row. Label every assumption and mark confidence. Donations are kept separate from product sales.'
+      },
       studentPrompts: [
         'Estimate donor count and average gift for low / target / stretch.',
         'Describe how donations are prompted at the table (sign, ask, donation card).',
@@ -165,6 +189,12 @@ export const pricingBreakEven: TemplateStudio = {
       title: 'Key financial KPIs',
       lesson:
         'Pick the small set of KPIs the team will actually watch — gross revenue, gross profit, donation total, sell-through rate per product, average transaction. Two or three is plenty; eight is noise.',
+      financeTable: {
+        enabled: true,
+        kind: 'kpi',
+        guidance:
+          'Build the KPI table. Each KPI has a formula / definition, a target, the source (where it lives), an owner, and a review rhythm. 4–7 rows is enough; more is noise.'
+      },
       studentPrompts: [
         'List the 3–5 KPIs the team will track during and after the pop-up.',
         'For each KPI, name where it lives (/pricing, /revenue, donation tracker).',

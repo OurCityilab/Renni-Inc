@@ -583,18 +583,19 @@ export function pickRecipe(
       doThis:
         'Show the margin per product and the units required to break even — number-first, prose below.',
       howToDoIt: [
-        'For each product, list unit cost, sale price, and margin.',
-        'Calculate units to break even using the fixed-cost share for that product.',
+        'Open the Break-Even Table builder.',
+        'For each product, enter unit cost, sale price, and the fixed-cost share.',
+        'Read the margin and units-to-break-even the builder calculates.',
         'Label every assumption (fixed-cost split, conversion, attendance).',
-        'Below the table, write a 2–3 sentence explanation of the math the team is willing to defend.',
+        'Copy the table into Working Draft and write 2–3 sentences explaining the math.',
         'Save your work, then ask your chief to review it.'
       ],
       doneWhenFallback:
         'Each product has unit cost, margin, units-to-break-even, and labeled assumptions, with a short defensible explanation.',
-      buttonLabel: 'Open Pricing Builder',
+      buttonLabel: 'Open Break-Even Table',
       outputFormat: 'You are making a cost / margin / break-even table — one row per product.',
       outputExample:
-        'product | fixed cost share | unit margin | units to break even | assumption'
+        'product | unit cost | sale price | unit margin | fixed cost / goal | units to break even | assumption'
     }
   }
 
@@ -664,18 +665,19 @@ export function pickRecipe(
       doThis:
         'Land the unit cost for each Renni Inc. product — vendor-quote-backed where possible, labeled assumption otherwise.',
       howToDoIt: [
-        'For each product, list every cost component (materials, packaging, sourcing).',
-        'Total to a unit cost.',
+        'Open the Unit Cost Table builder.',
+        'For each product, enter material, labor, packaging / fees, and any other cost.',
+        'Read the total unit cost the builder calculates.',
         'Cite the vendor quote, comparable, or label the assumption.',
-        'Mark unit costs that are still pending.',
+        'Copy the table into Working Draft and edit it in your own words.',
         'Save your work, then ask your chief to review it.'
       ],
       doneWhenFallback:
         'Each product has a defensible unit cost with components and source. Pending costs are explicitly flagged.',
-      buttonLabel: 'Open Pricing Builder',
+      buttonLabel: 'Open Unit Cost Table',
       outputFormat: 'You are making a unit-cost table — one row per product.',
       outputExample:
-        'product | components | unit cost | source (quote / comparable / assumption) | confidence'
+        'product | material | labor | packaging / fees | other | total unit cost | source | assumption'
     }
   }
 
@@ -704,18 +706,20 @@ export function pickRecipe(
       doThis:
         'Show the units required to break even per product — number-first.',
       howToDoIt: [
-        'Pull unit margin for each product from the unit-cost table.',
-        'Allocate fixed costs across products (write down the rule the team used).',
-        'Calculate units-to-break-even per product.',
-        'Label every assumption (fixed-cost split, attendance, conversion).',
+        'Open the Break-Even Table builder.',
+        'For each product, enter unit cost, sale price, and the fixed-cost share.',
+        'Read the unit margin and units-to-break-even the builder calculates.',
+        'Write down the fixed-cost allocation rule the team used.',
+        'Label every other assumption (attendance, conversion, channel mix).',
+        'Copy the table into Working Draft and edit it in your own words.',
         'Save your work, then ask your chief to review it.'
       ],
       doneWhenFallback:
         'Each product has units-to-break-even with the fixed-cost allocation rule and assumptions explicitly labeled.',
-      buttonLabel: 'Open Pricing Builder',
+      buttonLabel: 'Open Break-Even Table',
       outputFormat: 'You are making a break-even table — one row per product.',
       outputExample:
-        'product | fixed cost allocated | unit margin | units to break even | assumption'
+        'product | unit cost | sale price | unit margin | fixed cost / goal | units to break even | assumption'
     }
   }
 
@@ -724,15 +728,17 @@ export function pickRecipe(
       doThis:
         'Build low / target / stretch revenue scenarios — quantity, price, revenue, and confidence per row.',
       howToDoIt: [
-        'For each product, list planned quantity, price, and revenue across LOW, TARGET, and STRETCH scenarios.',
+        'Open the Revenue Scenarios Table builder.',
+        'For each product, add a row per scenario (low / target / stretch).',
+        'Enter quantity and price; the builder calculates revenue.',
         'Name the assumptions that change between scenarios (attendance, conversion, weather, channel mix).',
-        'Mark confidence per scenario (low / medium / high).',
-        'Below the table, write a 2–3 sentence narrative for what each scenario means for the team.',
+        'Mark confidence per row (low / medium / high).',
+        'Copy the table into Working Draft and write a 2–3 sentence narrative for what each scenario means for the team.',
         'Save your work, then ask your chief to review it.'
       ],
       doneWhenFallback:
         'Three scenarios (low / target / stretch) exist with quantity, price, revenue, assumptions, and confidence per product.',
-      buttonLabel: 'Start writing',
+      buttonLabel: 'Open Revenue Scenarios Table',
       outputFormat: 'You are making a revenue-scenarios table — one row per product per scenario.',
       outputExample:
         'scenario | product | quantity | price | revenue | assumption | confidence'
@@ -744,18 +750,20 @@ export function pickRecipe(
       doThis:
         'Project donation revenue separately from product sales — capture method, recording rule, and the donation goal.',
       howToDoIt: [
-        'List how donations are captured (Square donation tile, paper, cash jar, online).',
-        'Project donation revenue across low / target / stretch scenarios.',
+        'Open the Donation Scenarios Table builder.',
+        'For each donor type, enter expected count and average gift; the builder calculates the total.',
+        'In your draft, document how donations are captured (Square donation tile, paper, cash jar, online).',
         'Document the recording rule (who logs it, where it goes).',
         'Tie scenarios to the donation goal in the goals page.',
+        'Copy the table into Working Draft and edit it in your own words.',
         'Save your work, then ask your chief to review it.'
       ],
       doneWhenFallback:
         'Donation scenarios exist separately from product sales, the capture method and recording rule are documented, and projections tie to the donation goal.',
-      buttonLabel: 'Start writing',
-      outputFormat: 'You are making a donation-scenarios table — one row per scenario.',
+      buttonLabel: 'Open Donation Scenarios Table',
+      outputFormat: 'You are making a donation-scenarios table — one row per donor type.',
       outputExample:
-        'scenario | capture method | projected donations | recording rule | confidence'
+        'donor type | count | average gift | total | assumption | confidence'
     }
   }
 
@@ -764,17 +772,18 @@ export function pickRecipe(
       doThis:
         'Define Renni Inc.\'s financial KPIs — what to measure, the target, where it lives, and who owns it.',
       howToDoIt: [
+        'Open the KPI Table builder.',
         'List 4–7 KPIs (revenue, units sold, average margin, donations, foot-traffic-to-sale conversion, retail-carry committed units).',
-        'For each, name the target number, the source (Ch. 8 / pricing page / goals).',
-        'Name the chief who owns the KPI.',
+        'For each, enter formula / definition, target, source (Ch. 8 / pricing page / goals), owner, and review rhythm.',
+        'Copy the table into Working Draft and edit it in your own words.',
         'Save your work, then ask your chief to review it.'
       ],
       doneWhenFallback:
-        '4–7 KPIs are defined with target, source, and owner.',
-      buttonLabel: 'Start writing',
+        '4–7 KPIs are defined with formula, target, source, owner, and review rhythm.',
+      buttonLabel: 'Open KPI Table',
       outputFormat: 'You are making a KPI table — one row per KPI.',
       outputExample:
-        'KPI | target | source | owner | review cadence'
+        'KPI | formula / definition | target | source | owner | review rhythm'
     }
   }
 
@@ -805,15 +814,16 @@ export function pickRecipe(
       doThis:
         'Build the inventory list — every item Renni Inc. needs to bring, the quantity, the location, and whether it is packed.',
       howToDoIt: [
+        'Open the Inventory Checklist builder.',
         'List every item — products, packaging, signage, payment device, baked-goods supplies.',
-        'For each item, note quantity, current location, and the owner who brings it.',
-        'Mark issues (missing, damaged, behind on production).',
-        'Add a packed checkbox the team will tick on day-of.',
+        'For each item, enter quantity, location, the owner who brings it, any issue, and packed?',
+        'Mark issues honestly (missing, damaged, behind on production).',
+        'Copy the table into Working Draft and edit it in your own words.',
         'Save your work, then ask your chief to review it.'
       ],
       doneWhenFallback:
         'Every item is listed with quantity, location, owner, issue (if any), and a packed-yet flag.',
-      buttonLabel: 'Start writing',
+      buttonLabel: 'Open Inventory Checklist',
       outputFormat: 'You are making an inventory checklist — one row per item.',
       outputExample:
         'item | quantity | location | owner | issue | packed?'
@@ -825,18 +835,20 @@ export function pickRecipe(
       doThis:
         'Write the pop-up day SOP — every step, the time, the owner, the materials, the done signal, and the backup.',
       howToDoIt: [
-        'List the day broken into steps in time order (setup, open, mid-day, peak, close, breakdown).',
-        'For each step, name the owner, the materials needed, and the done signal.',
+        'Open the Day-of SOP builder.',
+        'Walk the day in time order (setup, open, mid-day, peak, close, breakdown).',
+        'For each step, enter the time, owner, materials, done signal, and a backup person.',
         'Add a backup person for any single-owner step.',
         'Make it usable by another student who hasn\'t done it before.',
+        'Copy the table into Working Draft and edit it in your own words.',
         'Save your work, then ask your chief to review it.'
       ],
       doneWhenFallback:
         'Every step has time, owner, materials, done signal, and a backup. A new student could read it and run the day.',
-      buttonLabel: 'Start writing',
+      buttonLabel: 'Open Day-of SOP',
       outputFormat: 'You are making an SOP — one row per step.',
       outputExample:
-        'time / step | owner | materials | done signal | backup'
+        'time / order | step | owner | materials | done signal | backup'
     }
   }
 
@@ -845,18 +857,20 @@ export function pickRecipe(
       doThis:
         'Document the baked-goods SOP — food handling, allergens, transport, and display rules a new baker could follow.',
       howToDoIt: [
-        'List preparation steps (sourcing, baking, packaging, labeling).',
-        'Document allergen labeling and handling rules.',
+        'Open the Baked Goods SOP builder.',
+        'For each step, name the food-safety concern, the owner, the materials, the done signal, and the backup or notes.',
+        'Document allergen labeling and handling rules in the food-safety concern column.',
         'Document transport and display rules (temperature, surface, handling).',
         'Note any health / inspection / school constraint that applies.',
+        'Copy the table into Working Draft and edit it in your own words. (Read the warning banner — this is not legal food-safety advice.)',
         'Save your work, then ask your chief to review it.'
       ],
       doneWhenFallback:
         'Preparation, allergen, transport, and display rules are documented and a new baker could follow them safely.',
-      buttonLabel: 'Start writing',
+      buttonLabel: 'Open Baked Goods SOP',
       outputFormat: 'You are making a food-handling SOP — one row per step.',
       outputExample:
-        'step | owner | materials | allergen / safety rule | done signal'
+        'step | food safety concern | owner | materials | done signal | backup / notes'
     }
   }
 
@@ -865,18 +879,20 @@ export function pickRecipe(
       doThis:
         'Write the continuity / handoff note — what the next cohort needs to start a Renni Inc. cycle without re-learning everything.',
       howToDoIt: [
-        'Name the assets the next cohort inherits (designs, vendor list, Square account, brand book, customer feedback).',
-        'Name the rules they should follow (pricing rule, brand voice, donation handling).',
-        'Name the open questions left for them.',
+        'Open the Continuity Checklist builder.',
+        'List the items / processes the next cohort inherits (designs, vendor list, Square account, brand book, customer feedback).',
+        'For each, mark status, owner, link / location, the warning or risk, and the next step.',
+        'Name the rules they should follow (pricing rule, brand voice, donation handling) in the warning / next-step columns.',
         'Make it short — a memo a student can read in five minutes.',
+        'Copy the table into Working Draft and edit it in your own words.',
         'Save your work, then ask your chief to review it.'
       ],
       doneWhenFallback:
         'The continuity note names assets, rules, and open questions in a memo a student can read in five minutes.',
-      buttonLabel: 'Start writing',
-      outputFormat: 'You are making a handoff memo — short, scannable.',
+      buttonLabel: 'Open Continuity Checklist',
+      outputFormat: 'You are making a handoff checklist — one row per item / process.',
       outputExample:
-        'Assets: ___ · Rules: ___ · Open questions: ___ · Where to find: ___'
+        'item / process | status | owner | link / location | warning / risk | next step'
     }
   }
 
@@ -1247,12 +1263,38 @@ export function buildSectionRecipe(
  * Resolve which DOM anchor id inside DeliverableOutputWorkspace.vue
  * the recipe panel's CTA should jump to. Mirrors the priority used
  * by SectionGuidanceStrip's `nextStepCta`.
+ *
+ * Anchor map (priority order):
+ *   ftb-<id>  → Finance Table Builder (launch-critical engines)
+ *   ocb-<id>  → Operations Checklist Builder (launch-critical engines)
+ *   kab-<id>  → Key Activities Builder
+ *   cpb-<id>  → Customer Profile Builder (Ch. 4 customer-segments only)
+ *   cqs-<id>  → Chip-pick QuickStart
+ *   mfb-<id>  → Market Fit Builder
+ *   bfb-<id>  → Brand Fit Builder
+ *   psb-<id>  → Pricing Strategy Builder
+ *   dft-<id>  → Working Draft (default fallback)
+ *
+ * Finance / Operations engines are checked FIRST so a section that
+ * mounts both a launch engine and another builder always lands the
+ * student on the engine — that's the surface that produces the
+ * sectioned output the launch sections require.
  */
 export function pickAnchorIdForSection(
   section: TemplateStudioSection,
   customerProfileBuilderEnabled: boolean
 ): string {
-  // Key Activities Builder is checked first when its per-section flag
+  // Launch-critical engines first. A section with `financeTable` or
+  // `operationsChecklist` enabled is one of the 9 Ch. 7 / 8 / 9 launch
+  // sections; the engine is the work surface, so the CTA jumps there
+  // before any other builder anchor.
+  if (section.financeTable?.enabled) {
+    return `ftb-${section.id}`
+  }
+  if (section.operationsChecklist?.enabled) {
+    return `ocb-${section.id}`
+  }
+  // Key Activities Builder is checked next when its per-section flag
   // is on, mirroring its position in the recipe library.
   if (section.keyActivities?.enabled) {
     return `kab-${section.id}`

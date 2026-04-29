@@ -53,6 +53,8 @@ import HelpMeUnderstand from '~/components/HelpMeUnderstand.vue'
 import ChipPickQuickStart from '~/components/ChipPickQuickStart.vue'
 import CustomerProfileBuilder from '~/components/CustomerProfileBuilder.vue'
 import KeyActivitiesBuilder from '~/components/KeyActivitiesBuilder.vue'
+import FinanceTableBuilder from '~/components/FinanceTableBuilder.vue'
+import OperationsChecklistBuilder from '~/components/OperationsChecklistBuilder.vue'
 import MarketFitBuilder from '~/components/MarketFitBuilder.vue'
 import MarketFitReferencePanel, {
   type ReferencedMarketFitRow
@@ -2435,6 +2437,53 @@ function shouldOpenDefend(s: TemplateStudioSection): boolean {
             starter into Working Draft and edit it in your own words.
           </p>
           <KeyActivitiesBuilder />
+        </div>
+
+        <!-- Finance Table Builder (Ch. 7 / 8 launch sections).
+             Mounts when `section.financeTable?.enabled` is true. The
+             `kind` selector lives on the section's metadata and picks
+             which finance table renders (unit-cost / break-even /
+             revenue-scenarios / donation-scenarios / kpi). Local state
+             only; no Firestore writes; no AI; copy-only markdown
+             output. The ftb-<id> wrapper id matches the anchor
+             pickAnchorIdForSection points at so the My Next Actions
+             CTA can smooth-scroll the student straight into the
+             builder. -->
+        <div
+          v-if="s.financeTable?.enabled"
+          :id="`ftb-${s.id}`"
+          class="space-y-1"
+        >
+          <p
+            v-if="s.financeTable?.guidance"
+            class="text-[11px] italic text-neutral-600"
+          >
+            {{ s.financeTable.guidance }}
+          </p>
+          <FinanceTableBuilder :kind="s.financeTable.kind" />
+        </div>
+
+        <!-- Operations Checklist Builder (Ch. 9 launch sections).
+             Mounts when `section.operationsChecklist?.enabled` is
+             true. The `kind` selector picks which checklist renders
+             (inventory / day-of-sop / baked-goods-sop / continuity).
+             Local state only; no Firestore writes; no AI; copy-only
+             markdown output. The ocb-<id> wrapper id matches the
+             anchor pickAnchorIdForSection points at. The baked-goods
+             variant carries a "not legal food-safety advice" warning
+             banner inside the component itself. -->
+        <div
+          v-if="s.operationsChecklist?.enabled"
+          :id="`ocb-${s.id}`"
+          class="space-y-1"
+        >
+          <p
+            v-if="s.operationsChecklist?.guidance"
+            class="text-[11px] italic text-neutral-600"
+          >
+            {{ s.operationsChecklist.guidance }}
+          </p>
+          <OperationsChecklistBuilder :kind="s.operationsChecklist.kind" />
         </div>
 
         <!-- Independent Student Mode: section-level mismatch warnings.

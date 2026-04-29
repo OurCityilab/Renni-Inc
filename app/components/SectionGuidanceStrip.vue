@@ -80,7 +80,16 @@ interface NextStepCta {
 
 const nextStepCta = computed<NextStepCta>(() => {
   const s = props.section
-  // Key Activities Builder is checked first when its per-section flag
+  // Launch-critical engines first. Mirrors pickAnchorIdForSection so
+  // the leader-facing strip and the student-facing recipe panel both
+  // deeplink to the same anchor.
+  if (s.financeTable?.enabled) {
+    return { label: financeTableLabel(s.financeTable.kind), anchorId: `ftb-${s.id}` }
+  }
+  if (s.operationsChecklist?.enabled) {
+    return { label: operationsChecklistLabel(s.operationsChecklist.kind), anchorId: `ocb-${s.id}` }
+  }
+  // Key Activities Builder is checked next when its per-section flag
   // is on, mirroring the priority used by `pickAnchorIdForSection` in
   // app/utils/studentNextActions.ts so the leader-facing strip and
   // the student-facing recipe panel both deeplink to the same anchor.
@@ -104,6 +113,38 @@ const nextStepCta = computed<NextStepCta>(() => {
   }
   return { label: 'Start writing', anchorId: `dft-${s.id}` }
 })
+
+function financeTableLabel(kind: string): string {
+  switch (kind) {
+    case 'unit-cost':
+      return 'Open Unit Cost Table'
+    case 'break-even':
+      return 'Open Break-Even Table'
+    case 'revenue-scenarios':
+      return 'Open Revenue Scenarios Table'
+    case 'donation-scenarios':
+      return 'Open Donation Scenarios Table'
+    case 'kpi':
+      return 'Open KPI Table'
+    default:
+      return 'Open Finance Table'
+  }
+}
+
+function operationsChecklistLabel(kind: string): string {
+  switch (kind) {
+    case 'inventory':
+      return 'Open Inventory Checklist'
+    case 'day-of-sop':
+      return 'Open Day-of SOP'
+    case 'baked-goods-sop':
+      return 'Open Baked Goods SOP'
+    case 'continuity':
+      return 'Open Continuity Checklist'
+    default:
+      return 'Open Operations Checklist'
+  }
+}
 
 // Click handler. Walks up from the target node, opening any
 // `<details>` ancestors so the target is actually visible after the
