@@ -8,10 +8,9 @@ import { templateStudios, getTemplateStudio } from '~/data/templateStudios'
 import { taskStatusLabel } from '~/utils/taskStatus'
 import { computeHomeSignals, type HomeAudience } from '~/utils/homeSignals'
 import { deepLinkForTask } from '~/utils/requirementToSection'
-import {
-  buildMemberNextBestAction,
-  pickMemberNextBest
-} from '~/utils/memberNextBestAction'
+import { buildStudentNextActions } from '~/utils/studentNextActions'
+import StudentNextActionCard from '~/components/StudentNextActionCard.vue'
+import { todayIso } from '~/utils/milestoneBackplan'
 
 const auth = useAuthStore()
 const deliverables = useDeliverables()
@@ -138,32 +137,22 @@ function taskWhyItMatters(t: Task | null): string | null {
   }
 }
 
-// Member-only "Do this next" card. The picker is purely task-shape
-// based; the page layers in the deep link and the connectedOutcome
-// narrative the helper deliberately doesn't know about.
-const memberPick = computed(() => pickMemberNextBest(myTasks.value))
-const memberCard = computed(() =>
-  buildMemberNextBestAction({
-    pick: memberPick.value,
-    taskHref: memberPick.value.task ? taskHref(memberPick.value.task) : null,
-    myDepartmentHref: myDeptHref.value,
-    whyItMatters: taskWhyItMatters(memberPick.value.task)
+// Member-only "My next actions" — up to 3 ranked action cards on the
+// home dashboard. Replaces the prior single "Do this next" card with
+// a richer, recipe-driven format that tells the student what to do,
+// how to do it, where to click, when they're done, and who reviews it.
+// Reads existing tasks + deliverables + Template Studio metadata; pure
+// deterministic compute — no AI, no Firestore writes.
+const myNextActionsView = computed(() =>
+  buildStudentNextActions({
+    myTasks: myTasks.value,
+    allTasks: allTasks.value,
+    deliverables: allDeliverables.value,
+    myDepartment: myDept.value,
+    todayIso: todayIso(),
+    maxCards: 3
   })
 )
-
-// Severity → tone class map. Matches the unified four-tier student
-// vocabulary (stuck / action-today / look-at-soon / all-good) used by
-// the C-Suite Advisor, Intelligence Sync, and Presentation Readiness
-// chip layers as of Sprint 1B.
-const memberCardTone: Record<
-  ReturnType<typeof buildMemberNextBestAction>['severity'],
-  string
-> = {
-  'stuck': 'border-rose-300 bg-rose-50',
-  'action-today': 'border-amber-300 bg-amber-50',
-  'look-at-soon': 'border-sky-300 bg-sky-50',
-  'all-good': 'border-emerald-300 bg-emerald-50'
-}
 
 // --- Phoenix Nest card -----------------------------------------------
 // One of the three final outputs in the project (TechTown pop-up,
@@ -229,44 +218,58 @@ async function copyMemberHelpMessage(): Promise<void> {
       </p>
     </header>
 
-    <!-- Do this next — member-only, single primary action.
-         Sprint 1A: replaces the chief-flavored advisor cockpit as the
-         first surface a regular student sees. Pure task-first picker
-         (utils/memberNextBestAction.ts) so the card never invents a
-         task and never claims success when there's nothing to do. -->
+    <!-- My next actions — member-only, up to 3 recipe-driven cards.
+         Replaces the prior single "Do this next" card. Each card
+         tells the student WHAT to do, HOW to do it (4–7 short
+         steps), WHEN they are done, WHO reviews it, and WHERE to
+         click. Pure deterministic compute (utils/studentNextActions.ts)
+         driven by existing task + deliverable + Template Studio
+         metadata. No AI calls. No Firestore writes. The Open button
+         deeplinks to the exact section page when sectionId is
+         resolvable, else the deliverable page, else /tasks. -->
     <section
       v-if="audience === 'member' && !myTasksLoading"
-      class="card space-y-2"
-      :class="memberCardTone[memberCard.severity]"
+      class="space-y-3"
     >
-      <header class="space-y-0.5">
-        <p class="text-xs font-semibold uppercase tracking-wide text-neutral-700">
-          Do this next
-        </p>
-        <h2 class="text-base font-semibold text-neutral-900">
-          {{ memberCard.headline }}
+      <header>
+        <h2 class="text-sm font-semibold uppercase tracking-wide text-neutral-700">
+          My next actions
         </h2>
+        <p class="text-xs text-neutral-600">
+          Start here. Open one task, follow the steps, save your work,
+          and mark it ready for review when your chief asks.
+        </p>
       </header>
-      <p class="text-sm text-neutral-800">{{ memberCard.body }}</p>
+
       <p
-        v-if="memberCard.whyItMatters"
-        class="text-xs italic text-neutral-700"
-      >{{ memberCard.whyItMatters }}</p>
-      <div class="flex flex-wrap gap-2 pt-1">
-        <NuxtLink
-          :to="memberCard.primaryAction.to"
-          class="btn-primary text-sm"
-        >{{ memberCard.primaryAction.label }}</NuxtLink>
-        <!-- Secondary affordances for the empty-state path. The picker
-             returns reason 'no-tasks' when the student has nothing
-             open; we still want them to feel useful, so we offer a
-             second link to Tasks alongside the My Department primary. -->
-        <NuxtLink
-          v-if="memberCard.reason === 'no-tasks'"
-          to="/tasks"
-          class="btn-secondary text-sm"
-        >Open Tasks</NuxtLink>
+        v-if="myNextActionsView.cards.length === 0"
+        class="rounded-lg border border-neutral-200 bg-white p-4 text-sm text-neutral-700"
+      >
+        No assigned tasks are ready yet. Check
+        <NuxtLink :to="myDeptHref" class="text-phoenix-700 hover:underline">
+          your department dashboard
+        </NuxtLink>
+        or ask your chief what to start.
+      </p>
+
+      <div
+        v-else
+        class="grid gap-3 md:grid-cols-2 xl:grid-cols-3 min-w-0"
+      >
+        <StudentNextActionCard
+          v-for="card in myNextActionsView.cards"
+          :key="card.taskId"
+          :card="card"
+        />
       </div>
+
+      <p
+        v-if="myNextActionsView.usingDepartmentFallback"
+        class="text-[11px] italic text-neutral-600"
+      >
+        Showing department work because nothing is personally assigned to
+        you yet. Pick one and ask your chief if you can take it on.
+      </p>
     </section>
 
     <!-- Start Your Day — onboarding orientation. Tells a new student
