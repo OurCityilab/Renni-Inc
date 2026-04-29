@@ -21,7 +21,8 @@
     - Never overwrites Working Draft. Copy buttons write to clipboard
       only. No "Add to Working Draft" path in this pass.
     - Numeric scores are NEVER shown to students. Teacher Debug is
-      gated by `isChief` and is collapsed by default.
+      gated by `canViewTeacherDebug` (chief OR admin/instructor) and
+      is collapsed by default.
     - Stereotype guardrail and PRIZM-inspired disclaimer remain
       visible above the form.
 
@@ -532,7 +533,7 @@
 
     <!-- ===== Teacher Debug (chiefs / admins only) ===== -->
     <details
-      v-if="activeSlotResult && isChief"
+      v-if="activeSlotResult && canViewTeacherDebug"
       class="mt-4 rounded border border-stone-300 bg-stone-50 p-2 text-xs"
     >
       <summary class="cursor-pointer font-semibold text-stone-700">
@@ -593,6 +594,7 @@
 <script setup lang="ts">
 import { computed, reactive, ref } from 'vue'
 import { useAuthStore } from '~/stores/auth'
+import { isExecutiveRole } from '~/utils/permissions'
 import { CUSTOMER_PROFILE_BUILDER_VARIANT } from '~/config/sectionEngineVariants'
 import { CUSTOMER_PROFILE_ARCHETYPE_BY_ID } from '~/data/customerProfileArchetypes'
 import { classifyCustomerProfile } from '~/utils/customerProfileClassifier'
@@ -604,7 +606,14 @@ import type {
 } from '~/types/sectionEngines'
 
 const authStore = useAuthStore()
-const isChief = computed(() => authStore.isChief)
+// Teacher Debug visibility: chief OR admin/instructor (=
+// `isExecutiveRole(profile)` from permissions.ts). Using the
+// explicit OR helper rather than auth store `isChief` alone is
+// defensive against role-data drift on production admin profiles —
+// the helper resolves to true on any chief or admin role string,
+// even if `CHIEF_ROLES` set composition shifts in a future change.
+// Regular `member` users never satisfy this gate.
+const canViewTeacherDebug = computed(() => isExecutiveRole(authStore.profile))
 
 // ---- Slot model (Primary / Secondary / Tertiary) ----------------
 
