@@ -10,6 +10,7 @@ import { computeHomeSignals, type HomeAudience } from '~/utils/homeSignals'
 import { deepLinkForTask } from '~/utils/requirementToSection'
 import { buildStudentNextActions } from '~/utils/studentNextActions'
 import StudentNextActionCard from '~/components/StudentNextActionCard.vue'
+import LaunchMorningPriorities from '~/components/LaunchMorningPriorities.vue'
 import { todayIso } from '~/utils/milestoneBackplan'
 
 const auth = useAuthStore()
@@ -271,6 +272,16 @@ async function copyMemberHelpMessage(): Promise<void> {
         you yet. Pick one and ask your chief if you can take it on.
       </p>
     </section>
+
+    <!-- Launch Morning Priorities — five role-grouped cards that route
+         each student group straight to the launch-critical section
+         they are expected to produce tomorrow. Visible to every
+         audience because chiefs / Co-CEOs / admins use it to direct
+         teams; members use it as a deterministic floor when their
+         own My Next Actions is empty or hasn't seeded yet. Pure
+         presentational; no Firestore writes, no AI, no nav side
+         effects beyond the link clicks themselves. -->
+    <LaunchMorningPriorities />
 
     <!-- Start Your Day — onboarding orientation. Tells a new student
          the daily path in one panel so they don't have to figure out
