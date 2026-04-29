@@ -294,17 +294,23 @@ function resolveSectionForTask(
  * Each recipe is a small object: doThis (one-liner), howToDoIt
  * (4–7 short steps), doneWhenFallback (used if the section has no
  * curriculum-authored completion criteria), and buttonLabel.
+ *
+ * `pickRecipe` is exported so the section workspace's
+ * SectionRecipePanel can reuse the SAME recipe library — no second
+ * conflicting copy of recipe text. It accepts an OPTIONAL task; the
+ * recipe selection is driven by section / deliverable signals first
+ * and never depends on task fields except the deliverableId fallback.
  * ------------------------------------------------------------------ */
 
-interface Recipe {
+export interface Recipe {
   doThis: string
   howToDoIt: string[]
   doneWhenFallback: string
   buttonLabel: string
 }
 
-function pickRecipe(
-  task: Task,
+export function pickRecipe(
+  task: Task | null,
   deliverable: Deliverable | null,
   _studio: TemplateStudio | null,
   section: TemplateStudioSection | null
@@ -384,7 +390,7 @@ function pickRecipe(
   }
 
   // Deliverable-driven recipes — match by chapter id.
-  const deliverableId = deliverable?.id ?? task.deliverableId ?? ''
+  const deliverableId = deliverable?.id ?? task?.deliverableId ?? ''
   if (deliverableId === 'ch-11-phoenix-nest-retail-carry-pitch') {
     return {
       doThis:
@@ -457,14 +463,19 @@ function pickRecipe(
 
 /* -------------------------------------------------------------------
  * "Done when" composer
+ *
+ * Exported so the section workspace's SectionRecipePanel can reuse
+ * the same fallback chain (task.definitionOfDone → section
+ * completionCriteria → recipe fallback). Accepts a nullable task so
+ * section-level callers without a task can still use it.
  * ------------------------------------------------------------------ */
 
-function buildDoneWhen(
+export function buildDoneWhen(
   section: TemplateStudioSection | null,
-  task: Task,
+  task: Task | null,
   recipeFallback: string
 ): string {
-  if (task.definitionOfDone && task.definitionOfDone.trim()) {
+  if (task?.definitionOfDone && task.definitionOfDone.trim()) {
     return task.definitionOfDone.trim()
   }
   if (section?.completionCriteria && section.completionCriteria.length > 0) {
@@ -475,9 +486,12 @@ function buildDoneWhen(
 
 /* -------------------------------------------------------------------
  * Reviewer label
+ *
+ * Exported so the section workspace can use the SAME role-name
+ * vocabulary as the dashboard cards. No CDO; no raw enum strings.
  * ------------------------------------------------------------------ */
 
-function buildReviewerLabel(
+export function buildReviewerLabel(
   deliverableId: string | null,
   department: Department | null
 ): string {
@@ -524,3 +538,112 @@ function addDays(iso: IsoDate, days: number): IsoDate {
  * ------------------------------------------------------------------ */
 
 export { templateStudios }
+
+/* -------------------------------------------------------------------
+ * Section recipe (for the section workspace)
+ *
+ * The section route mirrors the dashboard's recipe-driven cards by
+ * rendering the SAME recipe library at the top of the section page.
+ * `buildSectionRecipe` is the entry point for that mirror — it takes
+ * a deliverable + section (+ optional task and studio) and returns a
+ * panel-ready model with do-this, how-to-do-it steps, done-when,
+ * reviewer, button label, and the anchor id of the right work
+ * surface inside DeliverableOutputWorkspace.vue.
+ *
+ * The anchor ids match the wrappers added by the progressive-
+ * disclosure pass (commit cae9fe9):
+ *   cqs-<id>  → ChipPickQuickStart
+ *   cpb-<id>  → CustomerProfileBuilder
+ *   mfb-<id>  → Market Fit Builder
+ *   bfb-<id>  → Brand Fit Builder
+ *   psb-<id>  → Pricing Strategy Builder
+ *   dft-<id>  → Working Draft (default fallback)
+ * ------------------------------------------------------------------ */
+
+export interface SectionRecipeModel {
+  /** "Do this" one-liner. */
+  doThis: string
+  /** Numbered short steps. */
+  howToDoIt: string[]
+  /** "Done when …" line — composed via buildDoneWhen. */
+  doneWhen: string
+  /** "Reviewed by …" line — composed via buildReviewerLabel. */
+  reviewedBy: string
+  /** Button copy on the panel CTA. */
+  buttonLabel: string
+  /** DOM anchor id inside DeliverableOutputWorkspace the CTA should
+   *  scroll to. Always present; falls back to the Working Draft
+   *  wrapper when no builder applies to this section. */
+  anchorId: string
+}
+
+export interface BuildSectionRecipeInput {
+  deliverable: Deliverable | null
+  section: TemplateStudioSection
+  /** Optional studio. When omitted, the recipe library still picks
+   *  recipes via section / deliverable signals only. */
+  studio?: TemplateStudio | null
+  /** Optional task. When the student arrived here from a My Next
+   *  Actions card the task is the natural source for definitionOfDone
+   *  and `requirementId`-driven Done-when overrides. */
+  task?: Task | null
+  /** Optional explicit override for whether the Customer Profile
+   *  Builder beta is enabled. When omitted, the helper assumes the
+   *  builder is available for `customer-segments` (matches the
+   *  current production flag posture). */
+  customerProfileBuilderEnabled?: boolean
+}
+
+/**
+ * Build the section recipe panel model. Pure deterministic. Reuses
+ * `pickRecipe`, `buildDoneWhen`, and `buildReviewerLabel` so the
+ * section panel and the My Next Actions card render the SAME recipe
+ * vocabulary. No network, no AI, no Firestore.
+ */
+export function buildSectionRecipe(
+  input: BuildSectionRecipeInput
+): SectionRecipeModel {
+  const { deliverable, section, studio = null, task = null } = input
+  const recipe = pickRecipe(task, deliverable, studio, section)
+  return {
+    doThis: recipe.doThis,
+    howToDoIt: recipe.howToDoIt,
+    doneWhen: buildDoneWhen(section, task, recipe.doneWhenFallback),
+    reviewedBy: buildReviewerLabel(
+      deliverable?.id ?? task?.deliverableId ?? null,
+      task?.department ?? deliverable?.department ?? null
+    ),
+    buttonLabel: recipe.buttonLabel,
+    anchorId: pickAnchorIdForSection(
+      section,
+      input.customerProfileBuilderEnabled ?? true
+    )
+  }
+}
+
+/**
+ * Resolve which DOM anchor id inside DeliverableOutputWorkspace.vue
+ * the recipe panel's CTA should jump to. Mirrors the priority used
+ * by SectionGuidanceStrip's `nextStepCta`.
+ */
+export function pickAnchorIdForSection(
+  section: TemplateStudioSection,
+  customerProfileBuilderEnabled: boolean
+): string {
+  if (customerProfileBuilderEnabled && section.id === 'customer-segments') {
+    return `cpb-${section.id}`
+  }
+  if (section.chipPickQuickStart?.enabled) {
+    return `cqs-${section.id}`
+  }
+  if (section.marketFit?.enabled) {
+    return `mfb-${section.id}`
+  }
+  if (section.brandFit?.enabled) {
+    return `bfb-${section.id}`
+  }
+  if (section.pricingStrategy?.enabled) {
+    return `psb-${section.id}`
+  }
+  return `dft-${section.id}`
+}

@@ -25,9 +25,16 @@ import { getTemplateStudio } from '~/data/templateStudios'
 import DeliverableSectionWorkspace from '~/components/DeliverableSectionWorkspace.vue'
 import SectionGuidanceStrip from '~/components/SectionGuidanceStrip.vue'
 import SectionGuidanceCards from '~/components/SectionGuidanceCards.vue'
+import SectionRecipePanel from '~/components/SectionRecipePanel.vue'
 import TaskCreateForm from '~/components/TaskCreateForm.vue'
 import { effectiveWhyThisMatters } from '~/utils/sectionGuidance'
 import { canAssignSectionTasks } from '~/utils/permissions'
+
+// Leader gate. Used to keep the existing SectionGuidanceStrip /
+// SectionGuidanceCards visible to chiefs/admins for the richer review
+// context they rely on, while regular students see only the new
+// SectionRecipePanel — one clear action-first surface instead of three
+// guidance systems competing for attention.
 
 const route = useRoute()
 const auth = useAuthStore()
@@ -71,6 +78,15 @@ const sectionIndex = computed(() => {
 // if a stale UI somehow shows the button, the form will refuse.
 const canAssignSection = computed<boolean>(() =>
   canAssignSectionTasks(auth.profile)
+)
+
+// Leader = chief or admin. Drives whether the legacy
+// SectionGuidanceStrip and SectionGuidanceCards remain visible. The
+// new SectionRecipePanel renders for everyone — its content is the
+// dominant first thing a student sees, and it serves as a quick-scan
+// summary for chiefs alongside the existing review surfaces.
+const viewerIsLeader = computed<boolean>(
+  () => auth.isChief || auth.isAdmin
 )
 
 // Toggle for the inline TaskCreateForm panel.
@@ -208,12 +224,31 @@ onBeforeRouteLeave(() => {
 
     <!-- Valid section — render the focused workspace. -->
     <template v-else>
+      <!-- Section recipe panel — the new student-facing recipe shape
+           that mirrors the My Next Actions card on the home dashboard.
+           Visible to every viewer because the recipe is useful as a
+           quick-scan summary even for chiefs. The legacy
+           SectionGuidanceStrip / SectionGuidanceCards stay below for
+           leaders only (richer review context they rely on); regular
+           students see ONE clear action-first panel here instead of
+           three guidance systems competing for attention. Pure
+           display; reuses studentNextActions.ts recipe library so the
+           dashboard card and this panel stay in lockstep. -->
+      <SectionRecipePanel
+        :deliverable="deliverable"
+        :studio="studio"
+        :section="validSection"
+      />
+
       <!-- Action-first guidance strip. Replaces the prior chapter-
            context header. Renders the section title, the one
            plain-language next action, the reviewer, and the
            current workflow status. Display-only; never overrides
-           save / submit / approval / permission paths. -->
+           save / submit / approval / permission paths.
+           V2 (sprint c2fce17 follow-up): leader-gated so regular
+           students see the new SectionRecipePanel only. -->
       <SectionGuidanceStrip
+        v-if="viewerIsLeader"
         :deliverable="deliverable"
         :studio="studio"
         :section="validSection"
@@ -289,8 +324,14 @@ onBeforeRouteLeave(() => {
       <!-- Compact guidance cards: What good looks like / Done when /
            Who reviews · What happens next. Sit below the workspace
            so the writing surface stays visually dominant. Pure
-           display; never gates submit, approval, or save. -->
+           display; never gates submit, approval, or save.
+           V2 (sprint c2fce17 follow-up): leader-gated so regular
+           students see the new SectionRecipePanel only — the panel
+           already covers Done when + Reviewer + What good looks
+           like in a single action-first surface. Chiefs / admins
+           keep the cards for the richer review context. -->
       <SectionGuidanceCards
+        v-if="viewerIsLeader"
         :deliverable="deliverable"
         :studio="studio"
         :section="validSection"
