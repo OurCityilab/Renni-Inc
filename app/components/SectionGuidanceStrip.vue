@@ -26,6 +26,11 @@ const props = defineProps<{
   sectionIndex?: number | null
 }>()
 
+const runtimeConfig = useRuntimeConfig()
+const customerProfileBuilderEnabled = computed<boolean>(
+  () => runtimeConfig.public?.customerProfileBuilderEnabled === true
+)
+
 const nextAction = computed<string>(() =>
   effectiveActionSummary(props.section)
 )
@@ -64,6 +69,56 @@ const statusTone = computed<string>(() => {
       return 'border-neutral-300 bg-neutral-50 text-neutral-800'
   }
 })
+
+// Decide the right "next action" CTA: open a builder if the section
+// opts into one, otherwise drop the student into the writing surface.
+// Anchors below match wrapper ids inside DeliverableOutputWorkspace.
+interface NextStepCta {
+  label: string
+  anchorId: string
+}
+
+const nextStepCta = computed<NextStepCta>(() => {
+  const s = props.section
+  if (customerProfileBuilderEnabled.value && s.id === 'customer-segments') {
+    return { label: 'Open Customer Builder', anchorId: `cpb-${s.id}` }
+  }
+  if (s.chipPickQuickStart?.enabled) {
+    return { label: 'Open QuickStart', anchorId: `cqs-${s.id}` }
+  }
+  if (s.marketFit?.enabled) {
+    return { label: 'Open Market Fit Builder', anchorId: `mfb-${s.id}` }
+  }
+  if (s.brandFit?.enabled) {
+    return { label: 'Open Brand Builder', anchorId: `bfb-${s.id}` }
+  }
+  if (s.pricingStrategy?.enabled) {
+    return { label: 'Open Pricing Builder', anchorId: `psb-${s.id}` }
+  }
+  return { label: 'Start writing', anchorId: `dft-${s.id}` }
+})
+
+// Click handler. Walks up from the target node, opening any
+// `<details>` ancestors so the target is actually visible after the
+// scroll (anchor scroll alone leaves a closed `<details>` closed).
+// Fails gracefully — no errors thrown if the target is missing.
+function jumpToNextStep(): void {
+  if (typeof document === 'undefined') return
+  const id = nextStepCta.value.anchorId
+  const target = document.getElementById(id)
+  if (!target) return
+  let cur: HTMLElement | null = target
+  while (cur) {
+    if (cur.tagName === 'DETAILS') {
+      ;(cur as HTMLDetailsElement).open = true
+    }
+    cur = cur.parentElement
+  }
+  target.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  // Mild focus ring so the student's eye lands on the right area.
+  target.setAttribute('tabindex', '-1')
+  ;(target as HTMLElement).focus({ preventScroll: true })
+}
 </script>
 
 <template>
@@ -81,17 +136,27 @@ const statusTone = computed<string>(() => {
       {{ section.title }}
     </h1>
 
-    <!-- Your next action: the one plain-language thing to do first. -->
-    <p
-      class="rounded-md border border-phoenix-300 bg-phoenix-50 p-2 text-sm text-phoenix-900"
+    <!-- Your next action: the one plain-language thing to do first +
+         a direct-jump button to the right work area. -->
+    <div
+      class="flex flex-col gap-2 rounded-md border border-phoenix-300 bg-phoenix-50 p-2 text-sm text-phoenix-900 sm:flex-row sm:items-start sm:justify-between"
     >
-      <span
-        class="mr-1 inline-block rounded bg-phoenix-200 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-phoenix-900"
+      <p class="flex-1">
+        <span
+          class="mr-1 inline-block rounded bg-phoenix-200 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-phoenix-900"
+        >
+          Your next action
+        </span>
+        {{ nextAction }}
+      </p>
+      <button
+        type="button"
+        class="shrink-0 rounded border border-phoenix-500 bg-phoenix-600 px-3 py-1 text-xs font-semibold text-white shadow-sm hover:bg-phoenix-700"
+        @click="jumpToNextStep"
       >
-        Your next action
-      </span>
-      {{ nextAction }}
-    </p>
+        {{ nextStepCta.label }} →
+      </button>
+    </div>
 
     <!-- Reviewer + workflow chips. Display-only. Never overrides any
          permission or approval surface. -->

@@ -2301,7 +2301,7 @@ function shouldOpenDefend(s: TemplateStudioSection): boolean {
                 ? 'border-emerald-300 bg-emerald-50 text-emerald-800'
                 : 'border-neutral-300 bg-neutral-50 text-neutral-600'
             ]"
-          >Think {{ isThinkComplete(s) ? '✓' : '—' }}</li>
+          >Build / Think {{ isThinkComplete(s) ? '✓' : '—' }}</li>
           <li
             :class="[
               'rounded-full border px-2 py-0.5 uppercase tracking-wide',
@@ -2318,6 +2318,17 @@ function shouldOpenDefend(s: TemplateStudioSection): boolean {
                 : 'border-neutral-300 bg-neutral-50 text-neutral-600'
             ]"
           >Defend {{ isDefendStarted(s) ? '✓' : '—' }}</li>
+          <!-- Review stage — chapter-level. Lights up when the
+               deliverable enters in_review / approved. Always shows
+               so students see the full flow on every section. -->
+          <li
+            :class="[
+              'rounded-full border px-2 py-0.5 uppercase tracking-wide',
+              deliverable.status === 'in_review' || deliverable.status === 'approved'
+                ? 'border-emerald-300 bg-emerald-50 text-emerald-800'
+                : 'border-neutral-300 bg-neutral-50 text-neutral-600'
+            ]"
+          >Review {{ deliverable.status === 'approved' ? '✓' : (deliverable.status === 'in_review' ? '…' : '—') }}</li>
         </ul>
 
         <!-- Guidance Compression Sprint: section-level "What to do"
@@ -2362,15 +2373,24 @@ function shouldOpenDefend(s: TemplateStudioSection): boolean {
              This pattern is distinct from the upcoming Customer
              Profile Builder pattern; sections opt into one or the
              other via separate metadata fields. -->
-        <ChipPickQuickStart
+        <div
           v-if="s.chipPickQuickStart?.enabled"
-          :section="s"
-          :deliverable-id="deliverable.id"
-          :current-source-notes="drafts[s.id]?.sourceNotes ?? ''"
-          :current-draft-text="drafts[s.id]?.draftText ?? ''"
-          :editing-enabled="editingEnabled && !isLockedByOther(s)"
-          @apply="(payload) => handleQuickStartApply(s, payload)"
-        />
+          :id="`cqs-${s.id}`"
+          class="space-y-1"
+        >
+          <p class="text-[11px] italic text-neutral-600">
+            Use this first if you are stuck. Then paste or adapt your
+            result into the draft.
+          </p>
+          <ChipPickQuickStart
+            :section="s"
+            :deliverable-id="deliverable.id"
+            :current-source-notes="drafts[s.id]?.sourceNotes ?? ''"
+            :current-draft-text="drafts[s.id]?.draftText ?? ''"
+            :editing-enabled="editingEnabled && !isLockedByOther(s)"
+            @apply="(payload) => handleQuickStartApply(s, payload)"
+          />
+        </div>
 
         <!-- Customer Profile Builder beta panel.
              Mounted ONLY when:
@@ -2383,9 +2403,17 @@ function shouldOpenDefend(s: TemplateStudioSection): boolean {
              replaces it. State is local to the component. No
              Firestore writes. Copy Draft Starter writes to
              clipboard only. -->
-        <CustomerProfileBuilder
+        <div
           v-if="customerProfileBuilderEnabled && s.id === 'customer-segments'"
-        />
+          :id="`cpb-${s.id}`"
+          class="space-y-1"
+        >
+          <p class="text-[11px] italic text-neutral-600">
+            Use this first if you are stuck. Then paste or adapt your
+            result into the draft.
+          </p>
+          <CustomerProfileBuilder />
+        </div>
 
         <!-- Independent Student Mode: section-level mismatch warnings.
              Surfaces "false progress" cases (Think only, draft without
@@ -2503,7 +2531,7 @@ function shouldOpenDefend(s: TemplateStudioSection): boolean {
             </span>
           </summary>
           <div class="space-y-3 border-t border-sky-200 p-3">
-            <div>
+            <div :id="`dft-${s.id}`">
               <label class="block text-xs font-medium text-neutral-800">
                 Working draft
                 <textarea
@@ -2690,12 +2718,19 @@ function shouldOpenDefend(s: TemplateStudioSection): boolean {
         </details>
 
         <!-- DEFEND — sources, structured evidence, builders, AI critique.
-             Default-collapsed unless the section already has data or
-             is on a high-rigor / market-evidence chapter (Ch 7 / 8 /
-             10 / 11). The wrapper closes near the bottom of the
-             section card, just before the closing </li>. -->
+             Cognitive-load pass: tightened from "open whenever the
+             chapter is high-rigor" to "open when the section already
+             has data, OR the viewer is a leader (admin / Co-CEO /
+             chief / COO)." This means a regular student opening a
+             Ch 7 / 8 / 10 / 11 section with no data sees the writing
+             flow first instead of the form farm; a chief / Co-CEO /
+             admin still gets the Defend surface pre-opened so review
+             context is one glance away. The inner builders and the
+             AI critique panel keep their own defaults. The wrapper
+             closes near the bottom of the section card, just before
+             the closing </li>. -->
         <details
-          :open="shouldOpenDefend(s)"
+          :open="isDefendStarted(s) || viewerIsLeader"
           class="rounded-md border border-amber-200 bg-amber-50/30"
         >
           <summary class="cursor-pointer select-none p-3">
@@ -3513,6 +3548,7 @@ function shouldOpenDefend(s: TemplateStudioSection): boolean {
              and every save path are unchanged. -->
         <details
           v-if="shouldShowMarketFit(s)"
+          :id="`mfb-${s.id}`"
           class="rounded-md border border-violet-200 bg-violet-50/30"
         >
           <summary class="cursor-pointer p-3">
@@ -3520,7 +3556,7 @@ function shouldOpenDefend(s: TemplateStudioSection): boolean {
               Market Fit Builder
             </span>
             <span class="ml-1 text-xs text-neutral-700">
-              — use this if your section talks about customers or demand. Optional.
+              — use this first if you are stuck on customers or demand. Then paste or adapt your result into the draft.
             </span>
           </summary>
           <div class="border-t border-violet-200 p-3">
@@ -3546,6 +3582,7 @@ function shouldOpenDefend(s: TemplateStudioSection): boolean {
              Independent Student Mode: collapsed by default. -->
         <details
           v-if="shouldShowBrandFit(s)"
+          :id="`bfb-${s.id}`"
           class="rounded-md border border-rose-200 bg-rose-50/30"
         >
           <summary class="cursor-pointer p-3">
@@ -3553,7 +3590,7 @@ function shouldOpenDefend(s: TemplateStudioSection): boolean {
               Brand Fit Builder
             </span>
             <span class="ml-1 text-xs text-neutral-700">
-              — use this if your section talks about brand fit (identity, voice, references). Optional.
+              — use this first if you are stuck on identity, voice, or references. Then paste or adapt your result into the draft.
             </span>
           </summary>
           <div class="border-t border-rose-200 p-3">
@@ -3577,6 +3614,7 @@ function shouldOpenDefend(s: TemplateStudioSection): boolean {
              Independent Student Mode: collapsed by default. -->
         <details
           v-if="shouldShowPricingStrategy(s)"
+          :id="`psb-${s.id}`"
           class="rounded-md border border-amber-200 bg-amber-50/30"
         >
           <summary class="cursor-pointer p-3">
@@ -3584,7 +3622,7 @@ function shouldOpenDefend(s: TemplateStudioSection): boolean {
               Pricing Strategy Builder
             </span>
             <span class="ml-1 text-xs text-neutral-700">
-              — use this if your section talks about price, cost, or margin. Optional.
+              — use this first if you are stuck on price, cost, or margin. Then paste or adapt your result into the draft.
             </span>
           </summary>
           <div class="border-t border-amber-200 p-3">
