@@ -27,6 +27,7 @@
 -->
 <script setup lang="ts">
 import { computed, reactive, ref } from 'vue'
+import BuilderHandoffCallout from '~/components/BuilderHandoffCallout.vue'
 
 type FinanceTableKind =
   | 'unit-cost'
@@ -242,7 +243,7 @@ const CONFIGS: Record<FinanceTableKind, KindConfig> = {
   'kpi': {
     title: 'KPI Table',
     intro:
-      'Define what to measure, the target, the source, who owns it, and how often it gets reviewed. 4–7 KPIs is enough; more is noise.',
+      'KPI = Key Performance Indicator — the number leaders watch to know if the team is on track. List 4–7. Each one needs a target, a source, an owner, and a review rhythm.',
     copyHelper:
       'Copy the table into Working Draft, edit it in your own words, then save with the existing Save button below.',
     columns: [
@@ -394,6 +395,8 @@ async function copyTable(): Promise<void> {
       </h3>
       <p class="text-xs text-amber-900">{{ config.intro }}</p>
     </header>
+
+    <BuilderHandoffCallout />
 
     <p
       v-if="config.warningBanner"

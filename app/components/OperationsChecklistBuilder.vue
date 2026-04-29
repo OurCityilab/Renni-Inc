@@ -30,6 +30,7 @@
 -->
 <script setup lang="ts">
 import { computed, reactive, ref } from 'vue'
+import BuilderHandoffCallout from '~/components/BuilderHandoffCallout.vue'
 
 type OperationsChecklistKind =
   | 'inventory'
@@ -145,7 +146,7 @@ const CONFIGS: Record<OperationsChecklistKind, KindConfig> = {
   continuity: {
     title: 'Continuity Checklist',
     intro:
-      'List the things that have to keep working after the pop-up: the systems, accounts, processes, and handoffs. For each one, name the status, owner, where to find it, the warning, and the next step.',
+      'Hand the next cohort what they need to start a Renni Inc. cycle without re-learning everything. List every system, account, process, and asset that has to keep working — with status, owner, where to find it, any warning, and the next step.',
     copyHelper:
       'Copy the table into Working Draft, edit it in your own words, then save with the existing Save button below.',
     columns: [
@@ -268,6 +269,8 @@ async function copyTable(): Promise<void> {
       </h3>
       <p class="text-xs text-emerald-900">{{ config.intro }}</p>
     </header>
+
+    <BuilderHandoffCallout />
 
     <p
       v-if="config.warningBanner"
