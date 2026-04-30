@@ -53,6 +53,13 @@ import {
   type AssignTheWorkPayload,
   type AssignTheWorkResult
 } from './assignTheWork'
+import {
+  buildCoachModeTemplate,
+  buildCoachModeRegistryStub,
+  COACH_MODE_TEMPLATE_VERSION,
+  type CoachModePayload
+} from './coachModeShared'
+import { ADVISOR_MODES, type AdvisorModeResult } from '~~/app/types/executiveAdvisor'
 
 /**
  * A prompt template for one AI critique mode. Generic over the
@@ -123,6 +130,15 @@ const REGISTRY: Record<string, PromptTemplate<any, any>> = {
   'assign-the-work': assignTheWorkTemplate
 }
 
+// Executive Advisor V2 — eight management-coach modes added in
+// the upgrade pass. They share one prompt + one validator and
+// register here so resolvePromptTemplate(mode) treats them the
+// same as the V1 modes. Endpoint dispatcher constructs the
+// request-bound template via buildCoachModeTemplate(mode, payload).
+for (const mode of ADVISOR_MODES) {
+  REGISTRY[mode] = buildCoachModeRegistryStub(mode)
+}
+
 /**
  * Returns the PromptTemplate for a given mode string, or `null`
  * when the mode is unknown. Endpoint should reject unknown modes
@@ -167,3 +183,7 @@ export {
   buildRunTheMeetingTemplate,
   buildAssignTheWorkTemplate
 }
+
+// V2 coach-mode factory + shared types.
+export { buildCoachModeTemplate, COACH_MODE_TEMPLATE_VERSION }
+export type { CoachModePayload, AdvisorModeResult }

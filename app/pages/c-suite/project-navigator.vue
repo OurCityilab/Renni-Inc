@@ -46,6 +46,7 @@ import {
 } from '~/utils/projectNavigatorSignals'
 import LaunchReadinessChecklist from '~/components/LaunchReadinessChecklist.vue'
 import FinalWeekChiefPush from '~/components/FinalWeekChiefPush.vue'
+import ExecutiveAdvisorCoachPanel from '~/components/ExecutiveAdvisorCoachPanel.vue'
 import { todayIso } from '~/utils/milestoneBackplan'
 import type { Department } from '~/types/models'
 
@@ -382,6 +383,14 @@ function deliverableLink(deliverableId: string): string {
          hold during the launch week. Pure presentational; no
          Firestore reads, no AI, no derivation. -->
     <FinalWeekChiefPush v-if="!loading" />
+
+    <!-- ===== Executive Advisor coach panel (V2) =====
+         Mode picker for the eight management-coach modes. Calls
+         /api/ai/executive-advisor on demand; failures are surfaced
+         inline so the rest of the Navigator keeps rendering. The
+         panel internally gates on auth role — members never see it
+         even if they reach this page somehow. -->
+    <ExecutiveAdvisorCoachPanel v-if="!loading" />
 
     <!-- ===== Launch readiness checks (display-only) =====
          Static checklist of the 10 launch-critical builder sections.

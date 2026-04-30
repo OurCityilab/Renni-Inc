@@ -62,12 +62,19 @@ import {
   buildDailyCommandBriefTemplate,
   buildWhatsNextTemplate,
   buildRunTheMeetingTemplate,
-  buildAssignTheWorkTemplate
+  buildAssignTheWorkTemplate,
+  buildCoachModeTemplate
 } from '~~/server/utils/promptTemplates'
 import {
   buildExecutiveContextPackage,
   type ExecutiveContextPackage
 } from '~~/server/utils/executiveContext'
+import { buildExecutiveAdvisorContextV2 } from '~~/server/utils/executiveAdvisorContext'
+import {
+  ADVISOR_MODES,
+  isAdvisorMode,
+  type AdvisorMode as CoachAdvisorMode
+} from '~~/app/types/executiveAdvisor'
 import { scanForPersonalJudgment } from '~~/server/utils/executiveAdvisor/aiSafetyScan'
 import {
   countSourceIds,
@@ -103,18 +110,29 @@ interface ErrorEnvelope {
   message: string
 }
 
-type AdvisorMode =
+type V1AdvisorMode =
   | 'daily-command-brief'
   | 'whats-next'
   | 'run-the-meeting'
   | 'assign-the-work'
 
-const SUPPORTED_MODES = new Set<AdvisorMode>([
+type AdvisorMode = V1AdvisorMode | CoachAdvisorMode
+
+const V1_MODES = new Set<V1AdvisorMode>([
   'daily-command-brief',
   'whats-next',
   'run-the-meeting',
   'assign-the-work'
 ])
+
+const SUPPORTED_MODES = new Set<string>([
+  ...V1_MODES,
+  ...ADVISOR_MODES
+])
+
+function isV1Mode(mode: AdvisorMode): mode is V1AdvisorMode {
+  return V1_MODES.has(mode as V1AdvisorMode)
+}
 
 // Caller-supplied free-text caps. Defense-in-depth: each template
 // also re-caps internally so a misuse here cannot push the prompt
@@ -246,9 +264,9 @@ function normalizeBody(raw: unknown): NormalizedBody {
 
   const modeStr = asString(body.mode).trim()
   if (!modeStr) invalidRequest('mode is required.')
-  if (!SUPPORTED_MODES.has(modeStr as AdvisorMode)) {
+  if (!SUPPORTED_MODES.has(modeStr)) {
     invalidRequest(
-      `Unsupported mode "${modeStr}". Supported: daily-command-brief, whats-next, run-the-meeting, assign-the-work.`
+      `Unsupported mode "${modeStr}". V1 modes: daily-command-brief, whats-next, run-the-meeting, assign-the-work. V2 coach modes: ${ADVISOR_MODES.join(', ')}.`
     )
   }
 
@@ -266,11 +284,13 @@ interface ModeRun {
   payload: Record<string, unknown>
 }
 
-function buildModeRun(
+function buildV1ModeRun(
   body: NormalizedBody,
   context: ExecutiveContextPackage
 ): ModeRun {
-  switch (body.mode) {
+  // Narrow to V1 modes only — V2 coach modes use the V2 dispatcher.
+  const mode = body.mode as V1AdvisorMode
+  switch (mode) {
     case 'daily-command-brief': {
       const payload = { context }
       return {
@@ -364,22 +384,53 @@ export default defineEventHandler(async (event) => {
     invalidRequest(`Unsupported mode "${body.mode}".`)
   }
 
-  // 7. Build the executive context package via Admin SDK. The user
-  //    is authenticated and authorized; the helper enforces scope
-  //    by role (department-scoped chiefs vs company-wide
-  //    admin/coceo).
-  let context: ExecutiveContextPackage
+  // 7. Build the appropriate context package via Admin SDK. V1
+  //    modes use the original ExecutiveContextPackage; V2 coach
+  //    modes use the augmented ExecutiveAdvisorContextV2 which
+  //    layers in the final-week lane map, dependency signals, and
+  //    task-coverage gaps. Both share the same Firestore reads —
+  //    the V2 builder wraps the V1 builder and adds derivations
+  //    from pure utilities (no extra round-trips).
+  let run: ModeRun
   try {
-    context = await buildExecutiveContextPackage({
-      viewer: {
-        uid: user.uid,
-        email: user.email,
-        role: user.role,
-        department: user.department,
-        isChief: user.isChief
-      },
-      focusHint: body.focusHint || null
-    })
+    if (isV1Mode(body.mode)) {
+      const v1Context = await buildExecutiveContextPackage({
+        viewer: {
+          uid: user.uid,
+          email: user.email,
+          role: user.role,
+          department: user.department,
+          isChief: user.isChief
+        },
+        focusHint: body.focusHint || null
+      })
+      run = buildV1ModeRun(body, v1Context)
+    } else if (isAdvisorMode(body.mode)) {
+      const v2Context = await buildExecutiveAdvisorContextV2({
+        viewer: {
+          uid: user.uid,
+          email: user.email,
+          role: user.role,
+          department: user.department,
+          isChief: user.isChief
+        },
+        focusHint: body.focusHint || null
+      })
+      const payload = {
+        context: v2Context,
+        focus: body.focus || null
+      }
+      run = {
+        template: buildCoachModeTemplate(
+          body.mode,
+          payload
+        ) as PromptTemplate<unknown, unknown>,
+        payload
+      }
+    } else {
+      // Should never happen: normalizeBody already validated mode.
+      invalidRequest(`Unsupported mode "${body.mode}".`)
+    }
   } catch (e) {
     providerErrorFn(
       `Failed to assemble advisor context: ${e instanceof Error ? e.message : String(e)}`
@@ -387,15 +438,14 @@ export default defineEventHandler(async (event) => {
   }
 
   // 8. Build the request-bound template + mode payload.
-  const run = buildModeRun(body, context)
-  const template = run.template
+  const template = run!.template
 
   const systemPrompt = template.systemPrompt(
     HOUSE_PHOENIX_BRAND_CONTEXT,
     RENAISSANCE_PROGRAM_CONTEXT
   )
   const userPrompt = template.userPromptBuilder(
-    run.payload,
+    run!.payload,
     HOUSE_PHOENIX_BRAND_CONTEXT,
     RENAISSANCE_PROGRAM_CONTEXT
   )
