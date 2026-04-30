@@ -39,6 +39,11 @@ import {
   type PriorityItem,
   type ProjectNavigatorView
 } from '~/utils/projectNavigator'
+import {
+  buildProjectNavigatorSignals,
+  type ProjectNavigatorSignal,
+  type ProjectNavigatorSignalSeverity
+} from '~/utils/projectNavigatorSignals'
 import LaunchReadinessChecklist from '~/components/LaunchReadinessChecklist.vue'
 import { todayIso } from '~/utils/milestoneBackplan'
 import type { Department } from '~/types/models'
@@ -117,6 +122,44 @@ const departmentOptions: { id: Department | null; label: string }[] = [
 
 // Convenience accessors for templates.
 const priorityItems = computed<PriorityItem[]>(() => view.value.priorityItems)
+
+// Display-only dependency signals derived from the same deliverables
+// + tasks the Navigator already loads. Pure read; no Firestore writes,
+// no AI, no mutation. Cap at the top 12 to keep the surface calm.
+const dependencySignals = computed<ProjectNavigatorSignal[]>(() =>
+  buildProjectNavigatorSignals({
+    deliverables: liveDeliverables.value,
+    tasks: liveTasks.value,
+    todayIso: todayIso(),
+    filterDepartment: view.value.filteredByDepartment
+  }).slice(0, 12)
+)
+
+function signalChipClass(severity: ProjectNavigatorSignalSeverity): string {
+  switch (severity) {
+    case 'blocked':
+      return 'border-rose-300 bg-rose-50 text-rose-900'
+    case 'warning':
+      return 'border-amber-300 bg-amber-50 text-amber-900'
+    case 'ready':
+      return 'border-sky-300 bg-sky-50 text-sky-900'
+    case 'info':
+      return 'border-neutral-300 bg-neutral-50 text-neutral-800'
+  }
+}
+
+function signalChipLabel(severity: ProjectNavigatorSignalSeverity): string {
+  switch (severity) {
+    case 'blocked':
+      return 'Blocked'
+    case 'warning':
+      return 'Needs check'
+    case 'ready':
+      return 'Ready'
+    case 'info':
+      return 'Heads up'
+  }
+}
 
 function chipClassForKind(kind: PriorityItem['kind']): string {
   switch (kind) {
@@ -262,6 +305,75 @@ function deliverableLink(deliverableId: string): string {
           </p>
         </NuxtLink>
       </div>
+    </section>
+
+    <!-- ===== Dependency signals (display-only) =====
+         Derived from existing deliverables + tasks. Surfaces what is
+         blocked, overdue, ready for review, in revision, or weak
+         because an upstream chapter (product list, unit cost,
+         customer profile, inventory, etc.) is still in draft.
+         Pure read — no Firestore writes, no AI, no task creation,
+         no status mutation. Each card carries a supportive reason
+         and an optional deeplink the chief can choose to follow. -->
+    <section v-if="!loading" class="space-y-2">
+      <header>
+        <h2 class="text-sm font-semibold text-neutral-700">
+          Dependency signals
+        </h2>
+        <p class="text-xs text-neutral-500">
+          Display-only. Derived from existing deliverables and tasks.
+          Up to 12, ranked: blocked first, then ready for review,
+          then warnings, then heads-ups.
+        </p>
+      </header>
+
+      <p
+        v-if="dependencySignals.length === 0"
+        class="rounded border border-neutral-200 bg-white p-3 text-xs text-neutral-700"
+      >
+        Nothing flagged right now. If a chapter feels stuck, ask the
+        team where the upstream gap is — the platform may not see it
+        yet.
+      </p>
+
+      <ul v-else class="grid gap-2 sm:grid-cols-2 min-w-0">
+        <li
+          v-for="signal in dependencySignals"
+          :key="signal.id"
+          class="rounded border border-neutral-200 bg-white p-3 min-w-0"
+        >
+          <header class="flex flex-wrap items-baseline justify-between gap-2 min-w-0">
+            <p class="text-sm font-semibold text-neutral-900 break-words">
+              {{ signal.label }}
+            </p>
+            <span
+              class="inline-flex items-center rounded border px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide"
+              :class="signalChipClass(signal.severity)"
+            >
+              {{ signalChipLabel(signal.severity) }}
+            </span>
+          </header>
+
+          <p class="mt-1 text-xs text-neutral-700 break-words">
+            {{ signal.reason }}
+          </p>
+
+          <p
+            v-if="signal.department"
+            class="mt-1 text-[11px] italic text-neutral-500"
+          >
+            Department: {{ signal.department }}
+          </p>
+
+          <NuxtLink
+            v-if="signal.nextActionTo && signal.nextActionLabel"
+            :to="signal.nextActionTo"
+            class="mt-2 inline-flex rounded border border-phoenix-300 bg-phoenix-50 px-2 py-1 text-xs font-medium text-phoenix-900 hover:bg-phoenix-100"
+          >
+            {{ signal.nextActionLabel }} →
+          </NuxtLink>
+        </li>
+      </ul>
     </section>
 
     <!-- ===== Launch readiness checks (display-only) =====

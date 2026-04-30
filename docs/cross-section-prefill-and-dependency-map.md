@@ -125,25 +125,74 @@ is always free to ignore a hint and draft in any order.
 - `key-partners` → pulls Key Activities + Key Resources. **Square is
   the external POS partner**; Renni Command Center is not a POS.
 
-## Project Navigator opportunities (future)
+## Project Navigator dependency signals (V1 — shipped)
 
-The Project Navigator already shows blocked / overdue / ready work.
-A future pass could add structured prefill-state signals — none of
-which exist today:
+The Project Navigator surfaces a "Dependency signals" panel above
+the existing blocked / pending-review lists, derived from
+`app/utils/projectNavigatorSignals.ts`. **Display-only** — every
+signal is a label + reason + optional deeplink. The chief decides
+what to do; the platform never mutates anything in response.
 
-- "Blocked by missing product list" — flag any section whose
-  `Import product list` button has never been clicked AND whose
-  table contains zero non-starter rows.
-- "Missing unit cost" — flag Break-Even / Revenue Scenarios sections
-  whose draft references unit costs that are still blank in the
-  Unit Cost table.
-- "Missing inventory status" — flag Day-of SOP rows that name an
-  item missing from the Inventory checklist.
-- "Missing customer profile" — flag Value Propositions sections
-  drafted without a corresponding Customer Segments draft.
+### Severity rank
+- **`blocked`** — work cannot move (blocked tasks, overdue
+  deliverables not yet approved).
+- **`ready`** — work is waiting on a chief review (`in_review`).
+- **`warning`** — a launch-critical chapter is still in `draft` or
+  `needs_revision` and downstream sections will be weaker without
+  it ("missing X" signals).
+- **`info`** — soft heads-up, e.g. a deliverable still in `draft`
+  inside its 3-day landing window.
 
-All of these are **read-only signals**, not auto-mutations: the
-chief decides what to do.
+### Signal kinds (V1)
+| id prefix | severity | what it means |
+|---|---|---|
+| `blocked-task:<id>` | blocked | a task is marked `blocked`; ask the owner what's in the way |
+| `overdue-deliverable:<id>` | blocked | dueDate has passed and the deliverable isn't `approved` |
+| `ready-for-review:<id>` | ready | deliverable is `in_review` — needs a yes / no / revise |
+| `needs-revision:<id>` | warning | deliverable came back from review with notes |
+| `missing-dependency:ch-04-…` | warning | customer profile not landed → Value Props / Channels / Campaign weaker |
+| `missing-dependency:ch-07-…` | warning | product list not landed → Unit Cost / Revenue / Inventory weaker |
+| `missing-dependency:ch-08-…` | warning | unit cost / break-even not landed → pricing & margin story weaker |
+| `missing-dependency:ch-09-…` | warning | inventory / SOPs not landed → day-of execution weaker |
+| `missing-dependency:ch-10-…` | warning | campaign benefits from customer profile + demand proof |
+| `missing-dependency:ch-11-…` | warning | Phoenix Nest pitch needs buyer + shelf-fit + margin story |
+| `missing-final-output:<id>` | info | `draft` deliverable is within 3 days of its due date and still owes final Playbook text |
+
+### Conservative defaults (do not relax)
+- "Missing X" signals fire **only** when the underlying deliverable
+  exists AND is in `draft` or `needs_revision`. Once it moves to
+  `in_review` or `approved`, the warning auto-clears.
+- Every signal label is supportive ("may be easier after finance
+  adds unit cost"), never accusatory ("you are blocked"). The
+  c-suite middleware keeps students out of the page today, but the
+  copy stays student-safe in case a future pass surfaces a subset
+  on student pages.
+- Signals are computed from existing watcher data — `liveDeliverables`
+  and `liveTasks`. No new Firestore collection, no new index, no
+  new rule. The util is pure (`buildProjectNavigatorSignals`).
+
+### What's intentionally NOT automated
+- The platform does not create tasks from a signal.
+- The platform does not change task / deliverable / approval
+  status from a signal.
+- The platform does not write builder rows or draft text from a
+  signal.
+- The platform does not gate or block any user from working — the
+  worst a signal does is recommend an order of operations.
+- The platform does not call AI or any /api/* endpoint from a
+  signal computation.
+
+### Future opportunities (not in V1)
+- Per-section signals reading `DeliverableOutputSection.finalText`
+  presence: would require `useDeliverableOutputs.watchAll()` (a
+  collection-wide list watcher that does not exist today). When
+  added, the existing signal shape supports it directly — the
+  derivation just needs richer input.
+- Cross-deliverable dependency edges via the optional
+  `dependencies?` / `prefillSources?` metadata on
+  `TemplateStudioSection` (deferred earlier in this doc). Adding
+  that metadata would let `missing-dependency` signals reference
+  specific upstream sections instead of chapter-level wording.
 
 ## Executive Advisor opportunities (future)
 
