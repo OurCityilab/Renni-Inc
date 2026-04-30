@@ -44,6 +44,14 @@ import { SECTION_DEPENDENCY_HINTS } from '~~/app/utils/sectionDependencyHints'
 import { PRODUCT_CATALOG } from '~~/app/utils/productCatalog'
 import { templateStudios } from '~~/app/data/templateStudios'
 import type { TemplateStudioSection } from '~~/app/types/templateStudio'
+import {
+  deriveTaskCoverageNodes,
+  summarizeTaskCoverage,
+  topMissingCoverage,
+  topBlockedCoverage,
+  topChiefFocusItems,
+  type TaskCoverageNode
+} from '~~/app/utils/taskCoverageMap'
 import type {
   Deliverable,
   DeliverableStatus,
@@ -99,10 +107,82 @@ export interface ExecutiveAdvisorContextV2 {
    *  template can name the headline state without iterating the
    *  full per-section list. */
   builderCoverageSummary: BuilderCoverageSummary
+  /** Deterministic task coverage signals derived from the live
+   *  task list plus the FINAL_WEEK_LANES + FINAL_WEEK_TASK_TEMPLATES
+   *  registry. The Advisor uses these as facts ("3 P0 sections
+   *  have no matching task") rather than inferring coverage from
+   *  prose. Compact by design — see CompactTaskCoverageContext for
+   *  the embedded shape (summary + top-N missing + top-N blocked
+   *  + top-N chief focus, capped). */
+  taskCoverage: CompactTaskCoverageContext
   /** Explicit unknowns the Advisor should surface to the chief.
    *  Populated by the context builder when a derivation could not
    *  run because of missing inputs. */
   unknowns: string[]
+}
+
+export interface CompactTaskCoverageContext {
+  summary: {
+    totalRequiredSections: number
+    withTaskCoverage: number
+    missingTaskCoverage: number
+    totals: {
+      blocked: number
+      overdue: number
+      inProgress: number
+      readyForReview: number
+      done: number
+    }
+    byPriority: Record<
+      'P0' | 'P1' | 'P2',
+      { total: number; withTask: number; missing: number }
+    >
+    byLane: Array<{
+      lane: string
+      laneTitle: string
+      total: number
+      withTask: number
+      missing: number
+      blocked: number
+      overdue: number
+    }>
+  }
+  topMissingCoverage: Array<{
+    id: string
+    sectionId: string
+    sectionTitle: string
+    chapterId: string
+    lane: string
+    priority: 'P0' | 'P1' | 'P2'
+    requiredTaskTitle: string
+    owner: string
+    reviewer: string
+    dependency: string
+    definitionOfDone: string
+    route: string
+  }>
+  topBlockedCoverage: Array<{
+    id: string
+    sectionId: string
+    sectionTitle: string
+    chapterId: string
+    lane: string
+    priority: 'P0' | 'P1' | 'P2'
+    blocked: number
+    overdue: number
+    inProgress: number
+    owner: string
+    route: string
+  }>
+  chiefFocusItems: Array<{
+    id: string
+    sectionTitle: string
+    chapterId: string
+    priority: 'P0' | 'P1' | 'P2'
+    reason: string
+    suggestedChiefMove: string
+    route: string
+  }>
 }
 
 /** Family taxonomy the model uses to reason about which section
@@ -275,6 +355,22 @@ export async function buildExecutiveAdvisorContextV2(
   })
   const builderCoverageSummary = summarizeBuilderCoverage(builderCoverage)
 
+  // Deterministic task coverage. Reuses the same util the Project
+  // Navigator components consume so the Advisor's view of coverage
+  // exactly matches what chiefs see in the deterministic UI. The
+  // V1 base context.openTasks list is filtered to the same Task
+  // shape the util needs.
+  const taskCoverageInputs = {
+    tasks: base.openTasks.map(taskContextEntryToTask),
+    todayIso: today
+  }
+  const taskCoverageNodes = deriveTaskCoverageNodes(taskCoverageInputs)
+  const taskCoverageSummary = summarizeTaskCoverage(taskCoverageNodes)
+  const taskCoverage = compactTaskCoverageForAdvisor(
+    taskCoverageNodes,
+    taskCoverageSummary
+  )
+
   return {
     base,
     todayIso: today,
@@ -286,7 +382,111 @@ export async function buildExecutiveAdvisorContextV2(
     productCatalog: catalog,
     builderCoverage,
     builderCoverageSummary,
+    taskCoverage,
     unknowns
+  }
+}
+
+// ---- Task coverage helpers --------------------------------------
+
+/** Convert the V1 ExecutiveContextTask shape (the trimmed task
+ *  payload Advisor V1 already carries) back into the minimum
+ *  Task shape the deriveTaskCoverageNodes() helper expects. The
+ *  helper only reads `id`, `title`, `deliverableId`, `status`, and
+ *  `dueDate`, so we synthesize defaults for the rest. */
+function taskContextEntryToTask(
+  t: ExecutiveContextPackage['openTasks'][number]
+): Parameters<typeof deriveTaskCoverageNodes>[0]['tasks'][number] {
+  return {
+    id: t.id,
+    title: t.title,
+    deliverableId: t.deliverableId ?? null,
+    ownerEmail: t.ownerEmail ?? '',
+    ownerUid: null,
+    status: (t.status ?? 'in_progress') as
+      | 'not_started'
+      | 'in_progress'
+      | 'blocked'
+      | 'done',
+    startDate: null,
+    dueDate: t.dueDate ?? null,
+    blockedBy: t.blockedBy ?? null,
+    dependsOn: [],
+    progress: 0,
+    notes: null,
+    department: t.department ?? null,
+    definitionOfDone: null,
+    priority: null,
+    assignedByEmail: null,
+    playbookChapter: null,
+    requirementId: null,
+    createdAt: '',
+    updatedAt: ''
+  }
+}
+
+const TASK_COVERAGE_TOP_N = 8
+
+function compactTaskCoverageForAdvisor(
+  nodes: readonly TaskCoverageNode[],
+  summary: ReturnType<typeof summarizeTaskCoverage>
+): CompactTaskCoverageContext {
+  const missing = topMissingCoverage(nodes, TASK_COVERAGE_TOP_N).map((n) => ({
+    id: n.id,
+    sectionId: n.sectionId,
+    sectionTitle: n.sectionTitle,
+    chapterId: n.chapterId,
+    lane: n.lane,
+    priority: n.priority,
+    requiredTaskTitle: n.requiredTaskTitle,
+    owner: n.owner,
+    reviewer: n.reviewer,
+    dependency: n.dependency,
+    definitionOfDone: n.definitionOfDone,
+    route: n.route
+  }))
+  const blocked = topBlockedCoverage(nodes, TASK_COVERAGE_TOP_N).map((n) => ({
+    id: n.id,
+    sectionId: n.sectionId,
+    sectionTitle: n.sectionTitle,
+    chapterId: n.chapterId,
+    lane: n.lane,
+    priority: n.priority,
+    blocked: n.statusSummary.blocked,
+    overdue: n.statusSummary.overdue,
+    inProgress: n.statusSummary.inProgress,
+    owner: n.owner,
+    route: n.route
+  }))
+  const focus = topChiefFocusItems(nodes, 5).map((item) => ({
+    id: item.node.id,
+    sectionTitle: item.node.sectionTitle,
+    chapterId: item.node.chapterId,
+    priority: item.node.priority,
+    reason: item.reason,
+    suggestedChiefMove: item.suggestedChiefMove,
+    route: item.node.route
+  }))
+  return {
+    summary: {
+      totalRequiredSections: summary.totalRequiredSections,
+      withTaskCoverage: summary.withTaskCoverage,
+      missingTaskCoverage: summary.missingTaskCoverage,
+      totals: summary.totals,
+      byPriority: summary.byPriority,
+      byLane: summary.byLane.map((l) => ({
+        lane: l.lane,
+        laneTitle: l.laneTitle,
+        total: l.total,
+        withTask: l.withTask,
+        missing: l.missing,
+        blocked: l.blocked,
+        overdue: l.overdue
+      }))
+    },
+    topMissingCoverage: missing,
+    topBlockedCoverage: blocked,
+    chiefFocusItems: focus
   }
 }
 
@@ -531,6 +731,7 @@ export function summarizeAdvisorContextV2(
     `Drafts: ${counts.draftCount}`,
     `Dependency signals: ${ctx.dependencySignals.length} (blocked ${sigCounts.blocked ?? 0}, ready ${sigCounts.ready ?? 0}, warning ${sigCounts.warning ?? 0})`,
     `P0 task coverage gaps: ${gapCount}`,
-    `Builder coverage: ${cov.withAnyBuilder}/${cov.totalSections} sections (recipe-only ${cov.recipeOnly})`
+    `Builder coverage: ${cov.withAnyBuilder}/${cov.totalSections} sections (recipe-only ${cov.recipeOnly})`,
+    `Task coverage: ${ctx.taskCoverage.summary.withTaskCoverage}/${ctx.taskCoverage.summary.totalRequiredSections} required sections covered (missing ${ctx.taskCoverage.summary.missingTaskCoverage})`
   ].join(' · ')
 }

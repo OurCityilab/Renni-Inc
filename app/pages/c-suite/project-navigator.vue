@@ -47,6 +47,16 @@ import {
 import LaunchReadinessChecklist from '~/components/LaunchReadinessChecklist.vue'
 import FinalWeekChiefPush from '~/components/FinalWeekChiefPush.vue'
 import ExecutiveAdvisorCoachPanel from '~/components/ExecutiveAdvisorCoachPanel.vue'
+import ChiefFocusBoard from '~/components/ChiefFocusBoard.vue'
+import LaneCoverageBoard from '~/components/LaneCoverageBoard.vue'
+import TaskCoverageMap from '~/components/TaskCoverageMap.vue'
+import MissingTaskCoveragePanel from '~/components/MissingTaskCoveragePanel.vue'
+import {
+  deriveTaskCoverageNodes,
+  summarizeTaskCoverage,
+  topMissingCoverage,
+  topChiefFocusItems
+} from '~/utils/taskCoverageMap'
 import { todayIso } from '~/utils/milestoneBackplan'
 import type { Department } from '~/types/models'
 
@@ -128,6 +138,26 @@ const priorityItems = computed<PriorityItem[]>(() => view.value.priorityItems)
 // Display-only dependency signals derived from the same deliverables
 // + tasks the Navigator already loads. Pure read; no Firestore writes,
 // no AI, no mutation. Cap at the top 12 to keep the surface calm.
+// Deterministic task coverage map. Pure derivation from the loaded
+// tasks + the static FINAL_WEEK_LANES + FINAL_WEEK_TASK_TEMPLATES.
+// No Firestore reads / writes / mutation. Drives ChiefFocusBoard,
+// LaneCoverageBoard, TaskCoverageMap, and MissingTaskCoveragePanel.
+const taskCoverageNodes = computed(() =>
+  deriveTaskCoverageNodes({
+    tasks: liveTasks.value,
+    todayIso: todayIso()
+  })
+)
+const taskCoverageSummary = computed(() =>
+  summarizeTaskCoverage(taskCoverageNodes.value)
+)
+const missingTaskCoverageNodes = computed(() =>
+  topMissingCoverage(taskCoverageNodes.value, 12)
+)
+const chiefFocusItems = computed(() =>
+  topChiefFocusItems(taskCoverageNodes.value, 5)
+)
+
 const dependencySignals = computed<ProjectNavigatorSignal[]>(() =>
   buildProjectNavigatorSignals({
     deliverables: liveDeliverables.value,
@@ -382,6 +412,22 @@ function deliverableLink(deliverableId: string): string {
          Static reminder of the four push-back rules a chief should
          hold during the launch week. Pure presentational; no
          Firestore reads, no AI, no derivation. -->
+    <!-- ===== Deterministic task coverage layer (Pass — Task
+         Visualization). Display-only; no task creation, no status
+         mutation. Mounted above the Advisor so chiefs see the
+         factual map first and the coaching second. -->
+    <ChiefFocusBoard v-if="!loading" :items="chiefFocusItems" />
+    <LaneCoverageBoard
+      v-if="!loading"
+      :summary="taskCoverageSummary"
+      :nodes="taskCoverageNodes"
+    />
+    <MissingTaskCoveragePanel
+      v-if="!loading"
+      :nodes="missingTaskCoverageNodes"
+    />
+    <TaskCoverageMap v-if="!loading" :nodes="taskCoverageNodes" />
+
     <FinalWeekChiefPush v-if="!loading" />
 
     <!-- ===== Executive Advisor coach panel (V2) =====

@@ -36,6 +36,7 @@ import type {
   ExecutiveAdvisorContextV2,
   BuilderCoverageEntry,
   BuilderCoverageSummary,
+  CompactTaskCoverageContext,
   TaskCoverageGap,
   ProductCatalogContextEntry
 } from '~~/server/utils/executiveAdvisorContext'
@@ -125,6 +126,11 @@ export interface CompactAdvisorContext {
   /** Bounded product catalog — always small enough to include
    *  whole, but trimmed when not relevant. */
   productCatalog: ProductCatalogContextEntry[]
+  /** Deterministic task coverage. Always included — small by
+   *  construction (summary + top-N missing + top-N blocked +
+   *  top-5 chief focus). The Advisor uses this as factual ground
+   *  for management advice. */
+  taskCoverage: CompactTaskCoverageContext
   /** Explicit unknowns from the source context. */
   unknowns: string[]
   /** Mode-aware notes the model can read directly to know what was
@@ -174,6 +180,7 @@ export function compactContextForMode(
     builderCoverageSummary: context.builderCoverageSummary,
     builderCoverage: selection.builderCoverage,
     productCatalog: selection.productCatalog,
+    taskCoverage: context.taskCoverage,
     unknowns: context.unknowns,
     budgetNotes
   }
