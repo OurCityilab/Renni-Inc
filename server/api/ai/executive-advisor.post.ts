@@ -406,6 +406,13 @@ export default defineEventHandler(async (event) => {
       })
       run = buildV1ModeRun(body, v1Context)
     } else if (isAdvisorMode(body.mode)) {
+      // Pass the workspace's Customer Profile Builder feature flag
+      // through to the context builder so builderCoverage matches
+      // what students actually see in DeliverableOutputWorkspace.
+      // The flag lives on `runtimeConfig.public.customerProfileBuilderEnabled`
+      // and is read by the workspace via useRuntimeConfig().
+      const cpbEnabled =
+        config.public?.customerProfileBuilderEnabled === true
       const v2Context = await buildExecutiveAdvisorContextV2({
         viewer: {
           uid: user.uid,
@@ -414,7 +421,8 @@ export default defineEventHandler(async (event) => {
           department: user.department,
           isChief: user.isChief
         },
-        focusHint: body.focusHint || null
+        focusHint: body.focusHint || null,
+        customerProfileBuilderEnabled: cpbEnabled
       })
       const payload = {
         context: v2Context,

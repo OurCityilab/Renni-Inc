@@ -182,6 +182,17 @@ export interface BuildExecutiveAdvisorContextV2Options
   /** Optional override for "today" — useful for tests. Defaults to
    *  the server's current UTC date. */
   todayIso?: IsoDate
+  /** Whether the Customer Profile Builder is currently enabled in
+   *  the workspace. Mirrors the
+   *  `runtimeConfig.public.customerProfileBuilderEnabled` flag the
+   *  workspace gates the panel on (see
+   *  app/components/DeliverableOutputWorkspace.vue). The endpoint
+   *  reads `useRuntimeConfig()` and passes the resolved boolean
+   *  here so the context builder stays pure. When omitted or
+   *  false, builderCoverage reports the customer-segments section
+   *  as recipe-only with a conditional note rather than claiming
+   *  the Customer Profile Builder is visible. */
+  customerProfileBuilderEnabled?: boolean
 }
 
 /** Builds the V2 advisor context package. */
@@ -258,7 +269,10 @@ export async function buildExecutiveAdvisorContextV2(
   // Builder coverage derivation. Pure read of the studio registry —
   // no Firestore call. Produces one entry per section across every
   // chapter so the model can name the right surface to open.
-  const builderCoverage = deriveBuilderCoverage()
+  const builderCoverage = deriveBuilderCoverage({
+    customerProfileBuilderEnabled:
+      options.customerProfileBuilderEnabled ?? false
+  })
   const builderCoverageSummary = summarizeBuilderCoverage(builderCoverage)
 
   return {
@@ -278,16 +292,26 @@ export async function buildExecutiveAdvisorContextV2(
 
 // ---- Builder coverage derivation --------------------------------
 
+interface BuilderCoverageDerivationOptions {
+  /** Mirrors the workspace gate. When false, the customer-segments
+   *  section does NOT report `customer-profile-builder` as visible
+   *  — that builder is feature-flagged and only mounts when the
+   *  flag is on. */
+  customerProfileBuilderEnabled: boolean
+}
+
 /** Walk every chapter in the studio registry and classify each
  *  section by the first builder family that fires on it. Priority
  *  order matches DeliverableOutputWorkspace.hasPrimaryBuilder() so
  *  the model's view of the platform stays consistent with what the
  *  workspace actually mounts. */
-function deriveBuilderCoverage(): BuilderCoverageEntry[] {
+function deriveBuilderCoverage(
+  derivationOptions: BuilderCoverageDerivationOptions
+): BuilderCoverageEntry[] {
   const out: BuilderCoverageEntry[] = []
   for (const [deliverableId, studio] of Object.entries(templateStudios)) {
     for (const section of studio.sections) {
-      const families = enabledBuilderFamilies(section)
+      const families = enabledBuilderFamilies(section, derivationOptions)
       const primaryFamily = families[0] ?? 'recipe-only'
       const secondaryFamilies = families.slice(1)
       out.push({
@@ -308,11 +332,21 @@ function deriveBuilderCoverage(): BuilderCoverageEntry[] {
  *  Pass A universals. Mirrors hasPrimaryBuilder + the workspace
  *  mount order so the model never sees a phantom builder. */
 function enabledBuilderFamilies(
-  section: TemplateStudioSection
+  section: TemplateStudioSection,
+  derivationOptions: BuilderCoverageDerivationOptions
 ): BuilderFamily[] {
   const families: BuilderFamily[] = []
   // Existing primary surfaces (saved-state and Pass A primaries).
-  if (section.id === 'customer-segments') families.push('customer-profile-builder')
+  // Customer Profile Builder is feature-flagged in the workspace —
+  // only report it as visible when the same flag is on. When the
+  // flag is off, the section falls through to its other builder
+  // (chip-pick QuickStart) or to recipe-only.
+  if (
+    section.id === 'customer-segments' &&
+    derivationOptions.customerProfileBuilderEnabled
+  ) {
+    families.push('customer-profile-builder')
+  }
   if (section.keyActivities?.enabled) families.push('key-activities-builder')
   if (section.financeTable?.enabled) families.push('finance-table-builder')
   if (section.operationsChecklist?.enabled) families.push('operations-checklist-builder')

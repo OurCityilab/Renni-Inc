@@ -138,6 +138,17 @@ export async function recordInvocation(
  * Aggregates source-id counts across an unknown response object.
  * The endpoint runs this on the validated response so the audit log
  * captures grounding intensity without storing the IDs themselves.
+ *
+ * Two source-id shapes are supported:
+ *   V1 ActionCard: `sourceIds: { taskIds?: string[]; deliverableIds?:
+ *     string[]; sectionIds?: string[]; requirementIds?: string[];
+ *     advisorSignalIds?: string[] }` — the structured SourceIds
+ *     object originally introduced for the four V1 modes.
+ *   V2 AdvisorActionCard: `sourceIds: string[]` — a flat array of
+ *     opaque grounding IDs. Each string is classified into a
+ *     bucket via prefix heuristics that match what the V2 context
+ *     and prompt produce. Strings whose bucket cannot be inferred
+ *     fall back to `taskIds` (the most common ID type in scope).
  */
 export function countSourceIds(value: unknown): {
   taskIds: number
@@ -164,14 +175,93 @@ export function countSourceIds(value: unknown): {
     }
     if (typeof node !== 'object') return
     const obj = node as Record<string, unknown>
-    if ('sourceIds' in obj && obj.sourceIds && typeof obj.sourceIds === 'object') {
-      const s = obj.sourceIds as SourceIds
-      counts.taskIds += s.taskIds?.length ?? 0
-      counts.deliverableIds += s.deliverableIds?.length ?? 0
-      counts.sectionIds += s.sectionIds?.length ?? 0
-      counts.requirementIds += s.requirementIds?.length ?? 0
-      counts.advisorSignalIds += s.advisorSignalIds?.length ?? 0
+    if ('sourceIds' in obj) {
+      countSourceIdsField(obj.sourceIds, counts)
     }
     for (const child of Object.values(obj)) visit(child)
   }
+}
+
+/** Mutates `counts` to add the contribution of one `sourceIds`
+ *  field. Handles both the V1 structured object shape and the V2
+ *  flat string array shape. */
+function countSourceIdsField(
+  field: unknown,
+  counts: {
+    taskIds: number
+    deliverableIds: number
+    sectionIds: number
+    requirementIds: number
+    advisorSignalIds: number
+  }
+): void {
+  if (field === null || field === undefined) return
+  // V2 shape — flat string array, classify each entry by prefix.
+  if (Array.isArray(field)) {
+    for (const id of field) {
+      if (typeof id !== 'string') continue
+      classifyV2SourceId(id, counts)
+    }
+    return
+  }
+  // V1 shape — structured object with named arrays.
+  if (typeof field === 'object') {
+    const s = field as SourceIds
+    counts.taskIds += s.taskIds?.length ?? 0
+    counts.deliverableIds += s.deliverableIds?.length ?? 0
+    counts.sectionIds += s.sectionIds?.length ?? 0
+    counts.requirementIds += s.requirementIds?.length ?? 0
+    counts.advisorSignalIds += s.advisorSignalIds?.length ?? 0
+  }
+}
+
+/** Classifies one V2 sourceId string into a counts bucket via
+ *  deterministic prefix matching. The prefixes mirror the IDs the
+ *  V2 advisor context and the project-navigator signal helper
+ *  emit, so the audit count reflects the model's actual grounding
+ *  intensity. Unknown strings fall back to `taskIds` (the most
+ *  common opaque-Firestore-ID shape in scope). */
+function classifyV2SourceId(
+  id: string,
+  counts: {
+    taskIds: number
+    deliverableIds: number
+    sectionIds: number
+    requirementIds: number
+    advisorSignalIds: number
+  }
+): void {
+  // Project Navigator signals — emitted by buildProjectNavigatorSignals.
+  if (id.startsWith('blocked-task:')) {
+    counts.taskIds += 1
+    return
+  }
+  if (
+    id.startsWith('overdue-deliverable:') ||
+    id.startsWith('ready-for-review:') ||
+    id.startsWith('needs-revision:') ||
+    id.startsWith('missing-final-output:')
+  ) {
+    counts.deliverableIds += 1
+    return
+  }
+  if (id.startsWith('missing-dependency:')) {
+    counts.advisorSignalIds += 1
+    return
+  }
+  // Final-week lane entry id format: `ch-XX:section-id`.
+  // The colon distinguishes section refs from raw chapter ids.
+  if (id.startsWith('ch-') && id.includes(':')) {
+    counts.sectionIds += 1
+    return
+  }
+  // Bare chapter id (e.g. `ch-08-finance-and-revenue-model`).
+  if (id.startsWith('ch-')) {
+    counts.deliverableIds += 1
+    return
+  }
+  // Default — opaque Firestore IDs are most often task IDs in the
+  // V2 advisor scope. Counted into `taskIds` so the audit row
+  // reflects grounding intensity rather than dropping the ID.
+  counts.taskIds += 1
 }
