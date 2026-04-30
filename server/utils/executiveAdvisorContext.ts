@@ -52,6 +52,10 @@ import {
   topChiefFocusItems,
   type TaskCoverageNode
 } from '~~/app/utils/taskCoverageMap'
+import {
+  archetypeLibrarySummary,
+  type ArchetypeLibrarySummaryEntry
+} from '~~/app/utils/customerArchetypes'
 import type {
   Deliverable,
   DeliverableStatus,
@@ -115,6 +119,11 @@ export interface ExecutiveAdvisorContextV2 {
    *  the embedded shape (summary + top-N missing + top-N blocked
    *  + top-N chief focus, capped). */
   taskCoverage: CompactTaskCoverageContext
+  /** Compact customer-archetype library — id + label + one-line
+   *  profile + bestForSections only. The Advisor recommends
+   *  archetypes as STARTING HYPOTHESES, never as verified facts.
+   *  ~15 entries × 4 short fields ≈ 1.5 KB stringified. */
+  customerArchetypeLibrary: ArchetypeLibrarySummaryEntry[]
   /** Explicit unknowns the Advisor should surface to the chief.
    *  Populated by the context builder when a derivation could not
    *  run because of missing inputs. */
@@ -383,6 +392,7 @@ export async function buildExecutiveAdvisorContextV2(
     builderCoverage,
     builderCoverageSummary,
     taskCoverage,
+    customerArchetypeLibrary: archetypeLibrarySummary(),
     unknowns
   }
 }

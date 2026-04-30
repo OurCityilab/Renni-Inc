@@ -99,6 +99,27 @@
       does not submit or approve anything.
     </p>
 
+    <!-- Optional starting point: Customer Archetype Picker.
+         Local-state, copy-only. Never overwrites existing builder
+         selections; classifier output below remains the authoritative
+         deterministic profile. Students who want to skip the picker
+         can scroll past it. -->
+    <details class="mb-4 rounded border border-sky-200 bg-sky-50/40 p-2">
+      <summary class="cursor-pointer text-xs font-semibold text-sky-900">
+        Optional starting point — pick a customer archetype
+      </summary>
+      <p class="mt-1 text-[11px] italic text-sky-900">
+        Helps you start from a card deck instead of a blank page.
+        Selections do not overwrite anything below.
+      </p>
+      <div class="mt-2">
+        <CustomerArchetypePicker
+          :section-id="'customer-segments'"
+          :compact="true"
+        />
+      </div>
+    </details>
+
     <!-- ===== Slot tabs (Primary / Secondary / Tertiary) ===== -->
     <div
       class="mb-3 flex flex-wrap gap-2"
@@ -597,6 +618,7 @@ import { useAuthStore } from '~/stores/auth'
 import { isExecutiveRole } from '~/utils/permissions'
 import { CUSTOMER_PROFILE_BUILDER_VARIANT } from '~/config/sectionEngineVariants'
 import { CUSTOMER_PROFILE_ARCHETYPE_BY_ID } from '~/data/customerProfileArchetypes'
+import CustomerArchetypePicker from '~/components/CustomerArchetypePicker.vue'
 import { classifyCustomerProfile } from '~/utils/customerProfileClassifier'
 import type {
   CustomerProfileArchetypeId,

@@ -40,6 +40,7 @@ import type {
   TaskCoverageGap,
   ProductCatalogContextEntry
 } from '~~/server/utils/executiveAdvisorContext'
+import type { ArchetypeLibrarySummaryEntry } from '~~/app/utils/customerArchetypes'
 import type {
   FinalWeekLane,
   FinalWeekSectionEntry
@@ -131,6 +132,11 @@ export interface CompactAdvisorContext {
    *  top-5 chief focus). The Advisor uses this as factual ground
    *  for management advice. */
   taskCoverage: CompactTaskCoverageContext
+  /** Compact customer-archetype library — small enough to include
+   *  on every request. The Advisor uses these as STARTING
+   *  HYPOTHESES the team must validate with evidence, never as
+   *  facts. */
+  customerArchetypeLibrary: ArchetypeLibrarySummaryEntry[]
   /** Explicit unknowns from the source context. */
   unknowns: string[]
   /** Mode-aware notes the model can read directly to know what was
@@ -181,6 +187,7 @@ export function compactContextForMode(
     builderCoverage: selection.builderCoverage,
     productCatalog: selection.productCatalog,
     taskCoverage: context.taskCoverage,
+    customerArchetypeLibrary: context.customerArchetypeLibrary,
     unknowns: context.unknowns,
     budgetNotes
   }

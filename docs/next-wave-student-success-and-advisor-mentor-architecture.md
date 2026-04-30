@@ -480,6 +480,75 @@ Return PASS / PASS WITH WARNINGS / FAIL with exact files/lines for any blocker.
 - Do not create tasks automatically.
 - Do not claim Advisor output is an approval or final decision.
 
+## 11.5. Implementation status — Customer Archetype Picker
+
+**Shipped.** Pure UI + clipboard. No Firestore writes, no AI calls,
+no automatic Working-Draft writes. Reuses the existing
+BuilderHandoffCallout posture.
+
+### Files added
+- `app/utils/customerArchetypes.ts` — 15 archetypes from Section 7
+  of this doc, plus helpers (`getCustomerArchetypeById`,
+  `archetypesForSection`, `archetypeLibrarySummary`,
+  `formatArchetypesAsMarkdown`).
+- `app/components/CustomerArchetypePicker.vue` — card-deck UI with
+  per-archetype detail panel, custom-note textareas, copy-as-
+  markdown, and a "Suggested" badge for archetypes whose
+  `bestForSections` matches the active section id.
+
+### Files updated
+- `app/components/CustomerProfileBuilder.vue` — picker mounts
+  inside a collapsed `<details>` block above the slot tabs,
+  framed as an *optional starting point*. Existing classifier,
+  slot tabs, every output path, and every save flow are
+  unchanged.
+- `server/utils/executiveAdvisorContext.ts` — V2 context gains
+  `customerArchetypeLibrary` (id + label + shortProfile +
+  bestForSections only — ~15 entries, ~1.5 KB stringified).
+- `server/utils/executiveAdvisorContextBudget.ts` — compact view
+  always includes the archetype library (small by construction).
+- `server/utils/promptTemplates/coachModeShared.ts` — one
+  posture line directs the model to recommend archetypes only
+  as starting hypotheses and to ask the team to validate with
+  evidence.
+
+### Where it appears today
+- **Ch. 4 BMC `customer-segments`** via `CustomerProfileBuilder`.
+  Collapsed by default; opens to the full picker.
+- **Advisor V2 context** as a compact library only.
+- **Other related sections (Ch. 10 target-customers,
+  customer-problems-and-desires; Ch. 11 evidence)** intentionally
+  NOT touched in this pass to avoid duplicating the Customer
+  Profile Builder surface. Adding the picker there can land in a
+  follow-up pass once cohort feedback shows it would help.
+
+### Known limitations
+- The picker is local-state only. If a student switches sections
+  before copying, the selections do not persist — they need to
+  copy into Working Draft or save the section first.
+- The "Suggested" badge currently fires on `customer-segments`
+  through the bestForSections lookup. Other sections that mount
+  the picker in a future pass will need their own
+  `bestForSections` entries on the relevant archetypes.
+- Custom notes are kept as a flat object keyed by archetype id;
+  clearing all wipes them (intentional).
+- The Advisor receives only the compact library summary. If a
+  chief asks the Advisor to deep-dive into one archetype's
+  objections / channels list, the model has to ask the chief to
+  open the picker for the full detail. Trade-off chosen to keep
+  context bounded.
+
+### Future tuning notes
+- Monitor which archetypes students select most across cohorts —
+  consider re-ordering the card deck to surface the high-signal
+  ones first.
+- If real Renni Inc. archetypes diverge from the current 15
+  entries, amend `customerArchetypes.ts` rather than letting
+  students invent ad-hoc archetypes.
+- Add a small snapshot test that asserts every archetype has all
+  required fields populated, so future contributors catch missing
+  copy at PR time.
+
 ## 12. Bottom Line
 
 Claude Code should build **Advisor Mentor + deterministic task visualization** next because it gives chiefs the map they need to direct the room and gives the Advisor grounded facts to explain.
