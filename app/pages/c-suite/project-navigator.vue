@@ -45,6 +45,7 @@ import {
   type ProjectNavigatorSignalSeverity
 } from '~/utils/projectNavigatorSignals'
 import LaunchReadinessChecklist from '~/components/LaunchReadinessChecklist.vue'
+import FinalWeekChiefPush from '~/components/FinalWeekChiefPush.vue'
 import { todayIso } from '~/utils/milestoneBackplan'
 import type { Department } from '~/types/models'
 
@@ -375,6 +376,12 @@ function deliverableLink(deliverableId: string): string {
         </li>
       </ul>
     </section>
+
+    <!-- ===== Final Week Chief Push (display-only) =====
+         Static reminder of the four push-back rules a chief should
+         hold during the launch week. Pure presentational; no
+         Firestore reads, no AI, no derivation. -->
+    <FinalWeekChiefPush v-if="!loading" />
 
     <!-- ===== Launch readiness checks (display-only) =====
          Static checklist of the 10 launch-critical builder sections.

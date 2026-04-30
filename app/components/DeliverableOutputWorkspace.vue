@@ -3053,6 +3053,47 @@ function shouldOpenDefend(s: TemplateStudioSection): boolean {
               >
                 <li v-for="(g, gi) in s.sourceGuidance" :key="gi">{{ g }}</li>
               </ul>
+              <!-- Structured evidence example. Help text only — never
+                   saved into student work. Collapsed by default so it
+                   doesn't crowd the form. -->
+              <details
+                class="rounded border border-neutral-200 bg-neutral-50/60 p-2 text-[11px] text-neutral-700"
+              >
+                <summary class="cursor-pointer font-semibold text-neutral-800">
+                  See an example
+                </summary>
+                <dl class="mt-1 space-y-0.5">
+                  <div>
+                    <dt class="inline font-semibold text-neutral-700">Claim:</dt>
+                    House Phoenix sweatshirts are likely strongest with
+                    students and alumni who value school identity.
+                  </div>
+                  <div>
+                    <dt class="inline font-semibold text-neutral-700">Evidence:</dt>
+                    Students already respond to school-linked apparel and
+                    House Phoenix is the flagship launch brand.
+                  </div>
+                  <div>
+                    <dt class="inline font-semibold text-neutral-700">Source:</dt>
+                    Student observation / customer conversations.
+                  </div>
+                  <div>
+                    <dt class="inline font-semibold text-neutral-700">Assumption:</dt>
+                    Interest will increase if the design and story are strong.
+                  </div>
+                  <div>
+                    <dt class="inline font-semibold text-neutral-700">Confidence:</dt>
+                    Medium.
+                  </div>
+                  <div>
+                    <dt class="inline font-semibold text-neutral-700">Next validation:</dt>
+                    Ask 10 students if they would buy at the proposed price.
+                  </div>
+                </dl>
+                <p class="mt-1 italic text-neutral-500">
+                  Example only — this is not saved into your work.
+                </p>
+              </details>
               <label class="block text-xs font-medium text-neutral-800">
                 Claim
                 <input

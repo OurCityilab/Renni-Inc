@@ -11,6 +11,7 @@ import { deepLinkForTask } from '~/utils/requirementToSection'
 import { buildStudentNextActions } from '~/utils/studentNextActions'
 import StudentNextActionCard from '~/components/StudentNextActionCard.vue'
 import LaunchMorningPriorities from '~/components/LaunchMorningPriorities.vue'
+import FinalWeekCompletionPanel from '~/components/FinalWeekCompletionPanel.vue'
 import { todayIso } from '~/utils/milestoneBackplan'
 
 const auth = useAuthStore()
@@ -218,6 +219,15 @@ async function copyMemberHelpMessage(): Promise<void> {
         {{ auth.profile?.title }} · {{ auth.profile?.department }}
       </p>
     </header>
+
+    <!-- Final Week Completion Mode — declarative P0 / P1 / P2 lane
+         map for the launch-week dashboard. Shipped above My Next
+         Actions so a checked-out senior finds what to finish first
+         in under 10 seconds. Visible to every audience: members
+         use it as a deterministic floor; chiefs and Co-CEOs use
+         it to direct teams. Pure presentational — no Firestore
+         writes, no AI, no auto-task creation. -->
+    <FinalWeekCompletionPanel />
 
     <!-- My next actions — member-only, up to 3 recipe-driven cards.
          Replaces the prior single "Do this next" card. Each card
