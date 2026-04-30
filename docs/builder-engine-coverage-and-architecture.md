@@ -917,3 +917,105 @@ silently no-ops on those sections.
   green build. Recommend a 60-second click-through on a few
   configured sections before the next class.
 
+## 13. Implementation Status — Pass B (Specialized Builder Pack)
+
+**Pass B is implemented.** Three specialized copy-only builders ship.
+12 sections opted in across 6 studio files. 8 sections were
+deliberately skipped because an existing saved-state builder
+(BrandFit / MarketFit) already covers their primary surface.
+
+### Files added
+- `app/components/BrandSystemBuilder.vue` — copy-only brand builder
+  driven by `section.brandSystem`. Per-field opt-in for audience /
+  promise / voiceTraits / visualRules / proofPoints / copyExamples
+  / doDontRules. Three kinds: house-phoenix · supporting-brand ·
+  cross-brand.
+- `app/components/RetailPitchBuilder.vue` — copy-only retail-carry
+  pitch builder driven by `section.retailPitch`. Per-field
+  include flags for buyer / productSku / shelfFit / priceMargin /
+  proof / readiness / ask / risk / nextStep. Optional product
+  autocomplete on the SKU column. Five kinds: identity ·
+  evidence · offer · ask · recommendation.
+- `app/components/StrategyMemoBuilder.vue` — copy-only strategy
+  memo builder driven by `section.strategyMemo`. Configurable
+  field set across insight / evidence / recommendation / owner /
+  dueDate / dependency / definitionOfDone / nextValidation / risk.
+  Five kinds: lesson · insight · priority · action-plan ·
+  first-30-days.
+
+### Files updated
+- `app/types/templateStudio.ts` — adds `brandSystem` /
+  `retailPitch` / `strategyMemo` optional configs on
+  `TemplateStudioSection` plus their supporting types.
+- `app/components/DeliverableOutputWorkspace.vue` — registers
+  the three new components, extends `hasPrimaryBuilder()` and
+  introduces `hasOtherPrimaryBuilder()` so universal builders
+  short-circuit when a Pass B specialized builder is enabled.
+  Mounts the three new builders directly after the Pass A
+  universal mounts, with `bsb-<id>` / `rpb-<id>` / `smb-<id>`
+  anchor wrappers.
+
+### Sections configured (Pass B — 12 total)
+
+**Brand System Builder (2):**
+- Ch. 2 brand-relationship-rules (cross-brand kind)
+- Ch. 5 value-proposition (house-phoenix kind)
+
+**Retail Pitch Builder (3):**
+- Ch. 11 identity (identity kind)
+- Ch. 11 evidence (evidence kind)
+- Ch. 11 ask (ask kind)
+
+**Strategy Memo Builder (7):**
+- Ch. 3 next-cohort-playbook (first-30-days kind)
+- Ch. 4 canvas-insights (insight kind)
+- Ch. 10 implications-for-launch (insight kind)
+- Ch. 12 what-we-learned (lesson kind)
+- Ch. 12 customer-and-sales-insights (insight kind)
+- Ch. 12 brand-and-product-priorities (priority kind)
+- Ch. 12 recommended-action-plan (action-plan kind)
+
+### Sections intentionally skipped (8 — existing builder conflict)
+
+**BrandSystemBuilder skipped on (BrandFit already mounted):**
+- Ch. 5 voice — BrandFitBuilder
+- Ch. 5 identity — BrandFitBuilder
+- Ch. 6 lumen-sheet — BrandFitBuilder
+- Ch. 6 notice-sheet — BrandFitBuilder
+- Ch. 6 humble-oven-sheet — BrandFitBuilder
+- Ch. 6 cross-brand-rules — BrandFitBuilder
+
+**RetailPitchBuilder skipped on (MarketFit already mounted):**
+- Ch. 7 retail-recommendations — MarketFitBuilder
+- Ch. 11 offer — MarketFitBuilder
+
+The brief explicitly allowed "If unsure, skip the specialized
+config and report it." For V1 we skipped to avoid double-mounting
+a saved-state builder alongside a specialized copy-only builder
+on the same section. A future pass could mount the specialized
+builder as a clearly labeled "Build the buyer-facing pitch" or
+"Turn your Brand Fit choices into rules" support builder if the
+team wants both surfaces.
+
+### Conflict guard (Pass B)
+`hasPrimaryBuilder()` now returns true for brandSystem /
+retailPitch / strategyMemo flags — so Pass A universal builders
+also short-circuit when a Pass B specialized config is enabled
+on the same section.
+
+`hasOtherPrimaryBuilder(s, excluding)` lets the three Pass B
+mounts each render exactly when no other primary (existing or
+Pass B) wins on the section. In practice no section enables more
+than one Pass B flag, but the guard makes the math safe.
+
+### Known limitations
+- 8 of the 20 candidate sections were skipped because an existing
+  saved-state builder (BrandFit / MarketFit) already covers their
+  primary surface. Documented above.
+- No live browser smoke this pass. Verification is static review +
+  green build. Recommend a 60-second click-through on a Brand
+  System, Retail Pitch, and Strategy Memo section before the next
+  class.
+- Per-field starter copy is generic — real classroom use will
+  surface which fields each section actually wants populated.
+

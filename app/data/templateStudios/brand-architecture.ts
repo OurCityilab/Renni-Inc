@@ -242,6 +242,17 @@ export const brandArchitecture: TemplateStudio = {
       title: 'How the brands feel connected but distinct',
       lesson:
         'A good brand system signals "same family" without making everything look the same. Rules are simple: shared mark, shared voice, distinct visual identity per brand.',
+      brandSystem: {
+        enabled: true,
+        kind: 'cross-brand',
+        title: 'Cross-Brand Rules Builder',
+        intro: 'One card per shared rule (signaling family) and one per distinct rule (keeping each brand its own). Voice + visual + do/don\'t.',
+        copyTitle: 'Cross-brand rules',
+        voiceTraits: true,
+        visualRules: true,
+        doDontRules: true,
+        copyExamples: true
+      },
       studentPrompts: [
         'What signals belong to Renni Inc. (e.g., parent endorsement on tags)?',
         'What signals are unique to House Phoenix vs. Lumen vs. Notice vs. Humble Oven?',

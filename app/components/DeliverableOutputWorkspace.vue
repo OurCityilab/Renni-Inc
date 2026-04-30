@@ -58,6 +58,9 @@ import OperationsChecklistBuilder from '~/components/OperationsChecklistBuilder.
 import UniversalSectionTableBuilder from '~/components/UniversalSectionTableBuilder.vue'
 import UniversalChecklistBuilder from '~/components/UniversalChecklistBuilder.vue'
 import DecisionMemoBuilder from '~/components/DecisionMemoBuilder.vue'
+import BrandSystemBuilder from '~/components/BrandSystemBuilder.vue'
+import RetailPitchBuilder from '~/components/RetailPitchBuilder.vue'
+import StrategyMemoBuilder from '~/components/StrategyMemoBuilder.vue'
 import SectionDependencyHint from '~/components/SectionDependencyHint.vue'
 import { getSectionDependencyHints } from '~/utils/sectionDependencyHints'
 import { productNameOptions } from '~/utils/productCatalog'
@@ -1570,7 +1573,55 @@ function hasPrimaryBuilder(s: TemplateStudioSection): boolean {
   if (s.brandFit?.enabled) return true
   if (s.pricingStrategy?.enabled) return true
   if (customerProfileBuilderEnabled.value && s.id === 'customer-segments') return true
+  // Pass B specialized builders count as primary surfaces too —
+  // when one is enabled, the matching Pass A universal builder is
+  // suppressed below so the chief-facing layout never doubles up.
+  if (s.brandSystem?.enabled) return true
+  if (s.retailPitch?.enabled) return true
+  if (s.strategyMemo?.enabled) return true
   return false
+}
+
+// Pass B specialized builders (brandSystem / retailPitch /
+// strategyMemo) are themselves primary surfaces. They render only
+// when their own enabled flag is true AND no existing saved-state
+// or Pass A primary already wins on the same section. Because
+// hasPrimaryBuilder() returns true for each Pass B flag, we
+// re-derive a "no other primary except the one we want to render"
+// helper here so the three Pass B mounts can coexist with each
+// other in principle (one section enabling more than one Pass B
+// flag is unusual but the math should still work).
+function hasOtherPrimaryBuilder(
+  s: TemplateStudioSection,
+  excluding: 'brandSystem' | 'retailPitch' | 'strategyMemo'
+): boolean {
+  if (s.chipPickQuickStart?.enabled) return true
+  if (s.keyActivities?.enabled) return true
+  if (s.financeTable?.enabled) return true
+  if (s.operationsChecklist?.enabled) return true
+  if (s.marketFit?.enabled) return true
+  if (s.brandFit?.enabled) return true
+  if (s.pricingStrategy?.enabled) return true
+  if (customerProfileBuilderEnabled.value && s.id === 'customer-segments') return true
+  if (excluding !== 'brandSystem' && s.brandSystem?.enabled) return true
+  if (excluding !== 'retailPitch' && s.retailPitch?.enabled) return true
+  if (excluding !== 'strategyMemo' && s.strategyMemo?.enabled) return true
+  return false
+}
+
+function shouldShowBrandSystemBuilder(s: TemplateStudioSection): boolean {
+  if (s.brandSystem?.enabled !== true) return false
+  return !hasOtherPrimaryBuilder(s, 'brandSystem')
+}
+
+function shouldShowRetailPitchBuilder(s: TemplateStudioSection): boolean {
+  if (s.retailPitch?.enabled !== true) return false
+  return !hasOtherPrimaryBuilder(s, 'retailPitch')
+}
+
+function shouldShowStrategyMemoBuilder(s: TemplateStudioSection): boolean {
+  if (s.strategyMemo?.enabled !== true) return false
+  return !hasOtherPrimaryBuilder(s, 'strategyMemo')
 }
 
 function shouldShowUniversalTable(s: TemplateStudioSection): boolean {
@@ -2582,6 +2633,42 @@ function shouldOpenDefend(s: TemplateStudioSection): boolean {
           class="space-y-1"
         >
           <DecisionMemoBuilder :config="s.decisionMemo!" />
+        </div>
+
+        <!-- Brand System Builder (Pass B).
+             Mounts only when section.brandSystem.enabled is true AND
+             no other primary builder is enabled on the same section.
+             Pure UI + clipboard; no Firestore writes. -->
+        <div
+          v-if="shouldShowBrandSystemBuilder(s)"
+          :id="`bsb-${s.id}`"
+          class="space-y-1"
+        >
+          <BrandSystemBuilder :config="s.brandSystem!" />
+        </div>
+
+        <!-- Retail Pitch Builder (Pass B).
+             Same conflict guard as Brand System Builder. Optional
+             productOptions wires through to the SKU column. -->
+        <div
+          v-if="shouldShowRetailPitchBuilder(s)"
+          :id="`rpb-${s.id}`"
+          class="space-y-1"
+        >
+          <RetailPitchBuilder
+            :config="s.retailPitch!"
+            :product-options="productNameList"
+          />
+        </div>
+
+        <!-- Strategy Memo Builder (Pass B).
+             Same conflict guard as Brand System Builder. -->
+        <div
+          v-if="shouldShowStrategyMemoBuilder(s)"
+          :id="`smb-${s.id}`"
+          class="space-y-1"
+        >
+          <StrategyMemoBuilder :config="s.strategyMemo!" />
         </div>
 
         <!-- Independent Student Mode: section-level mismatch warnings.

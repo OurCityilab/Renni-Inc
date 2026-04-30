@@ -17,6 +17,15 @@ export const strategyNextSemester: TemplateStudio = {
       title: 'What we learned from the launch',
       lesson:
         'The honest version, not the press release. Name the 5–7 biggest lessons of the cohort — what worked, what surprised the team, what failed.',
+      strategyMemo: {
+        enabled: true,
+        kind: 'lesson',
+        title: 'Launch Lessons Memo',
+        intro: '5–7 cards. Each lesson is honest, evidenced, and actionable. Recommendation = what to keep, change, or kill.',
+        copyTitle: 'What we learned from the launch',
+        cardCount: 5,
+        fields: ['insight', 'evidence', 'recommendation', 'owner', 'risk']
+      },
       studentPrompts: [
         'List 5–7 lessons from launch — be specific about which decision or moment taught it.',
         'For each lesson, mark whether it confirmed an assumption or broke one.',
@@ -51,6 +60,15 @@ export const strategyNextSemester: TemplateStudio = {
       title: 'Customer and sales insights',
       lesson:
         'Pull the actual customer data — feedback, sales data, donation patterns, observed behavior at the table — and turn it into 3–5 insights that should shape next semester.',
+      strategyMemo: {
+        enabled: true,
+        kind: 'insight',
+        title: 'Customer & Sales Insights Memo',
+        intro: '3–5 insights tied to evidence. Each card: insight, evidence (number or quote), recommendation, next validation.',
+        copyTitle: 'Customer and sales insights',
+        cardCount: 4,
+        fields: ['insight', 'evidence', 'recommendation', 'nextValidation', 'risk']
+      },
       studentPrompts: [
         'What did customers actually say or do at the pop-up that surprised the team?',
         'Which products sold faster than expected and why? Which ones lagged?',
@@ -133,6 +151,15 @@ export const strategyNextSemester: TemplateStudio = {
       title: 'Brand and product priorities',
       lesson:
         'What stays, what evolves, what retires. Clear product and brand priorities prevent next cohort from rebuilding the lineup from scratch.',
+      strategyMemo: {
+        enabled: true,
+        kind: 'priority',
+        title: 'Brand & Product Priorities Memo',
+        intro: 'One card per priority: what stays / evolves / retires. Recommendation must be specific enough to act on.',
+        copyTitle: 'Brand and product priorities',
+        cardCount: 4,
+        fields: ['insight', 'recommendation', 'owner', 'risk', 'nextValidation']
+      },
       studentPrompts: [
         'Which products keep their slot next semester?',
         'Which products need a redesign, repackage, or repricing?',
@@ -270,6 +297,15 @@ export const strategyNextSemester: TemplateStudio = {
       title: 'Recommended action plan',
       lesson:
         'Close the chapter with a concrete first-90-days action plan for the next cohort: who does what, in roughly what order, with rough timing.',
+      strategyMemo: {
+        enabled: true,
+        kind: 'action-plan',
+        title: 'First-90-Days Action Plan',
+        intro: '6–10 sequenced actions. Each card: insight (why it matters), recommendation, owner, due, dependency, definition of done.',
+        copyTitle: 'Recommended action plan',
+        cardCount: 6,
+        fields: ['insight', 'recommendation', 'owner', 'dueDate', 'dependency', 'definitionOfDone']
+      },
       studentPrompts: [
         'List 6–10 next-cohort actions in order, with owners and rough timing.',
         'Mark which actions are sequencing-critical (must come first).',

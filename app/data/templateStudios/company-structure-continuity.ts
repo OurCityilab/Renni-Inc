@@ -274,6 +274,15 @@ export const companyStructureContinuity: TemplateStudio = {
       title: 'Next-cohort first 30 days',
       lesson:
         'Close the chapter with a "first 30 days" guide so the next cohort knows where to start: who to meet, what to read in the Playbook, which trackers to open, which decisions to ratify.',
+      strategyMemo: {
+        enabled: true,
+        kind: 'first-30-days',
+        title: 'First-30-Days Action Plan',
+        intro: 'One card per concrete first-30-days action. Insight (why it matters), recommendation, owner, due, dependency, definition of done.',
+        copyTitle: 'Next cohort — first 30 days',
+        cardCount: 6,
+        fields: ['insight', 'recommendation', 'owner', 'dueDate', 'dependency', 'definitionOfDone']
+      },
       studentPrompts: [
         'Day 1: which Playbook chapters do they read first?',
         'Week 1: which advisors and chiefs do they meet?',

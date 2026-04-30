@@ -147,6 +147,16 @@ export interface TemplateStudioSection {
   universalTable?: UniversalTableBuilderConfig
   universalChecklist?: UniversalChecklistBuilderConfig
   decisionMemo?: DecisionMemoBuilderConfig
+  // Pass B specialized builders. Each one is treated as a PRIMARY
+  // surface for its section: when enabled, the workspace
+  // suppresses any Pass A universal builder on the same section so
+  // the chief-facing layout never doubles up. Existing saved-state
+  // builders (BrandFit / MarketFit / PricingStrategy) still take
+  // precedence; sections that already render a saved-state primary
+  // are NOT opted into the specialized builders in V1.
+  brandSystem?: BrandSystemBuilderConfig
+  retailPitch?: RetailPitchBuilderConfig
+  strategyMemo?: StrategyMemoBuilderConfig
   // Operations Checklist / SOP Builder visibility metadata. Same
   // opt-in pattern. The `kind` selector picks which checklist /
   // SOP shape the shared OperationsChecklistBuilder renders:
@@ -283,6 +293,109 @@ export interface DecisionMemoBuilderConfig {
   starterCards?: DecisionMemoBuilderCard[]
   /** When `starterCards` is omitted, this many empty cards are seeded. */
   cardCount?: number
+  copyTitle?: string
+}
+
+// Pass B — specialized builder configs.
+//
+// Each one is local-state copy-only (same posture as Pass A
+// universal builders): no Firestore writes, no AI calls, no save
+// handler, no automatic Working-Draft mutation. The workspace
+// treats them as primary surfaces — when one is enabled on a
+// section, the matching Pass A universal builder is suppressed.
+
+export interface BrandSystemBuilderStarterCard {
+  label?: string
+  audience?: string
+  promise?: string
+  voiceTrait?: string
+  doRule?: string
+  dontRule?: string
+  sampleCopy?: string
+  visualRule?: string
+  proof?: string
+}
+
+export interface BrandSystemBuilderConfig {
+  enabled: boolean
+  kind: 'house-phoenix' | 'supporting-brand' | 'cross-brand'
+  title: string
+  intro?: string
+  // Per-field opt-in. Omitted means "do not render that field on
+  // any card." A studio that wants the full picker enables every
+  // flag explicitly.
+  audience?: boolean
+  promise?: boolean
+  voiceTraits?: boolean
+  visualRules?: boolean
+  proofPoints?: boolean
+  copyExamples?: boolean
+  doDontRules?: boolean
+  starterCards?: BrandSystemBuilderStarterCard[]
+  copyTitle?: string
+}
+
+export interface RetailPitchBuilderStarterCard {
+  buyer?: string
+  productSku?: string
+  shelfFit?: string
+  priceMargin?: string
+  proof?: string
+  readiness?: string
+  ask?: string
+  risk?: string
+  nextStep?: string
+}
+
+export interface RetailPitchBuilderConfig {
+  enabled: boolean
+  kind: 'identity' | 'evidence' | 'offer' | 'ask' | 'recommendation'
+  title: string
+  intro?: string
+  includeBuyer?: boolean
+  includeProductSku?: boolean
+  includeShelfFit?: boolean
+  includePriceMargin?: boolean
+  includeProof?: boolean
+  includeReadiness?: boolean
+  includeAsk?: boolean
+  includeRisk?: boolean
+  includeNextStep?: boolean
+  starterCards?: RetailPitchBuilderStarterCard[]
+  copyTitle?: string
+}
+
+export type StrategyMemoBuilderField =
+  | 'insight'
+  | 'evidence'
+  | 'recommendation'
+  | 'owner'
+  | 'dueDate'
+  | 'dependency'
+  | 'definitionOfDone'
+  | 'nextValidation'
+  | 'risk'
+
+export interface StrategyMemoBuilderStarterCard {
+  insight?: string
+  evidence?: string
+  recommendation?: string
+  owner?: string
+  dueDate?: string
+  dependency?: string
+  definitionOfDone?: string
+  nextValidation?: string
+  risk?: string
+}
+
+export interface StrategyMemoBuilderConfig {
+  enabled: boolean
+  kind: 'lesson' | 'insight' | 'priority' | 'action-plan' | 'first-30-days'
+  title: string
+  intro?: string
+  cardCount?: number
+  fields: StrategyMemoBuilderField[]
+  starterCards?: StrategyMemoBuilderStarterCard[]
   copyTitle?: string
 }
 

@@ -17,6 +17,16 @@ export const phoenixNestPitch: TemplateStudio = {
       title: 'Who are we?',
       lesson:
         'Start with a one-line identity a buyer can repeat. Borrow from the House Phoenix brand story — do not reinvent it here.',
+      retailPitch: {
+        enabled: true,
+        kind: 'identity',
+        title: 'Pitch Identity Builder',
+        intro: 'One card. Buyer in mind, the one-line identity sentence, and the proof that backs it. Use the same words a buyer can repeat.',
+        copyTitle: 'Phoenix Nest pitch — identity',
+        includeBuyer: true,
+        includeShelfFit: true,
+        includeProof: true
+      },
       studentPrompts: [
         'One sentence: who made this, for whom, and why it exists.',
         'Attribution: who led this cohort? Include Co-CEOs, CSGO, CMO.'
@@ -30,6 +40,17 @@ export const phoenixNestPitch: TemplateStudio = {
       title: 'What did the pop-up actually prove?',
       lesson:
         'A buyer wants evidence, not optimism. Use real numbers from /revenue and /pricing.',
+      retailPitch: {
+        enabled: true,
+        kind: 'evidence',
+        title: 'Pitch Evidence Builder',
+        intro: 'One card per evidence point. Product / SKU it backs, the proof itself, the readiness behind it.',
+        copyTitle: 'Phoenix Nest pitch — evidence',
+        includeProductSku: true,
+        includeProof: true,
+        includeReadiness: true,
+        includeRisk: true
+      },
       studentPrompts: [
         'How many units of each product sold?',
         'What was average gross margin across the portfolio?',
@@ -88,6 +109,17 @@ export const phoenixNestPitch: TemplateStudio = {
       title: 'What is the ask?',
       lesson:
         'End every pitch with one concrete next step the buyer can say yes to. Do not ask for the whole commitment in the first meeting.',
+      retailPitch: {
+        enabled: true,
+        kind: 'ask',
+        title: 'Pitch Ask Builder',
+        intro: 'One card. Buyer (named contact), the ask itself (one sentence), and the next step after the meeting.',
+        copyTitle: 'Phoenix Nest pitch — ask',
+        includeBuyer: true,
+        includeAsk: true,
+        includeNextStep: true,
+        includeRisk: true
+      },
       example:
         'Ask: a 30-unit test order of the House Phoenix beanie, by August, for the fall floor.',
       studentPrompts: [

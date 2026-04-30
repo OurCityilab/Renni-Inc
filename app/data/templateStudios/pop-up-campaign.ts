@@ -235,6 +235,15 @@ export const popUpCampaign: TemplateStudio = {
       title: 'Implications for launch',
       lesson:
         'Close the insights half of the chapter with the "so what." Tie insights to specific decisions the team is making for TechTown and the Phoenix Nest pitch. The campaign half below should follow from these.',
+      strategyMemo: {
+        enabled: true,
+        kind: 'insight',
+        title: 'Launch Implications Memo',
+        intro: 'One card per insight that drives a TechTown or Phoenix Nest decision. Recommendation must name the decision changing.',
+        copyTitle: 'Implications for launch',
+        cardCount: 3,
+        fields: ['insight', 'evidence', 'recommendation', 'owner', 'risk']
+      },
       studentPrompts: [
         'List 3–5 launch decisions the team made because of these insights.',
         'For each decision, name the insight that drove it.',

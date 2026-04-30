@@ -67,6 +67,17 @@ export const housePhoenixBrandStory: TemplateStudio = {
       title: 'What do we promise them?',
       lesson:
         'A value proposition is the one thing the audience will believe after the pop-up that they did not before. Keep it short enough to fit on a tag.',
+      brandSystem: {
+        enabled: true,
+        kind: 'house-phoenix',
+        title: 'House Phoenix Promise Builder',
+        intro: 'Each card pairs a promise with the audience it serves and the proof a customer would believe.',
+        copyTitle: 'House Phoenix value proposition',
+        audience: true,
+        promise: true,
+        proofPoints: true,
+        copyExamples: true
+      },
       example:
         'House Phoenix makes Detroit-student-led merch that actually fits and looks like it could hang in a real store.',
       studentPrompts: [

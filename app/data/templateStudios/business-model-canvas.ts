@@ -536,6 +536,15 @@ export const businessModelCanvas: TemplateStudio = {
       title: 'Canvas insights',
       lesson:
         'After mapping the canvas, the team should be able to name what they learned. This block is the "why this exercise mattered" paragraph.',
+      strategyMemo: {
+        enabled: true,
+        kind: 'insight',
+        title: 'BMC Insight Memo',
+        intro: 'Three insight cards. What changed in the plan, what the canvas exposed, the one thing the team is still uncertain about.',
+        copyTitle: 'BMC insights',
+        cardCount: 3,
+        fields: ['insight', 'evidence', 'recommendation', 'nextValidation']
+      },
       studentPrompts: [
         'What surprised the team while filling out the canvas?',
         'What changed in the plan because of something the canvas exposed?',
