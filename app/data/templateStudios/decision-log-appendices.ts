@@ -26,6 +26,12 @@ export const decisionLogAppendices: TemplateStudio = {
       completionCriteria: [
         'At least eight decisions are listed in chronological order.',
         'Each decision has a named decider and a one-line summary.'
+      ],
+      evidencePrompt:
+        'For each decision that hinged on a measurement (pricing, inventory, foot traffic, vendor lead time), add a structured evidence entry naming the source and the confidence at the time of the call.',
+      sourceGuidance: [
+        'Reference Ch. 7 / Ch. 8 finance tables, /revenue, customer feedback, or vendor quotes — not memory.',
+        'If a decision was made under uncertainty, mark confidence honestly.'
       ]
     },
     {

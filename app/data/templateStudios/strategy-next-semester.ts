@@ -169,6 +169,12 @@ export const strategyNextSemester: TemplateStudio = {
         'Goals are measurable and have owners.',
         'Targets are defended by the data in this chapter.'
       ],
+      evidencePrompt:
+        'Each goal should be a structured evidence entry — claim (the goal), evidence (this cohort\'s baseline number), source (/revenue · post-event recap), confidence, risk if missed, next validation step.',
+      sourceGuidance: [
+        'Pull baselines from /revenue and Ch. 8 actuals; do not invent the prior number.',
+        'If a target is aspirational without baseline, mark confidence low.'
+      ],
       expertGuidance: {
         expertRole: 'strategy operator / Co-CEO',
         whyThisMatters:
@@ -234,6 +240,12 @@ export const strategyNextSemester: TemplateStudio = {
       completionCriteria: [
         'Action plan is sequenced with owners and rough timing.',
         'Sequencing-critical actions are flagged.'
+      ],
+      evidencePrompt:
+        'For any action that depends on a number (cohort size, vendor lead time, expected reach), add a structured evidence entry naming the source, the assumption, and the next validation step.',
+      sourceGuidance: [
+        'Cite Ch. 3 (next-cohort first 30 days), /revenue, and the post-event recap rather than asserting timing from memory.',
+        'If timing is a guess, mark confidence low and name what would make it certain.'
       ],
       expertGuidance: {
         expertRole: 'strategy operator (preparing next cohort)',
