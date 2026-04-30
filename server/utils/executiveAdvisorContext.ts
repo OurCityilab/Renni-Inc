@@ -42,6 +42,8 @@ import {
 } from '~~/app/utils/projectNavigatorSignals'
 import { SECTION_DEPENDENCY_HINTS } from '~~/app/utils/sectionDependencyHints'
 import { PRODUCT_CATALOG } from '~~/app/utils/productCatalog'
+import { templateStudios } from '~~/app/data/templateStudios'
+import type { TemplateStudioSection } from '~~/app/types/templateStudio'
 import type {
   Deliverable,
   DeliverableStatus,
@@ -88,10 +90,64 @@ export interface ExecutiveAdvisorContextV2 {
    *  isSellableProduct flag. The Advisor uses this to tell chiefs
    *  which products map to which finance / inventory tables. */
   productCatalog: ProductCatalogContextEntry[]
+  /** Per-section builder coverage summary derived from
+   *  app/data/templateStudios. Lets the model recommend the right
+   *  surface ("open the Universal Table on Ch. 4 channels") rather
+   *  than guessing what kind of artifact the section produces. */
+  builderCoverage: BuilderCoverageEntry[]
+  /** Roll-up counts for the builder coverage summary so a prompt
+   *  template can name the headline state without iterating the
+   *  full per-section list. */
+  builderCoverageSummary: BuilderCoverageSummary
   /** Explicit unknowns the Advisor should surface to the chief.
    *  Populated by the context builder when a derivation could not
    *  run because of missing inputs. */
   unknowns: string[]
+}
+
+/** Family taxonomy the model uses to reason about which section
+ *  has which artifact surface. `recipe-only` means no builder is
+ *  mounted — the section relies on the recipe panel + Working
+ *  Draft alone. */
+export type BuilderFamily =
+  | 'customer-profile-builder'
+  | 'key-activities-builder'
+  | 'finance-table-builder'
+  | 'operations-checklist-builder'
+  | 'market-fit-builder'
+  | 'brand-fit-builder'
+  | 'pricing-strategy-builder'
+  | 'chip-pick-quickstart'
+  | 'universal-table'
+  | 'universal-checklist'
+  | 'decision-memo'
+  | 'brand-system-builder'
+  | 'retail-pitch-builder'
+  | 'strategy-memo-builder'
+  | 'recipe-only'
+
+export interface BuilderCoverageEntry {
+  deliverableId: string
+  sectionId: string
+  sectionTitle: string
+  /** First builder family that fires on the section, in priority
+   *  order: existing primary builders first (saved-state and
+   *  Pass A primaries), then Pass B specialized builders, then
+   *  Pass A universals, then `recipe-only`. */
+  primaryFamily: BuilderFamily
+  /** Optional secondary builder families also enabled on the same
+   *  section. Empty when only one builder fires. */
+  secondaryFamilies: BuilderFamily[]
+  /** Whether the section produces structured artifact output beyond
+   *  free-text Working Draft. True when any builder family fires. */
+  hasBuilder: boolean
+}
+
+export interface BuilderCoverageSummary {
+  totalSections: number
+  withAnyBuilder: number
+  recipeOnly: number
+  byFamily: Partial<Record<BuilderFamily, number>>
 }
 
 export interface TaskCoverageGap {
@@ -199,6 +255,12 @@ export async function buildExecutiveAdvisorContextV2(
     isSellableProduct: p.isSellableProduct
   }))
 
+  // Builder coverage derivation. Pure read of the studio registry —
+  // no Firestore call. Produces one entry per section across every
+  // chapter so the model can name the right surface to open.
+  const builderCoverage = deriveBuilderCoverage()
+  const builderCoverageSummary = summarizeBuilderCoverage(builderCoverage)
+
   return {
     base,
     todayIso: today,
@@ -208,7 +270,90 @@ export async function buildExecutiveAdvisorContextV2(
     dependencySignals: navigatorSignals,
     sectionDependencyHints: SECTION_DEPENDENCY_HINTS,
     productCatalog: catalog,
+    builderCoverage,
+    builderCoverageSummary,
     unknowns
+  }
+}
+
+// ---- Builder coverage derivation --------------------------------
+
+/** Walk every chapter in the studio registry and classify each
+ *  section by the first builder family that fires on it. Priority
+ *  order matches DeliverableOutputWorkspace.hasPrimaryBuilder() so
+ *  the model's view of the platform stays consistent with what the
+ *  workspace actually mounts. */
+function deriveBuilderCoverage(): BuilderCoverageEntry[] {
+  const out: BuilderCoverageEntry[] = []
+  for (const [deliverableId, studio] of Object.entries(templateStudios)) {
+    for (const section of studio.sections) {
+      const families = enabledBuilderFamilies(section)
+      const primaryFamily = families[0] ?? 'recipe-only'
+      const secondaryFamilies = families.slice(1)
+      out.push({
+        deliverableId,
+        sectionId: section.id,
+        sectionTitle: section.title,
+        primaryFamily,
+        secondaryFamilies,
+        hasBuilder: primaryFamily !== 'recipe-only'
+      })
+    }
+  }
+  return out
+}
+
+/** Returns enabled builder families for a section in priority order:
+ *  existing primary builders first, then Pass B specialized, then
+ *  Pass A universals. Mirrors hasPrimaryBuilder + the workspace
+ *  mount order so the model never sees a phantom builder. */
+function enabledBuilderFamilies(
+  section: TemplateStudioSection
+): BuilderFamily[] {
+  const families: BuilderFamily[] = []
+  // Existing primary surfaces (saved-state and Pass A primaries).
+  if (section.id === 'customer-segments') families.push('customer-profile-builder')
+  if (section.keyActivities?.enabled) families.push('key-activities-builder')
+  if (section.financeTable?.enabled) families.push('finance-table-builder')
+  if (section.operationsChecklist?.enabled) families.push('operations-checklist-builder')
+  if (section.marketFit?.enabled) families.push('market-fit-builder')
+  if (section.brandFit?.enabled) families.push('brand-fit-builder')
+  if (section.pricingStrategy?.enabled) families.push('pricing-strategy-builder')
+  if (section.chipPickQuickStart?.enabled) families.push('chip-pick-quickstart')
+  // Pass B specialized.
+  if (section.brandSystem?.enabled) families.push('brand-system-builder')
+  if (section.retailPitch?.enabled) families.push('retail-pitch-builder')
+  if (section.strategyMemo?.enabled) families.push('strategy-memo-builder')
+  // Pass A universals — only if no primary fires above (the
+  // workspace conflict guard suppresses universals when a primary
+  // is enabled).
+  if (families.length === 0) {
+    if (section.universalTable?.enabled) families.push('universal-table')
+    if (section.universalChecklist?.enabled) families.push('universal-checklist')
+    if (section.decisionMemo?.enabled) families.push('decision-memo')
+  }
+  return families
+}
+
+function summarizeBuilderCoverage(
+  entries: readonly BuilderCoverageEntry[]
+): BuilderCoverageSummary {
+  const byFamily: Partial<Record<BuilderFamily, number>> = {}
+  let withAnyBuilder = 0
+  let recipeOnly = 0
+  for (const e of entries) {
+    if (e.hasBuilder) {
+      withAnyBuilder++
+    } else {
+      recipeOnly++
+    }
+    byFamily[e.primaryFamily] = (byFamily[e.primaryFamily] ?? 0) + 1
+  }
+  return {
+    totalSections: entries.length,
+    withAnyBuilder,
+    recipeOnly,
+    byFamily
   }
 }
 
@@ -265,6 +410,20 @@ function findMatchingTask(
 // The navigator-signal helper expects rough Deliverable / Task
 // shapes. We synthesize the minimum subset from the V1 context
 // package so we don't need to reach back into Firestore.
+//
+// `buildProjectNavigatorSignals` only reads a narrow subset of
+// each shape — d.id / d.title / d.department / d.status / d.dueDate
+// for deliverables, and t.id / t.title / t.department / t.status /
+// t.dueDate / t.deliverableId for tasks. The synthesized objects
+// supply every field the signals helper actually consumes; other
+// `Deliverable` / `Task` fields are intentionally omitted.
+//
+// TypeScript flags the direct cast because the synthesized objects
+// don't structurally satisfy the full Deliverable / Task interfaces.
+// Bridging through `unknown` (as the compiler itself suggests) is
+// the cleanest documentation that the narrowing is deliberate —
+// neither broadening to `any` nor expanding the types in
+// app/types/models.ts which would weaken type safety elsewhere.
 function contextDeliverablesToNavigatorShape(
   deliverables: ExecutiveContextPackage['deliverables']
 ): Deliverable[] {
@@ -283,7 +442,7 @@ function contextDeliverablesToNavigatorShape(
     approverUid: undefined,
     approverEmail: d.approverEmail ?? undefined
     // Other Deliverable fields are optional in the navigator path.
-  })) as Deliverable[]
+  })) as unknown as Deliverable[]
 }
 
 function contextTasksToNavigatorShape(
@@ -301,7 +460,7 @@ function contextTasksToNavigatorShape(
     description: '',
     priority: 'medium',
     requirementId: undefined
-  })) as Task[]
+  })) as unknown as Task[]
 }
 
 function filterDeptForViewer(
@@ -329,6 +488,7 @@ export function summarizeAdvisorContextV2(
     {}
   )
   const gapCount = ctx.taskCoverageGaps.filter((g) => g.missing).length
+  const cov = ctx.builderCoverageSummary
   return [
     `Today: ${ctx.todayIso}`,
     `Open tasks: ${counts.openTaskCount} (blocked ${counts.blockedTaskCount}, overdue ${counts.overdueTaskCount})`,
@@ -336,6 +496,7 @@ export function summarizeAdvisorContextV2(
     `Needs revision: ${counts.needsRevisionCount}`,
     `Drafts: ${counts.draftCount}`,
     `Dependency signals: ${ctx.dependencySignals.length} (blocked ${sigCounts.blocked ?? 0}, ready ${sigCounts.ready ?? 0}, warning ${sigCounts.warning ?? 0})`,
-    `P0 task coverage gaps: ${gapCount}`
+    `P0 task coverage gaps: ${gapCount}`,
+    `Builder coverage: ${cov.withAnyBuilder}/${cov.totalSections} sections (recipe-only ${cov.recipeOnly})`
   ].join(' · ')
 }

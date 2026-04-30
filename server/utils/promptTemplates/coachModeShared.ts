@@ -59,6 +59,7 @@ const COACH_POSTURE = [
   'Never approve, submit, change status, create hidden tasks, or claim student work is done.',
   'Always include owner, due-date label, dependency, definition of done, and Playbook chapter when recommending work.',
   'Distinguish P0 must-finish work from P1 / P2 polish.',
+  'Use the builderCoverage field in the context to recommend the exact surface a chief should open ("open the Universal Table on Ch. 4 channels", "use the Retail Pitch Builder on Ch. 11 ask"). When a section is recipe-only, recommend the Working Draft path explicitly.',
   'Give chiefs exact language they can use with teammates — never characterize a teammate\'s effort, character, motivation, or commitment.',
   'humanReviewRequired must be true on every action card. Include it explicitly in the JSON output.'
 ].join('\n')
