@@ -418,19 +418,19 @@ export function pickRecipe(
       doThis:
         'List Renni Inc.\'s revenue streams — apparel sales, baked-goods sales, and donations — and explain how each is captured separately.',
       howToDoIt: [
-        'List each revenue stream with the product or activity that generates it.',
-        'Note the sale price range and the channel that produces it.',
-        'Separate donations from product sales — different recording rules and break-even effects.',
-        'Mention how Phoenix Nest carry would generate revenue if it lands.',
-        'Add evidence or label the assumption.',
-        'Save your work, then ask your chief to review it.'
+        'Open the Revenue Streams Table builder.',
+        'Use Import Renni Inc. revenue streams to seed one row per product plus a donations row.',
+        'Set the type, the capture method (Square / cash / donation form — all external), source, assumption, confidence, risk, and owner.',
+        'Mark whether each stream ties to a Ch. 8 finance number.',
+        'Copy the table into Working Draft and summarize the streams in your own words.',
+        'Add structured evidence for any defended figure, then save.'
       ],
       doneWhenFallback:
-        'Each revenue stream is named, the price/range and channel are captured, and donations are recorded separately from product sales.',
-      buttonLabel: 'Start writing',
-      outputFormat: 'You are making a revenue table — one row per stream.',
+        'Each revenue stream is named, capture method is documented, donations are separate from product sales, and Ch. 8 ties are flagged.',
+      buttonLabel: 'Open Revenue Streams Table',
+      outputFormat: 'You are making a revenue-streams table — one row per stream.',
       outputExample:
-        'stream | product or activity | price range | channel | recording rule | confidence'
+        'stream | type | capture method | source | assumption | confidence | risk | owner | ties to Ch. 8?'
     }
   }
 
@@ -481,19 +481,19 @@ export function pickRecipe(
       doThis:
         'Name Renni Inc.\'s costs — fixed, variable, product, and event — and tie them to the pricing engine in Ch. 7 / 8.',
       howToDoIt: [
-        'List FIXED costs (booth fee, signage, recurring fees).',
-        'List VARIABLE costs that scale with sales (per-unit cost of beanies / shirts / baked goods).',
-        'List PRODUCT costs (materials, packaging, sourcing).',
-        'List EVENT costs unique to a pop-up day (transport, setup, day-of supplies).',
-        'Reference the Ch. 7 / 8 pricing engine for the unit-cost source.',
-        'Save your work, then ask your chief to review it.'
+        'Open the Cost Structure Table builder.',
+        'Add a row per cost item; tag the cost type (Variable / Fixed / Event-only / Packaging / Pending).',
+        'Enter the estimated amount, name the source, the assumption, and your confidence.',
+        'Use the Connected product / section column to tie costs back to Ch. 7 / Ch. 8 unit-cost rows.',
+        'Copy the table into Working Draft and summarize the buckets in your own words.',
+        'Add structured evidence for any defended figure, then save.'
       ],
       doneWhenFallback:
-        'Fixed, variable, product, and event costs are each represented, and the unit costs cite the Ch. 7 / 8 source.',
-      buttonLabel: 'Start writing',
+        'Variable, fixed, event-only, packaging, and pending costs are each represented; each row cites a source and a confidence; Ch. 7 / Ch. 8 ties are named.',
+      buttonLabel: 'Open Cost Structure Table',
       outputFormat: 'You are making a cost-structure table — one row per cost line.',
       outputExample:
-        'cost line | type (fixed / variable / product / event) | amount | source | assumption'
+        'cost item | type | estimated amount | source | assumption | confidence | connected product / section | risk | owner'
     }
   }
 

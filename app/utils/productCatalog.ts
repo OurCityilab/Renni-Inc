@@ -262,6 +262,53 @@ export function inventoryRowsToImport(target: ImportTarget): Row[] {
     }))
 }
 
+// ---- BMC revenue-streams import ---------------------------------
+//
+// Used by the BMC Ch. 4 revenue-streams table (FinanceTableBuilder
+// kind 'revenue-streams'). Imports one row per sellable product
+// labelled as a "Product sale" stream, plus an explicit "Donations"
+// stream — donations are a separate revenue stream from product
+// sales by the CFO posture in the Ch. 4 expert guidance.
+//
+// The import does NOT invoke any POS / payment / checkout flow.
+// The captureMethod column is seeded with neutral text describing
+// where the stream is recorded externally; students edit it to
+// reflect the team's real recording rule before saving.
+
+export function revenueStreamRowsToImport(target: ImportTarget): Row[] {
+  const taken = productNameSet(target.existingRows, target.productKey)
+  const rows: Row[] = []
+  for (const p of sellableProducts()) {
+    if (taken.has(p.productName.toLowerCase())) continue
+    rows.push({
+      streamName: p.productName,
+      streamType: p.category === 'baked-goods' ? 'Baked good' : 'Product sale',
+      captureMethod: 'Square (external POS) — confirm with CFO',
+      source: p.source,
+      assumption: p.notes,
+      confidence: p.confidence,
+      risk: 'Vendor delivery / sell-through assumption may shift.',
+      owner: 'CFO',
+      tiesToCh8: 'Yes'
+    })
+  }
+  for (const d of donationItems()) {
+    if (taken.has(d.productName.toLowerCase())) continue
+    rows.push({
+      streamName: d.productName,
+      streamType: 'Donation',
+      captureMethod: 'Donation form / cash jar — recorded externally',
+      source: d.source,
+      assumption: d.notes,
+      confidence: d.confidence,
+      risk: 'Donor count + average gift assumption.',
+      owner: 'CFO',
+      tiesToCh8: 'Yes'
+    })
+  }
+  return rows
+}
+
 // ---- KPI starter pack --------------------------------------------
 //
 // KPIs are surfaced behind a separate button (not "Import product

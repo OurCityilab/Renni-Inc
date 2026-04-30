@@ -95,6 +95,22 @@ export const SECTION_DEPENDENCY_HINTS: SectionDependencyHints = {
   'key-partners': [
     'Pulls from Key Activities and Key Resources. Square is the external POS partner.',
     'Feeds Cost Structure and the Phoenix Nest retail buyer relationship.'
+  ],
+  'revenue-streams': [
+    'Pulls from the Renni Inc. product list and donations. Use the Import button to seed rows.',
+    'Feeds Ch. 8 revenue scenarios + the Phoenix Nest pitch margin story. Square is the external POS — this section is a map, not a checkout.'
+  ],
+  'cost-structure': [
+    'Pulls from Ch. 7 unit costs and Ch. 8 break-even. Tag costs as variable / fixed / event-only / packaging / pending.',
+    'Feeds the Phoenix Nest pitch margin story and the next-cohort handoff.'
+  ],
+  channels: [
+    'Pulls from Customer Segments. Map awareness vs sale vs fulfillment vs follow-up.',
+    'Feeds the Campaign channel choice (Ch. 10) and the Phoenix Nest pitch (Ch. 11).'
+  ],
+  'customer-relationships': [
+    'Pulls from Customer Segments. Describe how Renni Inc. treats buyers per segment, not generic customer service.',
+    'Feeds the Campaign messaging tone (Ch. 10) and supports House Phoenix brand voice.'
   ]
 }
 

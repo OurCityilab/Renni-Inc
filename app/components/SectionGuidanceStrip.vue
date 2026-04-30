@@ -126,6 +126,10 @@ function financeTableLabel(kind: string): string {
       return 'Open Donation Scenarios Table'
     case 'kpi':
       return 'Open KPI Table'
+    case 'revenue-streams':
+      return 'Open Revenue Streams Table'
+    case 'cost-structure':
+      return 'Open Cost Structure Table'
     default:
       return 'Open Finance Table'
   }

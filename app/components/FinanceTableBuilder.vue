@@ -33,6 +33,7 @@ import {
   breakEvenRowsToImport,
   revenueScenarioRowsToImport,
   donationScenarioRowsToImport,
+  revenueStreamRowsToImport,
   starterKpiRows
 } from '~/utils/productCatalog'
 
@@ -42,6 +43,12 @@ type FinanceTableKind =
   | 'revenue-scenarios'
   | 'donation-scenarios'
   | 'kpi'
+  // BMC Finance Table Cleanup additions. Both are taxonomy-first
+  // (text + select columns; no calc fields). They render the same
+  // row editor + copy / clear / import scaffolding but never invoke
+  // a POS, payment, or checkout flow.
+  | 'revenue-streams'
+  | 'cost-structure'
 
 type FieldType =
   | 'text'
@@ -276,6 +283,70 @@ const CONFIGS: Record<FinanceTableKind, KindConfig> = {
       reviewRhythm: ''
     },
     starterRowCount: 3
+  },
+  'revenue-streams': {
+    title: 'Revenue Streams Table',
+    intro:
+      'This is not a checkout system. This is a map of how Renni Inc. earns or receives money. List each stream — product sale, baked good, donation, retail carry — with how it is captured, the source, and the assumption.',
+    copyHelper:
+      'Copy the table into Working Draft, summarize the important streams in your own words, then save with the existing Save button below.',
+    warningBanner:
+      'Separate the business model from the TechTown event. TechTown is one sales / test channel, not the whole company.',
+    columns: [
+      { key: 'streamName', label: 'Stream', type: 'text', placeholder: 'House Phoenix Beanie · Donations · Phoenix Nest carry', wide: true },
+      { key: 'streamType', label: 'Type', type: 'select', options: ['Product sale', 'Baked good', 'Donation', 'Retail carry', 'Future'] },
+      { key: 'captureMethod', label: 'How it is captured', type: 'text', placeholder: 'Square (external POS) · cash · donation form', wide: true },
+      { key: 'source', label: 'Source', type: 'text', placeholder: 'Vendor quote · /pricing · prior cohort', wide: true },
+      { key: 'assumption', label: 'Assumption', type: 'text', placeholder: 'Sell-through · donor count · etc.', wide: true },
+      { key: 'confidence', label: 'Confidence', type: 'select', options: ['low', 'medium', 'high'] },
+      { key: 'risk', label: 'Risk', type: 'text', placeholder: 'What could make this wrong?', wide: true },
+      { key: 'owner', label: 'Owner / reviewer', type: 'text', placeholder: 'CFO' },
+      { key: 'tiesToCh8', label: 'Ties to Ch. 8?', type: 'select', options: ['Yes', 'No', 'Pending'] }
+    ],
+    rowTemplate: {
+      streamName: '',
+      streamType: 'Product sale',
+      captureMethod: '',
+      source: '',
+      assumption: '',
+      confidence: 'medium',
+      risk: '',
+      owner: '',
+      tiesToCh8: 'Pending'
+    },
+    starterRowCount: 3
+  },
+  'cost-structure': {
+    title: 'Cost Structure Table',
+    intro:
+      'This is not the detailed CFO model. This is the business-model view of what costs Renni Inc. must plan for. Tag each cost as variable / fixed / event-only / packaging / pending and name the source.',
+    copyHelper:
+      'Copy the table into Working Draft, summarize the buckets in your own words, then save with the existing Save button below.',
+    warningBanner:
+      'Separate the business model from the TechTown event. TechTown is one sales / test channel, not the whole company.',
+    columns: [
+      { key: 'costItem', label: 'Cost item', type: 'text', placeholder: 'Booth fee · sweatshirt blank · packaging', wide: true },
+      { key: 'costType', label: 'Cost type', type: 'select', options: ['Variable', 'Fixed', 'Event-only', 'Packaging', 'Pending'] },
+      { key: 'estimatedAmount', label: 'Estimated amount', type: 'number', placeholder: '0.00' },
+      { key: 'source', label: 'Source', type: 'text', placeholder: 'Vendor quote · /pricing · estimate', wide: true },
+      { key: 'assumption', label: 'Assumption', type: 'text', placeholder: 'Per-event · per-unit · monthly', wide: true },
+      { key: 'confidence', label: 'Confidence', type: 'select', options: ['low', 'medium', 'high'] },
+      { key: 'connectedTo', label: 'Connected product / section', type: 'text', placeholder: 'House Phoenix Beanie · Ch. 8 unit-cost', wide: true },
+      { key: 'risk', label: 'Risk', type: 'text', placeholder: 'What could make this wrong?', wide: true },
+      { key: 'owner', label: 'Owner / reviewer', type: 'text', placeholder: 'CFO · COO' }
+    ],
+    rowTemplate: {
+      costItem: '',
+      costType: 'Variable',
+      estimatedAmount: '',
+      source: '',
+      assumption: '',
+      confidence: 'medium',
+      connectedTo: '',
+      risk: '',
+      owner: ''
+    },
+    starterRowCount: 4
   }
 }
 
@@ -332,6 +403,12 @@ const importLabel = computed<string | null>(() => {
       return 'Import donation starter row'
     case 'kpi':
       return 'Add starter KPIs'
+    case 'revenue-streams':
+      return 'Import Renni Inc. revenue streams'
+    case 'cost-structure':
+      // Costs are too context-specific to seed from the catalog —
+      // every team has different fixed-cost shares and event costs.
+      return null
   }
 })
 
@@ -347,6 +424,10 @@ function productKeyForKind(): string {
       return 'donorType'
     case 'kpi':
       return 'kpi'
+    case 'revenue-streams':
+      return 'streamName'
+    case 'cost-structure':
+      return 'costItem'
   }
 }
 
@@ -364,6 +445,10 @@ function buildImportRows(): Row[] {
       return revenueScenarioRowsToImport(target)
     case 'donation-scenarios':
       return donationScenarioRowsToImport(target)
+    case 'revenue-streams':
+      return revenueStreamRowsToImport(target)
+    case 'cost-structure':
+      return []
     case 'kpi':
       return starterKpiRows(target)
   }

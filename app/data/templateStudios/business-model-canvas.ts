@@ -245,6 +245,18 @@ export const businessModelCanvas: TemplateStudio = {
       title: 'Revenue streams',
       lesson:
         'Revenue streams are how Renni Inc. takes money in across every channel. Product sales (TechTown direct, Phoenix Nest carry if it lands, school events) and donations are different streams — the canvas should treat them separately, with the recording rule named per stream.',
+      // BMC Finance Table Cleanup. Mounts the FinanceTableBuilder
+      // 'revenue-streams' kind so students fill a structured table
+      // (stream name + type + capture method + source + assumption +
+      // confidence + risk + owner + ties-to-Ch.8) instead of a prose
+      // answer. Pure UI + clipboard. No POS, payment, or checkout
+      // behavior — captureMethod is a free-text descriptor.
+      financeTable: {
+        enabled: true,
+        kind: 'revenue-streams',
+        guidance:
+          'Use the table to separate product sales, baked goods, donations, and any future / retail-carry revenue. Name how each stream is captured externally (Square / cash / donation form) — Renni Command Center is not a checkout.'
+      },
       studentPrompts: [
         'List each revenue stream: beanies, sweatshirts, t-shirts, baked goods, donations.',
         'For each stream, name how money is captured (Square, cash, donation form).',
@@ -416,6 +428,18 @@ export const businessModelCanvas: TemplateStudio = {
       title: 'Cost structure',
       lesson:
         'Renni Inc.\'s cost structure has four buckets: FIXED costs (booth fee, signage, recurring fees), VARIABLE costs that scale with sales (per-unit beanie / shirt / baked-goods cost), PRODUCT costs (materials, packaging, sourcing), and EVENT costs unique to a single channel (transport, day-of supplies). Tie each cost to the unit-cost / fixed-cost work that already lives in Ch. 7 / 8 and /pricing.',
+      // BMC Finance Table Cleanup. Mounts the FinanceTableBuilder
+      // 'cost-structure' kind so students separate cost types and
+      // name the source / confidence per row instead of writing
+      // prose. Pure UI + clipboard. No POS, payment, checkout, or
+      // tax behavior — `estimatedAmount` is a numeric input that
+      // never settles, charges, or decrements anything.
+      financeTable: {
+        enabled: true,
+        kind: 'cost-structure',
+        guidance:
+          'Use the table to separate variable / fixed / event-only / packaging / pending costs. Each row should name the source and confidence — this is the business-model view, not the detailed CFO model.'
+      },
       studentPrompts: [
         'List variable costs per product (blanks, prints, ingredients, packaging).',
         'List fixed costs (booth, signage, kitchen rental, advisor honoraria).',

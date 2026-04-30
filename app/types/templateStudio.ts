@@ -116,7 +116,18 @@ export interface TemplateStudioSection {
   // Local component state, copy-only output. No Firestore writes.
   financeTable?: {
     enabled: boolean
-    kind: 'unit-cost' | 'break-even' | 'revenue-scenarios' | 'donation-scenarios' | 'kpi'
+    kind:
+      | 'unit-cost'
+      | 'break-even'
+      | 'revenue-scenarios'
+      | 'donation-scenarios'
+      | 'kpi'
+      // BMC Finance Table Cleanup additions. Both are taxonomy-first
+      // (text + select columns; no calc fields) and were added so the
+      // Ch. 4 BMC revenue-streams and cost-structure sections render
+      // structured tables instead of prose-only inputs.
+      | 'revenue-streams'
+      | 'cost-structure'
     guidance?: string
   }
   // Operations Checklist / SOP Builder visibility metadata. Same
