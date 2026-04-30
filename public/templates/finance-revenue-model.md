@@ -2,7 +2,7 @@
 
 - **Deliverable:** Finance and Revenue Model
 - **Chapter:** 8
-- **Owner:** Chase Jackson, CFO (cjackson6@ltu.edu)
+- **Owner:** Destiny, CFO (hardydestiny04@gmail.com)
 - **Approver:** Bre'ell Crenshaw, Co-CEO (bcrenshaw@ltu.edu)
 
 ## Purpose

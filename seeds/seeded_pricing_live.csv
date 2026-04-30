@@ -1,6 +1,6 @@
 productName,brand,category,unitCost,salePrice,plannedQuantity,fixedCostShare,soldQuantity,ownerEmail,department,notes
-Beanie,House Phoenix,apparel,8,20,25,,,cjackson6@ltu.edu,finance,Placeholder — confirm vendor quote before the pop-up.
-Sweatshirt,House Phoenix,apparel,18,45,15,,,cjackson6@ltu.edu,finance,Placeholder — confirm print run cost and sample sizing.
-T-Shirt,House Phoenix,apparel,10,25,25,,,cjackson6@ltu.edu,finance,Placeholder — tiered pricing and bundle discounts not modeled yet.
-Baked Goods,Humble Oven,baked-goods,1.50,3,50,,,cjackson6@ltu.edu,finance,Per-item placeholder. Adjust once ingredient costing is final.
-Donations,Renni Inc.,donation,0,1,100,,,cjackson6@ltu.edu,finance,Tracked separately from merch revenue; sale price is a nominal unit.
+Beanie,House Phoenix,apparel,8,20,25,,,hardydestiny04@gmail.com,finance,Placeholder — confirm vendor quote before the pop-up.
+Sweatshirt,House Phoenix,apparel,18,45,15,,,hardydestiny04@gmail.com,finance,Placeholder — confirm print run cost and sample sizing.
+T-Shirt,House Phoenix,apparel,10,25,25,,,hardydestiny04@gmail.com,finance,Placeholder — tiered pricing and bundle discounts not modeled yet.
+Baked Goods,Humble Oven,baked-goods,1.50,3,50,,,hardydestiny04@gmail.com,finance,Per-item placeholder. Adjust once ingredient costing is final.
+Donations,Renni Inc.,donation,0,1,100,,,hardydestiny04@gmail.com,finance,Tracked separately from merch revenue; sale price is a nominal unit.

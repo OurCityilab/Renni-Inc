@@ -2,7 +2,7 @@
 import { computed, ref } from 'vue'
 import { useAuthStore } from '~/stores/auth'
 import { useDeliverables } from '~/composables/useDeliverables'
-import { useRoster } from '~/composables/useRoster'
+import { isChiefForRole, useRoster } from '~/composables/useRoster'
 import { useTasks } from '~/composables/useTasks'
 import type { Deliverable, Department, RosterEntry, Task } from '~/types/models'
 import { taskStatusLabel } from '~/utils/taskStatus'
@@ -141,7 +141,7 @@ const myChief = computed<RosterEntry | null>(() => {
   if (!myDept.value) return null
   return (
     rosterEntries.value.find(
-      (r) => r.department === myDept.value && r.isChief && r.role !== 'admin'
+      (r) => r.department === myDept.value && r.role !== 'admin' && isChiefForRole(r.role)
     ) ?? null
   )
 })

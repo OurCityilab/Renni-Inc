@@ -88,7 +88,7 @@ You are preparing a 30-second morning brief for the executive whose role + scope
   },
   "whoNeedsHelp": [                // 0-3 entries; empty array allowed when no one needs help
     {
-      "role": string,              // e.g. "CFO" or "Chase (CFO)"
+      "role": string,              // e.g. "CFO" or "Destiny (CFO)"
       "workStateDescription": string,  // describe WORK STATE, never character or effort
       "sourceIds": SourceIds
     }

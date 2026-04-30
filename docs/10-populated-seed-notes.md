@@ -6,10 +6,10 @@ These live seed files are a best-effort starting point based on the current Rena
 - Bre'ell Crenshaw is seeded as Co-CEO.
 - Peyton Cunegin is seeded as Co-CEO.
 - Sharae Cottingham is seeded as COO.
-- Chase Jackson is seeded as CFO.
+- Destiny is seeded as CFO.
 - Arianna Malloy is seeded as CMO.
-- Alory Thomas is seeded as CDO.
-- Trinity Colbert is seeded as Chief Strategy and Growth Officer.
+- Alory Thomas is seeded as Chief Strategy and Growth Officer.
+- Trinity Colbert is seeded as a Strategy and Growth team member.
 - House Phoenix is treated as the primary current launch brand.
 - The pop-up product set is beanies, sweatshirts, t-shirts, baked goods, and donations.
 - Due dates are suggested sprint dates and are instructor-editable.

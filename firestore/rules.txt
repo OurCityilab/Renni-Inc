@@ -31,7 +31,13 @@ service cloud.firestore {
     function isAdmin() { return hasRole('admin'); }
     function isCoCEO() { return hasRole('coceo'); }
     function isAdminOrCoCEO() { return isAdmin() || isCoCEO(); }
-    function isChief() { return isSignedIn() && userDoc().isChief == true; }
+    // Derive chief access from the current role, not the stored isChief
+    // boolean. The boolean is roster/profile display metadata and can drift
+    // during a role correction; permissions must follow the role immediately.
+    function isChief() {
+      return isSignedIn()
+        && userDoc().role in ['coceo', 'coo', 'cfo', 'cmo', 'csgo', 'admin'];
+    }
     function deliverableDoc(id) {
       return get(/databases/$(database)/documents/deliverables/$(id)).data;
     }

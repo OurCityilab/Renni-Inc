@@ -4,7 +4,7 @@
 - **Chapter:** 11
 - **Owner:** Arianna Malloy, CMO (arimalloy10@gmail.com) — lead for pitch assembly
 - **Approver:** Bre'ell Crenshaw, Co-CEO (bcrenshaw@ltu.edu)
-- **Co-owners:** Chase Jackson, CFO (numbers) · Sharae Cottingham, COO (fulfillment)
+- **Co-owners:** Destiny, CFO (numbers) · Sharae Cottingham, COO (fulfillment)
 
 ## Purpose
 The pitch asking Phoenix Nest to carry House Phoenix product. Lives as a deck plus this written companion.

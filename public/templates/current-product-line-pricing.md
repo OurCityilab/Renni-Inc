@@ -2,7 +2,7 @@
 
 - **Deliverable:** Current Product Line and Pricing
 - **Chapter:** 7
-- **Owner:** Chase Jackson, CFO (cjackson6@ltu.edu)
+- **Owner:** Destiny, CFO (hardydestiny04@gmail.com)
 - **Approver:** Bre'ell Crenshaw, Co-CEO (bcrenshaw@ltu.edu)
 
 ## Purpose

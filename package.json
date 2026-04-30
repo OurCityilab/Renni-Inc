@@ -24,6 +24,7 @@
     "cleanup:bible-goal": "tsx scripts/cleanup-bible-goal.ts",
     "audit:studio-alignment": "tsx scripts/audit-studio-alignment.ts",
     "audit:requirement-sections": "tsx scripts/audit-requirement-section-resolution.ts",
+    "audit:cfo-ownership": "tsx scripts/audit-cfo-ownership.ts",
     "test:classifier": "tsx app/__tests__/customerProfileClassifier.test.ts",
     "backfill:tasks": "tsx scripts/backfill-task-alignment.ts",
     "sync:users": "tsx scripts/sync-users-from-roster.ts"

@@ -2,7 +2,7 @@
 import { computed } from 'vue'
 import { useAuthStore } from '~/stores/auth'
 import { useDeliverables } from '~/composables/useDeliverables'
-import { useRoster } from '~/composables/useRoster'
+import { isChiefForRole, useRoster } from '~/composables/useRoster'
 import { useTasks } from '~/composables/useTasks'
 import { DEPARTMENTS, type Department, type RosterEntry, type Task } from '~/types/models'
 
@@ -24,7 +24,7 @@ const visibleDepartments: Department[] = DEPARTMENTS.filter(
 function chiefOf(dept: Department): RosterEntry | null {
   return (
     rosterEntries.value.find(
-      (r) => r.department === dept && r.isChief && r.role !== 'admin'
+      (r) => r.department === dept && r.role !== 'admin' && isChiefForRole(r.role)
     ) ?? null
   )
 }

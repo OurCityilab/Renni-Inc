@@ -5,7 +5,7 @@ import { useRoute } from 'vue-router'
 import { useAuthStore } from '~/stores/auth'
 import { useDeliverables } from '~/composables/useDeliverables'
 import { useGoals } from '~/composables/useGoals'
-import { useRoster } from '~/composables/useRoster'
+import { isChiefForRole, useRoster } from '~/composables/useRoster'
 import { useTasks } from '~/composables/useTasks'
 import { useDeliverableOutputs } from '~/composables/useDeliverableOutputs'
 import { DEPARTMENTS } from '~/types/models'
@@ -66,7 +66,7 @@ const advisorLoading = computed(
 const chief = computed<RosterEntry | null>(
   () =>
     rosterEntries.value.find(
-      (r) => r.department === dept.value && r.isChief && r.role !== 'admin'
+      (r) => r.department === dept.value && r.role !== 'admin' && isChiefForRole(r.role)
     ) ?? null
 )
 const members = computed<RosterEntry[]>(() =>

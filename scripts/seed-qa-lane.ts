@@ -86,7 +86,7 @@ interface Pair { owner: string; approver: string }
 const DEFAULT_PAIRS: Record<number, Pair> = {
   5: { owner: '08sydbradley@gmail.com', approver: 'arimalloy10@gmail.com' },   // marketing member / CMO
   9: { owner: 'tseay@ltu.edu', approver: 'sharaecottingham1@gmail.com' },       // ops member / COO
-  8: { owner: 'nghtlooker30k@gmail.com', approver: 'cjackson6@ltu.edu' },       // finance member / CFO
+  8: { owner: 'nghtlooker30k@gmail.com', approver: 'hardydestiny04@gmail.com' }, // finance member / CFO
   12: { owner: 'alorythomas569@gmail.com', approver: 'pcunegin1@gmail.com' }  // CSGO / Co-CEO
 }
 

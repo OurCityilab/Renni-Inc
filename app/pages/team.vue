@@ -270,7 +270,7 @@ function isProvisioned(e: RosterEntry): boolean {
                     : 'border-neutral-300 text-neutral-500'"
                 >{{ isProvisioned(e) ? 'Signed in' : 'Pending first sign-in' }}</span>
                 <span
-                  v-if="e.isChief"
+                  v-if="isChiefForRole(e.role)"
                   class="rounded-full border border-phoenix-300 bg-phoenix-50 px-2 py-0.5 text-phoenix-800"
                 >chief</span>
                 <span class="rounded-full border border-neutral-300 px-2 py-0.5 text-neutral-600">{{ e.role }}</span>
