@@ -166,6 +166,11 @@ async function runMode(mode: AdvisorMode): Promise<void> {
         />
       </label>
     </div>
+    <p class="text-[11px] italic text-neutral-500">
+      Use focus when you want a tighter answer, e.g. ch-08, finance,
+      Phoenix Nest, marketing, operations, or a section id. Section
+      Rescue and Approval Coach work best with a specific focus.
+    </p>
 
     <p v-if="loading" class="text-xs italic text-neutral-600">
       Asking the Advisor…

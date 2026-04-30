@@ -35,6 +35,7 @@ import type {
 } from '~~/app/types/executiveAdvisor'
 import type { ExecutiveAdvisorContextV2 } from '~~/server/utils/executiveAdvisorContext'
 import { summarizeAdvisorContextV2 } from '~~/server/utils/executiveAdvisorContext'
+import { compactContextForMode } from '~~/server/utils/executiveAdvisorContextBudget'
 import {
   buildExecutiveAdvisorSystemPrompt,
   EXECUTIVE_ADVISOR_TEMPLATE_VERSION
@@ -175,6 +176,18 @@ export function buildCoachUserPrompt(
     ? `Caller focus hint (verbatim from chief): "${focus}"`
     : 'Caller focus hint: (none — return for the full visible scope)'
   const contextSummary = summarizeAdvisorContextV2(payload.context)
+  // Compact, mode-aware context — filtered to what each mode
+  // actually uses, capped, and prioritized by `focus`. Replaces
+  // the original full-context dump that was overflowing the
+  // 28k-char input budget. The full context summary is still
+  // embedded above so the model sees the headline state; the
+  // compact view carries the per-record detail it needs.
+  const compactContext = compactContextForMode(
+    payload.context,
+    mode,
+    payload.focus ?? null,
+    null
+  )
   return `${MODE_INSTRUCTIONS[mode]}
 
 ${focusLine}
@@ -182,8 +195,8 @@ ${focusLine}
 CONTEXT SUMMARY:
 ${contextSummary}
 
-EXECUTIVE ADVISOR CONTEXT V2 (JSON):
-${JSON.stringify(payload.context)}
+EXECUTIVE ADVISOR CONTEXT V2 — COMPACT FOR MODE "${mode}" (JSON):
+${JSON.stringify(compactContext)}
 
 OUTPUT JSON SHAPE:
 {
