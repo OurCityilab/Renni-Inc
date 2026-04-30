@@ -19,7 +19,7 @@ defineProps<{
    *  section connects". */
   title?: string
   /** Short, plain-language hints. Each renders as one bullet. */
-  hints: string[]
+  hints: readonly string[]
 }>()
 </script>
 

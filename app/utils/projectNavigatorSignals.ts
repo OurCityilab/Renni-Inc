@@ -149,7 +149,7 @@ const CHAPTER_DEPENDENCY_SPECS: readonly ChapterDependencySpec[] = [
     missingLabel: 'Missing Phoenix Nest proof',
     reason:
       'The retail carry pitch needs a buyer name, shelf fit, and the margin story from Ch. 7 / 8 finance tables.',
-    preferSectionId: 'pitch-evidence'
+    preferSectionId: 'evidence'
   }
 ] as const
 
