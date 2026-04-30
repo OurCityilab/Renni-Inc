@@ -51,13 +51,18 @@ exists only to seed editable starter rows.
   SOP without helping. The team writes inventory rows in the
   inventory section and references them in the SOP narrative.
 
-## Future product-data wiring (not in V1)
+## Future product-data wiring (deferred this pass)
 
 These builders already accept a single `productName` text field but
 do not yet pick from a shared product list. Adding a `productOptions`
 prop would make them consistent with the finance / inventory
-imports. None are done in V1 because the changes touch large files
-and the launch sprint did not justify the regression risk:
+imports. **All four are deferred** because the changes touch large
+files (`PricingStrategyBuilder` ~1870 lines, `MarketFitBuilder` ~2605
+lines) and the connected-classroom sprint did not justify the
+regression risk on launch eve. The launch finance / ops / BMC paths
+do not depend on this wiring — `FinanceTableBuilder` and
+`OperationsChecklistBuilder` already import from the catalog
+directly:
 
 - **MarketFitBuilder** (`app/components/MarketFitBuilder.vue`):
   `form.productFacts.productName` is a free-text field around line

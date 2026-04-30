@@ -39,6 +39,7 @@ import {
   type PriorityItem,
   type ProjectNavigatorView
 } from '~/utils/projectNavigator'
+import LaunchReadinessChecklist from '~/components/LaunchReadinessChecklist.vue'
 import { todayIso } from '~/utils/milestoneBackplan'
 import type { Department } from '~/types/models'
 
@@ -262,6 +263,14 @@ function deliverableLink(deliverableId: string): string {
         </NuxtLink>
       </div>
     </section>
+
+    <!-- ===== Launch readiness checks (display-only) =====
+         Static checklist of the 10 launch-critical builder sections.
+         The platform doesn't track per-section builder-row counts
+         (they live in local component state), so this is a
+         click-through prompt for the chief — not a derived signal.
+         No Firestore reads, no AI, no derivation. -->
+    <LaunchReadinessChecklist v-if="!loading" />
 
     <!-- ===== Blocked / Pending review ===== -->
     <section v-if="!loading" class="grid gap-4 md:grid-cols-2">
