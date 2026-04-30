@@ -61,6 +61,7 @@ import DecisionMemoBuilder from '~/components/DecisionMemoBuilder.vue'
 import BrandSystemBuilder from '~/components/BrandSystemBuilder.vue'
 import RetailPitchBuilder from '~/components/RetailPitchBuilder.vue'
 import StrategyMemoBuilder from '~/components/StrategyMemoBuilder.vue'
+import CorporateStructureBuilder from '~/components/CorporateStructureBuilder.vue'
 import SectionDependencyHint from '~/components/SectionDependencyHint.vue'
 import { getSectionDependencyHints } from '~/utils/sectionDependencyHints'
 import { productNameOptions } from '~/utils/productCatalog'
@@ -1579,6 +1580,8 @@ function hasPrimaryBuilder(s: TemplateStudioSection): boolean {
   if (s.brandSystem?.enabled) return true
   if (s.retailPitch?.enabled) return true
   if (s.strategyMemo?.enabled) return true
+  // Corporate Structure / Equity Builder is a primary surface too.
+  if (s.corporateStructure?.enabled) return true
   return false
 }
 
@@ -1593,7 +1596,11 @@ function hasPrimaryBuilder(s: TemplateStudioSection): boolean {
 // flag is unusual but the math should still work).
 function hasOtherPrimaryBuilder(
   s: TemplateStudioSection,
-  excluding: 'brandSystem' | 'retailPitch' | 'strategyMemo'
+  excluding:
+    | 'brandSystem'
+    | 'retailPitch'
+    | 'strategyMemo'
+    | 'corporateStructure'
 ): boolean {
   if (s.chipPickQuickStart?.enabled) return true
   if (s.keyActivities?.enabled) return true
@@ -1606,7 +1613,15 @@ function hasOtherPrimaryBuilder(
   if (excluding !== 'brandSystem' && s.brandSystem?.enabled) return true
   if (excluding !== 'retailPitch' && s.retailPitch?.enabled) return true
   if (excluding !== 'strategyMemo' && s.strategyMemo?.enabled) return true
+  if (excluding !== 'corporateStructure' && s.corporateStructure?.enabled) return true
   return false
+}
+
+function shouldShowCorporateStructureBuilder(
+  s: TemplateStudioSection
+): boolean {
+  if (s.corporateStructure?.enabled !== true) return false
+  return !hasOtherPrimaryBuilder(s, 'corporateStructure')
 }
 
 function shouldShowBrandSystemBuilder(s: TemplateStudioSection): boolean {
@@ -2669,6 +2684,20 @@ function shouldOpenDefend(s: TemplateStudioSection): boolean {
           class="space-y-1"
         >
           <StrategyMemoBuilder :config="s.strategyMemo!" />
+        </div>
+
+        <!-- Corporate Structure / Equity Builder. Primary builder;
+             Pass A universal builders are suppressed on the same
+             section. The component itself renders the non-removable
+             "draft educational model — instructor / adult / legal
+             review required before any real-world use" disclaimer.
+             Local-state, copy-only; no Firestore writes. -->
+        <div
+          v-if="shouldShowCorporateStructureBuilder(s)"
+          :id="`csb-${s.id}`"
+          class="space-y-1"
+        >
+          <CorporateStructureBuilder :config="s.corporateStructure!" />
         </div>
 
         <!-- Independent Student Mode: section-level mismatch warnings.

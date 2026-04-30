@@ -157,6 +157,14 @@ export interface TemplateStudioSection {
   brandSystem?: BrandSystemBuilderConfig
   retailPitch?: RetailPitchBuilderConfig
   strategyMemo?: StrategyMemoBuilderConfig
+  // Corporate Structure / Equity Builder. Educational + planning-
+  // oriented only; the workspace and the underlying component MUST
+  // surface the "draft educational model — instructor/adult/legal
+  // review required before any real-world use" disclaimer on every
+  // render. This builder is treated as a primary surface; when
+  // enabled, Pass A universal builders are suppressed on the same
+  // section.
+  corporateStructure?: CorporateStructureBuilderConfig
   // Operations Checklist / SOP Builder visibility metadata. Same
   // opt-in pattern. The `kind` selector picks which checklist /
   // SOP shape the shared OperationsChecklistBuilder renders:
@@ -396,6 +404,58 @@ export interface StrategyMemoBuilderConfig {
   cardCount?: number
   fields: StrategyMemoBuilderField[]
   starterCards?: StrategyMemoBuilderStarterCard[]
+  copyTitle?: string
+}
+
+// Corporate Structure / Equity Builder — educational + planning
+// only. Under no circumstances is this builder, its config, or its
+// output a legal cap table, an equity grant, or legal / tax /
+// securities / investment / accounting advice. The component
+// renders a non-removable safety disclaimer on every view; the
+// workspace is REQUIRED to keep that disclaimer visible.
+
+export interface CorporateStructureEntityTypeOption {
+  id: string
+  label: string
+  /** Plain-English description of what the entity type generally
+   *  is. Educational only. */
+  educationalExplanation: string
+  /** Common tradeoffs students should think through. Each entry is
+   *  a short string, not legal language. */
+  commonTradeoffs: string[]
+  /** Questions the team should bring to the instructor / adult /
+   *  legal reviewer. Drives the unresolved-question list. */
+  adultReviewQuestions: string[]
+}
+
+export interface CorporateStructureBuilderConfig {
+  enabled: boolean
+  title: string
+  intro?: string
+  /** The 70/30 default lives here so the picker can show it on
+   *  first render. Students may edit the percentages locally; the
+   *  builder warns when they don't sum to 100%. */
+  ownershipModel: {
+    nonprofitSharePercentDefault: number
+    studentSharePercentDefault: number
+    /** When true, the UI exposes editable percentages with a
+     *  "must total 100%" guard. When false, the percentages are
+     *  read-only and only the 70/30 model renders. */
+    allowCustomScenario: boolean
+  }
+  vesting: {
+    enabledDefault: boolean
+    scheduleOptions: string[]
+    exitRulePrompts: string[]
+  }
+  entityTypeOptions: CorporateStructureEntityTypeOption[]
+  dividendPolicyPrompts: string[]
+  votingRightsPrompts: string[]
+  graduationRulePrompts: string[]
+  unresolvedLegalQuestionPrompts: string[]
+  /** Always true. Kept on the type for documentation; the
+   *  component never lets this be false. */
+  adultReviewRequired: true
   copyTitle?: string
 }
 

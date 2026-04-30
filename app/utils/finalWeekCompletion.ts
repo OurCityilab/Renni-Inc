@@ -122,6 +122,25 @@ export const FINAL_WEEK_LANES: readonly FinalWeekLane[] = [
         dependency: null,
         doneWhen: 'A reviewer can name the three final outputs without scrolling.',
         firstAction: 'Write one sentence per final output, then connect them with the team\'s launch theme.'
+      },
+      {
+        id: 'ch-03:corporate-structure-and-ownership',
+        laneId: 'executive',
+        deliverableId: 'ch-03-company-structure-and-continuity',
+        sectionId: 'corporate-structure-and-ownership',
+        title: 'Corporate structure & ownership (draft model)',
+        artifact:
+          'Draft educational model — entity comparison, 70/30 ownership, student allocation, vesting, distribution policy, governance, graduation rules, adult / legal review checklist.',
+        priority: 'P1',
+        owner: 'Co-CEOs',
+        reviewer: 'Instructor / Admin',
+        dueLabel: 'Final week — late',
+        dependency:
+          'Executive summary and company structure basics (company roles, decision rights, continuity risks)',
+        doneWhen:
+          'Draft model includes entity comparison, 70/30 ownership, student allocation, vesting / exit rules, governance, and adult / legal review checklist. Output carries the "draft educational model — instructor / adult / legal review required" disclaimer.',
+        firstAction:
+          'Open the Corporate Structure Builder, pick 2 entity types to compare, and confirm the 30/70 ownership defaults.'
       }
     ]
   },

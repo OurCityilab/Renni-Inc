@@ -627,6 +627,82 @@ order / refund / tax data in the tracker.
   to confirm the 8 new sections render and the 4 original
   Operations Checklist sections still mount their builder.
 
+## 11.7. Implementation status — Corporate Structure / Equity Builder
+
+**Shipped.** Educational and planning-oriented only. Renders a
+non-removable safety disclaimer on every view. Local-state,
+copy-only; no Firestore writes, no AI calls, no hidden writes,
+no real cap table, no equity grants.
+
+### Section configured
+Ch. 3 (`company-structure-and-continuity` studio) gains a new
+section `corporate-structure-and-ownership` titled "Corporate
+Structure and Ownership Model." Owner: Co-CEOs. Reviewer:
+Instructor / Admin. Priority: P1.
+
+### 70/30 ownership model
+Default per the source-of-truth doc: Our City nonprofit 30%,
+student ownership pool 70%. Editable when
+`ownershipModel.allowCustomScenario` is true (set true on the
+configured section). The picker hard-warns when percentages do
+not total 100 and the markdown output flags the gap explicitly.
+
+### Builder behavior summary
+- Entity-type selector across LLC, C-corp, S-corp, employee-owned,
+  co-op, nonprofit-owned subsidiary, classroom venture, and "other
+  / needs adult review." Each option ships an educational
+  explanation, common tradeoffs, and adult-review questions.
+- Editable 70/30 ownership block with total-must-be-100 guard.
+- Student equity allocation table: rows of participant /
+  proposed % / rationale / vesting Yes/No/Undecided / notes.
+  Live total calc + warning when total ≠ student pool %.
+- Vesting block: enabled Yes/No/Undecided + schedule option +
+  cliff/milestone + graduation rule + leaving-early rule +
+  next-cohort rule + unresolved review question.
+- Distribution / dividend draft policy block with explicit
+  rose-toned "not tax or accounting advice" caption.
+- Governance / voting block (product / financial / equity / Our
+  City role / instructor review / unresolved governance question).
+- Graduation / exit / continuity block.
+- Adult / legal review checklist (9 mandatory items including
+  "instructor / adult / legal review completed before any
+  real-world use").
+- Copy markdown output — every output prefixed with the safety
+  disclaimer.
+
+### Adult / legal review guardrails
+- Non-removable rose-toned banner at the top of the builder view.
+- Same disclaimer reprinted at the top of the markdown output.
+- Studio `lesson` copy + `completionCriteria` repeat the
+  disclaimer.
+- Section dependency hint repeats the disclaimer.
+- Coach prompt posture: *"Corporate structure and equity outputs
+  are DRAFT educational models only. NEVER give legal, tax,
+  securities, accounting, or investment advice. Always require
+  instructor / adult / legal review before any real-world use.
+  Renni Command Center cannot create entities, grant equity, or
+  maintain a real cap table."*
+- The Tools brief's hard guardrails are honored: no legal /
+  tax / securities / investment / accounting advice; no entity
+  formation; no equity grants; no cap table; no binding
+  ownership records.
+
+### Task coverage / final-week template changes
+- New executive-lane entry `ch-03:corporate-structure-and-ownership`
+  in `app/utils/finalWeekCompletion.ts` (P1, owner Co-CEOs,
+  reviewer Instructor/Admin).
+- Matching template in `app/utils/finalWeekTaskTemplates.ts`.
+
+### Known limitations
+- The builder is local-state only. Switching sections before
+  copying loses selections.
+- The output is a draft markdown document — not a legal record.
+  Every consumer of the output must keep the safety disclaimer.
+- No live browser smoke this pass. Recommend a 60-second
+  click-through on the new Ch. 3 section to verify the
+  non-removable disclaimer, the entity-type cards, the 70/30
+  guard, the allocation table, and the markdown output.
+
 ## 12. Bottom Line
 
 Claude Code should build **Advisor Mentor + deterministic task visualization** next because it gives chiefs the map they need to direct the room and gives the Advisor grounded facts to explain.

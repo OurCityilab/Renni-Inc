@@ -60,6 +60,22 @@ export const FINAL_WEEK_TASK_TEMPLATES: readonly FinalWeekTaskTemplate[] = [
     sectionId: 'launch-focus',
     priority: 'P0'
   },
+  // Ch. 3 corporate structure (educational draft model — adult / legal review required)
+  {
+    id: 'ch-03:corporate-structure-and-ownership',
+    title:
+      'Draft the corporate structure & ownership model (educational draft — adult / legal review required)',
+    owner: 'Co-CEOs',
+    reviewer: 'Instructor / Admin',
+    dueLabel: 'Final week — late',
+    dependency:
+      'Executive summary and company structure basics (company roles, decision rights, continuity risks)',
+    doneWhen:
+      'Draft model includes entity comparison, 70/30 ownership, student allocation, vesting / exit rules, governance, and adult / legal review checklist. Output carries the "draft educational model — instructor / adult / legal review required" disclaimer.',
+    playbookChapter: 3,
+    sectionId: 'corporate-structure-and-ownership',
+    priority: 'P1'
+  },
   // BMC core
   {
     id: 'ch-04:customer-segments',

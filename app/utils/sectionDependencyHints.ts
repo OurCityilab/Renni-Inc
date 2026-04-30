@@ -106,6 +106,10 @@ export const SECTION_DEPENDENCY_HINTS: SectionDependencyHints = {
     'The next cohort inherits a running operating system, not just an inventory list.',
     'Pulls from operating cadence + vendors + quality control + interest tracker; feeds Ch. 13 next-cohort instructions.'
   ],
+  'corporate-structure-and-ownership': [
+    'Easier after company roles, decision rights, continuity risks, and major decisions are drafted.',
+    'Output is a DRAFT educational model. Not legal, tax, securities, accounting, or investment advice. Instructor / adult / legal review is required before any real-world use.'
+  ],
 
   // Ch. 4 — Business Model Canvas
   'customer-segments': [

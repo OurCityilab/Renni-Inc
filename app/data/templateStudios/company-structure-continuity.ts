@@ -312,6 +312,261 @@ export const companyStructureContinuity: TemplateStudio = {
         ownerHint: 'Co-CEOs',
         doneLooksLike: 'Next cohort has 4 weeks of named, executable activities they could follow without you in the room.'
       }
+    },
+    {
+      id: 'corporate-structure-and-ownership',
+      title: 'Corporate Structure and Ownership Model',
+      lesson:
+        'Draft an educational model for how Renni Inc. could be structured and owned. Compare entity types, define the 30% Our City nonprofit / 70% student ownership split, propose how the 70% student pool gets allocated, draft vesting + distribution policy, sketch governance, and list every question the instructor / adult / legal reviewer needs to answer before any of this is real. This builder is NOT legal, tax, securities, accounting, or investment advice; Renni Command Center cannot create entities, grant equity, or maintain a real cap table.',
+      corporateStructure: {
+        enabled: true,
+        title: 'Corporate Structure and Ownership Model (draft)',
+        intro:
+          'Pick entity types to compare, set the 70/30 ownership model, draft how the student pool gets allocated, sketch vesting / distribution / governance / continuity, and list every adult-review question. Output is a draft educational model — instructor / adult / legal review is required before any real-world use.',
+        copyTitle: 'Corporate Structure and Ownership Model (draft)',
+        adultReviewRequired: true,
+        ownershipModel: {
+          nonprofitSharePercentDefault: 30,
+          studentSharePercentDefault: 70,
+          allowCustomScenario: true
+        },
+        vesting: {
+          enabledDefault: true,
+          scheduleOptions: [
+            'Annual cohort vest (one-time at year end)',
+            'Semester milestone vest',
+            'Project / launch milestone vest',
+            'Cliff + monthly continued vest',
+            'Other (describe)'
+          ],
+          exitRulePrompts: [
+            'What happens to unvested student shares when a student graduates?',
+            'What happens when a student leaves early or transfers?',
+            'How are inherited shares re-allocated to next cohort participants?',
+            'Are there any conditions that should accelerate vesting (e.g. major launch milestone)?'
+          ]
+        },
+        entityTypeOptions: [
+          {
+            id: 'llc',
+            label: 'LLC',
+            educationalExplanation:
+              'A limited liability company. Often used by small ventures because it is flexible about ownership and tax treatment.',
+            commonTradeoffs: [
+              'Members can hold different shares without complex stock structures',
+              'Tax treatment depends on adult / accounting review',
+              'May not fit a school-owned-subsidiary model without legal review'
+            ],
+            adultReviewQuestions: [
+              'Can a school-affiliated nonprofit own 30% of an LLC under our state\'s rules?',
+              'Who signs the operating agreement?',
+              'How are student members documented in a way the school can sign off on?'
+            ]
+          },
+          {
+            id: 'c-corp',
+            label: 'C-corporation',
+            educationalExplanation:
+              'A standard corporation. Has shares and a clear ownership model, but more reporting overhead.',
+            commonTradeoffs: [
+              'Clear cap-table model maps to formal share grants',
+              'Double-tax on dividends in many cases',
+              'More formal annual filings'
+            ],
+            adultReviewQuestions: [
+              'Is this overkill for a student-led venture today?',
+              'Who are the directors, and how does adult oversight work?',
+              'How are minor students named on share records, if at all?'
+            ]
+          },
+          {
+            id: 's-corp',
+            label: 'S-corporation',
+            educationalExplanation:
+              'A corporation with pass-through tax treatment. Limited eligibility rules.',
+            commonTradeoffs: [
+              'Pass-through taxation may be simpler',
+              'Has restrictions on who can be a shareholder',
+              'School / nonprofit ownership may not fit'
+            ],
+            adultReviewQuestions: [
+              'Can a nonprofit hold S-corp shares in our state?',
+              'Are minor students eligible shareholders?',
+              'Do we have an adult tax / accounting reviewer?'
+            ]
+          },
+          {
+            id: 'employee-owned',
+            label: 'Employee-owned model (e.g. ESOP-style)',
+            educationalExplanation:
+              'A model where the people who work in the company own shares of it through a structured plan.',
+            commonTradeoffs: [
+              'Strong fit with student-as-worker-owner ethos',
+              'Real ESOPs are heavily regulated and not student-friendly',
+              'May be educational concept only — not a real legal structure'
+            ],
+            adultReviewQuestions: [
+              'Is this a real ESOP or only the educational idea?',
+              'How does this work in a school-affiliated venture?',
+              'Who oversees compliance?'
+            ]
+          },
+          {
+            id: 'co-op',
+            label: 'Cooperative (co-op)',
+            educationalExplanation:
+              'A member-owned and member-governed organization. Often one-member-one-vote.',
+            commonTradeoffs: [
+              'Strong democratic / student-voice fit',
+              'State co-op laws vary',
+              'Tax treatment differs from corporations'
+            ],
+            adultReviewQuestions: [
+              'Does our state have a youth-friendly co-op statute?',
+              'Who can be a member?',
+              'How do we keep the 70/30 model inside the co-op rules?'
+            ]
+          },
+          {
+            id: 'nonprofit-subsidiary',
+            label: 'Nonprofit-owned subsidiary or affiliated venture',
+            educationalExplanation:
+              'A separate entity owned (in whole or part) by a nonprofit parent. The nonprofit keeps oversight; the venture operates under it.',
+            commonTradeoffs: [
+              'Fits well with Our City nonprofit owning 30%',
+              'Requires careful governance to keep the nonprofit\'s mission protected',
+              'UBIT (unrelated business income tax) considerations may apply'
+            ],
+            adultReviewQuestions: [
+              'How does the nonprofit\'s mission protect itself from venture risk?',
+              'Who serves on a venture board the nonprofit can rely on?',
+              'How do distributions back to the nonprofit work?'
+            ]
+          },
+          {
+            id: 'classroom-venture',
+            label: 'Informal classroom venture (not yet a formed entity)',
+            educationalExplanation:
+              'Renni Inc. operates as a classroom learning venture today. There is no real legal entity yet; this is the most common posture for student work.',
+            commonTradeoffs: [
+              'No filings, no ownership records',
+              'Cannot hold real assets, sign real contracts, or grant real equity',
+              'Best for educational draft modeling and instructor review'
+            ],
+            adultReviewQuestions: [
+              'Does the school want to keep Renni Inc. as a learning venture?',
+              'When (if ever) should formation happen?',
+              'Who decides?'
+            ]
+          },
+          {
+            id: 'other',
+            label: 'Other / needs adult review',
+            educationalExplanation:
+              'A different structure the team wants to explore. Capture what it is and what the team needs answered.',
+            commonTradeoffs: [
+              'Tradeoffs depend on the model',
+              'Adult / legal review required before treating it as real'
+            ],
+            adultReviewQuestions: [
+              'What is this structure called?',
+              'Who has used it for a similar venture?',
+              'What questions does the instructor need answered first?'
+            ]
+          }
+        ],
+        dividendPolicyPrompts: [
+          'If distributions are allowed, how often are they considered (annual, post-launch, never)?',
+          'What expenses must be paid before any distribution?',
+          'How much of net is reinvested in Renni Inc. vs distributed?',
+          'How is a distribution recorded in a way the instructor / accountant can review?',
+          'What happens to a graduating student\'s eligibility for future distributions?'
+        ],
+        votingRightsPrompts: [
+          'Does each student get one vote, or vote share with their equity?',
+          'Does the Our City nonprofit (30%) hold veto rights on certain decisions?',
+          'Which decisions require unanimous chief approval?',
+          'Which decisions require instructor / adult sign-off?',
+          'How are tied votes resolved?'
+        ],
+        graduationRulePrompts: [
+          'What happens to a graduating student\'s vested shares?',
+          'What happens to unvested shares?',
+          'Do alumni keep any rights or roles?',
+          'How are new students invited into the student pool?',
+          'How does the team prevent share concentration over time?'
+        ],
+        unresolvedLegalQuestionPrompts: [
+          'Confirm whether minor students can hold equity in our state without a guardian arrangement.',
+          'Confirm whether a school-affiliated nonprofit can legally own a percentage of the chosen entity type.',
+          'Confirm tax treatment for any distributions, including distributions back to the nonprofit.',
+          'Confirm whether vesting milestones constitute a securities-law triggering event.',
+          'Confirm what filings (if any) Renni Inc. needs to make if the entity is formed.',
+          'Confirm what insurance / liability coverage applies once the venture moves beyond classroom learning.'
+        ]
+      },
+      studentPrompts: [
+        'Pick one or two entity types to compare. Read the explanations and tradeoffs.',
+        'Set or confirm the 70/30 ownership model (Our City nonprofit 30%, student pool 70%).',
+        'Sketch how the 70% student pool gets allocated. Drafts can be partial.',
+        'Decide how vesting, distributions, governance, and graduation work in your draft.',
+        'Tick the adult / legal review checklist as the team confirms each step has been reviewed.',
+        'Copy the draft into Working Draft and add structured evidence for any assumption that needs to be tested.'
+      ],
+      requiredInputs: [
+        'Entity-type comparison (one or more options selected)',
+        '30/70 ownership model (default or edited to total 100%)',
+        'At least one student-allocation row',
+        'A vesting decision (Yes / No / Undecided + rule)',
+        'A distribution-policy stance (Yes / No / Undecided + reasoning)',
+        'A governance sketch (who votes on what)',
+        'Graduation / exit / continuity rules',
+        'A populated adult / legal review checklist with unresolved questions'
+      ],
+      completionCriteria: [
+        'Draft model includes entity comparison, 70/30 ownership, student allocation, vesting / exit rules, governance, and adult / legal review checklist.',
+        'Every output document carries the "draft educational model — instructor / adult / legal review required" disclaimer.',
+        'No claim is made that this is legal, tax, securities, accounting, or investment advice.',
+        'No claim is made that Renni Inc. has formed an entity, granted real equity, or has a legal cap table.'
+      ],
+      expertGuidance: {
+        expertRole: 'Co-CEOs · Instructor / adult reviewer',
+        whyThisMatters:
+          'Students learn the most by working through ownership and governance decisions in plain language and then handing the draft to an adult who can answer the legal questions. The draft is the learning artifact; the real decisions live with the school + adult reviewer.',
+        whatToGather: [
+          'Entity-type comparison + selected option(s)',
+          '30/70 ownership numbers (or edited percentages that total 100%)',
+          'A first-pass student-allocation table',
+          'Vesting + distribution + governance sketches',
+          'Graduation / exit / continuity rules',
+          'A list of unresolved legal / tax / securities / accounting questions'
+        ],
+        weakAnswerLooksLike:
+          '"We will be an LLC owned 70/30 with vesting." — no entity comparison, no allocation table, no review checklist, no unresolved questions list.',
+        strongAnswerLooksLike:
+          'A draft that compares 2–3 entity types in plain language, a clear 30/70 split with student allocation totaling 70%, a real vesting schedule + exit rules, a distribution policy with named approver, governance sketch with Our City\'s role, graduation rules, and an honest unresolved-questions list the instructor can act on.',
+        expertPushback: [
+          'Where is the legal / tax / securities review happening?',
+          'Have we been clear that this is a draft, not a real cap table?',
+          'What happens when students graduate?',
+          'Who decides the entity type — the cohort or the school?'
+        ],
+        commonMistakes: [
+          'Treating the draft as if it were a real cap table.',
+          'Claiming the model is legal, tax, or securities advice.',
+          'Forgetting that minors may not be able to hold equity directly.',
+          'Skipping the 30% Our City nonprofit role in governance.'
+        ],
+        decisionSupported:
+          'Whether — and when — the school should consider real entity formation, and what protections / questions need answers first.',
+        connectsTo: [
+          'Chapter 3 — company roles, decision rights, continuity',
+          'Chapter 13 — decision log + appendices'
+        ],
+        ownerHint: 'Co-CEOs · Instructor / adult reviewer',
+        doneLooksLike:
+          'A reader can follow the draft model and tell what the team is proposing AND what still needs an adult / legal answer before any real-world use.'
+      }
     }
   ],
   requirements: [
