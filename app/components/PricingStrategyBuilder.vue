@@ -74,6 +74,13 @@ const props = defineProps<{
   // no upstream data.
   ch7MarketFit?: MarketFitBuilder | null
   ch7MarketEntries?: MarketBuilderEntry[] | null
+  // Optional shared product-name list (from app/utils/productCatalog).
+  // When non-empty, the Product name input renders a native HTML5
+  // <datalist> autocomplete so students can pick from the Renni
+  // Inc. catalog instead of retyping. The input remains free-text;
+  // the v-model binding, save flow, and form shape are unchanged.
+  // Empty / missing prop preserves the legacy free-text input.
+  productOptions?: string[]
 }>()
 
 const auth = useAuthStore()
@@ -715,10 +722,28 @@ async function copyScaffold() {
             v-model="form.productName"
             :disabled="!editingEnabled"
             type="text"
+            :list="productOptions && productOptions.length ? `psb-products-${sectionId}` : undefined"
             class="mt-0.5 w-full rounded border border-neutral-300 p-1.5 text-sm disabled:bg-neutral-50"
             placeholder="House Phoenix sweatshirt"
             @input="markDirty"
           />
+          <datalist
+            v-if="productOptions && productOptions.length"
+            :id="`psb-products-${sectionId}`"
+          >
+            <option
+              v-for="opt in productOptions"
+              :key="opt"
+              :value="opt"
+            />
+          </datalist>
+          <span
+            v-if="productOptions && productOptions.length"
+            class="mt-0.5 block text-[10px] italic text-neutral-500"
+          >
+            Pick from the Renni Inc. product list or keep typing — your
+            answer is not saved until you press Save.
+          </span>
         </label>
         <label class="text-xs">
           <span class="font-medium text-neutral-700">Product type</span>

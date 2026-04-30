@@ -51,35 +51,64 @@ exists only to seed editable starter rows.
   SOP without helping. The team writes inventory rows in the
   inventory section and references them in the SOP narrative.
 
-## Future product-data wiring (deferred this pass)
+## Product-data wiring (V1 — shipped)
 
-These builders already accept a single `productName` text field but
-do not yet pick from a shared product list. Adding a `productOptions`
-prop would make them consistent with the finance / inventory
-imports. **All four are deferred** because the changes touch large
-files (`PricingStrategyBuilder` ~1870 lines, `MarketFitBuilder` ~2605
-lines) and the connected-classroom sprint did not justify the
-regression risk on launch eve. The launch finance / ops / BMC paths
-do not depend on this wiring — `FinanceTableBuilder` and
-`OperationsChecklistBuilder` already import from the catalog
-directly:
+These builders accept an optional `productOptions?: string[]` prop.
+When the parent passes the list (the workspace passes
+`productNameOptions()` from `productCatalog.ts`), the product-name
+text input renders an HTML5 `<datalist>` for native autocomplete.
+The input remains free-text — the v-model binding, save flow, and
+form shape are unchanged. Empty / missing prop preserves the legacy
+free-text input.
 
-- **MarketFitBuilder** (`app/components/MarketFitBuilder.vue`):
-  `form.productFacts.productName` is a free-text field around line
-  1106. A future pass should accept `productOptions: string[]` from
-  the parent, render a `<select>` populated with `productNameOptions()`
-  from `productCatalog.ts`, and fall back to a free-text input when
-  the prop is empty.
-- **PricingStrategyBuilder** (`app/components/PricingStrategyBuilder.vue`):
-  `form.productName` text input around line 715. Same wiring as
-  MarketFitBuilder; defaults from the catalog could also pre-fill
-  the unit cost and target price inputs in the same pass.
-- **CustomerProfileBuilder** (`app/components/CustomerProfileBuilder.vue`):
-  Currently uses internal state with no product-facing field. If a
-  future iteration asks "what would this customer buy?", that
-  field is the natural place to wire `productOptions`.
-- **BrandFitBuilder** (`app/components/BrandFitBuilder.vue`): No
-  product-named field today. Lower priority.
+**Wired:**
+- `FinanceTableBuilder` — per-row `product` column on every kind
+  that has one (unit-cost, break-even, revenue-scenarios). One
+  shared `<datalist>` per builder instance, referenced by every
+  row's product input.
+- `MarketFitBuilder` — `form.productFacts.productName` input around
+  line 1106. Carries the supportive disclaimer copy: "Use the
+  product list to keep your market-fit work aligned with finance
+  and operations. Selecting a product here does not overwrite your
+  saved answer."
+- `PricingStrategyBuilder` — `form.productName` input around line
+  715. Same supportive disclaimer pattern.
+
+**Not wired (no product-named field today):**
+- `BrandFitBuilder` — no productName field.
+- `CustomerProfileBuilder` — uses internal classifier state with
+  no product-facing field.
+
+**Read-only / copy-only / not-synced:**
+- The datalist surfaces a list of catalog product names. Selecting
+  one fills the bound input with the chosen string. Nothing else
+  changes — no Firestore write, no auto-save, no auto-population
+  of other fields, no overwrite of any other v-model state.
+- Existing student-saved text in any input is **never** overwritten
+  by the datalist or by changing the prop.
+- The catalog itself is in-app data (`app/utils/productCatalog.ts`).
+  Updating products requires editing that file and re-deploying;
+  there is no Firestore-backed catalog yet.
+
+**Future persisted catalog work would require:**
+- A new Firestore collection (e.g. `productCatalog/{itemId}`).
+- Firestore rule additions (read for any authed member; write for
+  chiefs / admins only).
+- A `useProductCatalog` composable mirroring the read-pattern of
+  `useDeliverables` / `useTasks`.
+- A migration of the seed array in `productCatalog.ts` into the
+  collection, plus a fallback path so existing pages keep rendering
+  if the collection is empty.
+- This is intentionally **out of scope** for the connected-classroom
+  passes — see the launch-week posture in
+  `docs/tonight-completion-and-classroom-checklist.md`.
+
+A future pass could optionally extend the wiring to pre-fill
+adjacent numeric fields (e.g. seed `PricingStrategyBuilder`'s unit
+cost and target price from the catalog defaults the moment a
+catalog product is picked). That requires careful UX design — auto-
+filling adjacent fields can silently overwrite student work — so
+it is intentionally not done in V1.
 
 ## Section dependency map
 

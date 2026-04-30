@@ -75,6 +75,12 @@ type Row = Record<string, string>
 
 const props = defineProps<{
   kind: FinanceTableKind
+  // Optional shared product-name list (from app/utils/productCatalog).
+  // When non-empty, the per-row "Product" text column gets a native
+  // HTML5 <datalist> autocomplete so students can pick a catalog
+  // product instead of retyping. The input remains free-text;
+  // v-model and the import / copy / save flow are unchanged.
+  productOptions?: string[]
 }>()
 
 // ---- Column / row config per kind --------------------------------
@@ -509,6 +515,16 @@ async function copyTable(): Promise<void> {
       {{ config.warningBanner }}
     </p>
 
+    <!-- Shared product-name datalist for every row's product column.
+         Native HTML5 autocomplete; the input stays free-text and
+         v-model is unchanged. Rendered once per builder instance. -->
+    <datalist
+      v-if="productOptions && productOptions.length"
+      :id="`ftb-products-${kind}`"
+    >
+      <option v-for="opt in productOptions" :key="opt" :value="opt" />
+    </datalist>
+
     <!-- ===== Row editor ===== -->
     <div class="space-y-3">
       <article
@@ -542,6 +558,11 @@ async function copyTable(): Promise<void> {
                 v-model="row[col.key]"
                 type="text"
                 :placeholder="col.placeholder"
+                :list="
+                  col.key === 'product' && productOptions && productOptions.length
+                    ? `ftb-products-${kind}`
+                    : undefined
+                "
                 class="mt-1 w-full rounded border border-stone-300 bg-white p-1 text-xs"
               />
             </template>

@@ -57,6 +57,7 @@ import FinanceTableBuilder from '~/components/FinanceTableBuilder.vue'
 import OperationsChecklistBuilder from '~/components/OperationsChecklistBuilder.vue'
 import SectionDependencyHint from '~/components/SectionDependencyHint.vue'
 import { getSectionDependencyHints } from '~/utils/sectionDependencyHints'
+import { productNameOptions } from '~/utils/productCatalog'
 import MarketFitBuilder from '~/components/MarketFitBuilder.vue'
 import MarketFitReferencePanel, {
   type ReferencedMarketFitRow
@@ -112,6 +113,15 @@ const runtimeConfig = useRuntimeConfig()
 const customerProfileBuilderEnabled = computed<boolean>(
   () => runtimeConfig.public?.customerProfileBuilderEnabled === true
 )
+
+// Shared product-name list from the in-app product catalog. Passed
+// to FinanceTableBuilder, MarketFitBuilder, and PricingStrategyBuilder
+// so their product-name inputs offer a native HTML5 <datalist>
+// autocomplete instead of forcing students to retype "House Phoenix
+// Beanie" / "Humble Oven Baked Good" each time. Builders accept the
+// list as an optional prop; missing/empty preserves the legacy
+// free-text input. Read-only — no save side effects.
+const productNameList: string[] = productNameOptions()
 
 // In section-filter mode the chapter hub renders the orientation,
 // readiness, navigation, and preview; the workspace only renders the
@@ -2472,7 +2482,10 @@ function shouldOpenDefend(s: TemplateStudioSection): boolean {
           >
             {{ s.financeTable.guidance }}
           </p>
-          <FinanceTableBuilder :kind="s.financeTable.kind" />
+          <FinanceTableBuilder
+            :kind="s.financeTable.kind"
+            :product-options="productNameList"
+          />
         </div>
 
         <!-- Operations Checklist Builder (Ch. 9 launch sections).
@@ -3650,6 +3663,7 @@ function shouldOpenDefend(s: TemplateStudioSection): boolean {
               :initial="persistedMarketFit(s)"
               :editing-enabled="editingEnabled && !isLockedByOther(s)"
               :guidance="s.marketFit?.guidance ?? null"
+              :product-options="productNameList"
             />
           </div>
         </details>
@@ -3718,6 +3732,7 @@ function shouldOpenDefend(s: TemplateStudioSection): boolean {
               :guidance="s.pricingStrategy?.guidance ?? null"
               :ch7-market-fit="ch7MarketFitForPricing"
               :ch7-market-entries="ch7MarketEntriesForPricing"
+              :product-options="productNameList"
             />
           </div>
         </details>

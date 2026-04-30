@@ -72,6 +72,13 @@ const props = defineProps<{
   editingEnabled: boolean
   // Optional studio-provided guidance string shown above the editor.
   guidance?: string | null
+  // Optional shared product-name list (from app/utils/productCatalog).
+  // When non-empty, the Product name input renders a native HTML5
+  // <datalist> autocomplete so students can pick from the Renni
+  // Inc. catalog instead of retyping. The input remains free-text;
+  // the v-model binding, save flow, and form shape are unchanged.
+  // Empty / missing prop preserves the legacy free-text input.
+  productOptions?: string[]
 }>()
 
 const auth = useAuthStore()
@@ -1106,10 +1113,29 @@ async function save() {
             v-model="form.productFacts.productName"
             type="text"
             :disabled="!editingEnabled"
+            :list="productOptions && productOptions.length ? `mfb-products-${sectionId}` : undefined"
             class="mt-1 w-full rounded border border-neutral-300 p-2 text-sm disabled:bg-neutral-50"
             placeholder="House Phoenix Detroit-made sweatshirt"
             @input="markDirty"
           />
+          <datalist
+            v-if="productOptions && productOptions.length"
+            :id="`mfb-products-${sectionId}`"
+          >
+            <option
+              v-for="opt in productOptions"
+              :key="opt"
+              :value="opt"
+            />
+          </datalist>
+          <span
+            v-if="productOptions && productOptions.length"
+            class="mt-1 block text-[10px] italic text-neutral-500"
+          >
+            Use the product list to keep your market-fit work aligned
+            with finance and operations. Selecting a product here
+            does not overwrite your saved answer.
+          </span>
         </label>
         <label class="block text-xs font-medium text-neutral-800">
           Product category
