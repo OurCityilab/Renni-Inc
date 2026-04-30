@@ -17,6 +17,14 @@ export const decisionLogAppendices: TemplateStudio = {
       title: 'Major decisions',
       lesson:
         "List the big calls of the semester — pricing, product, brand, partnerships, ops. A 'major decision' is any call that would have changed downstream chapters if it went the other way.",
+      decisionMemo: {
+        enabled: true,
+        kind: 'major-decisions',
+        title: 'Major Decisions Memo',
+        intro: 'One card per material decision in chronological order. Decision (the call), options weighed, evidence at the time, recommendation, owner, due date that decision had to land.',
+        copyTitle: 'Major decisions',
+        cardCount: 8
+      },
       studentPrompts: [
         'List 8–15 major decisions from the semester.',
         'For each, name the date (or week), the decider, and a one-line summary.',
@@ -39,6 +47,14 @@ export const decisionLogAppendices: TemplateStudio = {
       title: 'Decision rationale',
       lesson:
         'For each major decision, write a short rationale — what the alternatives were, what the team chose, and why. This is the single most useful thing for the next cohort.',
+      decisionMemo: {
+        enabled: true,
+        kind: 'decision-rationale',
+        title: 'Decision Rationale Memo',
+        intro: 'One card per major decision. Lead with the decision, then options, evidence, criteria, recommendation, risk if reversed, owner.',
+        copyTitle: 'Decision rationale',
+        cardCount: 5
+      },
       studentPrompts: [
         'For each decision, write 2–4 sentences of rationale.',
         'Name the alternatives that were considered and rejected.',
@@ -60,6 +76,21 @@ export const decisionLogAppendices: TemplateStudio = {
       title: 'Evidence appendix',
       lesson:
         'Decisions are stronger when the evidence is one click away. Link the customer feedback, vendor quotes, sales data, photos, or notes that backed each major decision.',
+      universalTable: {
+        enabled: true,
+        kind: 'evidence-appendix',
+        title: 'Evidence Appendix Index',
+        intro: 'One row per evidence item. Type, link / location, the decision it backs, owner.',
+        copyTitle: 'Evidence appendix',
+        columns: [
+          { key: 'evidence', label: 'Evidence item', type: 'text', placeholder: 'customer quote · vendor quote · sales data · photo · note', wide: true },
+          { key: 'type', label: 'Type', type: 'select', options: ['Quote', 'Observation', 'Survey', 'Sales data', 'Photo', 'Vendor quote', 'Other'] },
+          { key: 'link', label: 'Link / location', type: 'text', placeholder: 'where to find it', wide: true },
+          { key: 'backsDecision', label: 'Backs decision', type: 'text', placeholder: 'tie to a major decision', wide: true },
+          { key: 'owner', label: 'Owner', type: 'text', placeholder: 'role / name' }
+        ],
+        starterRowCount: 5
+      },
       studentPrompts: [
         'For each major decision, link the supporting evidence (or note that it was qualitative / cohort consensus).',
         'Include the post-event recap when the pop-up closes.',
@@ -75,6 +106,14 @@ export const decisionLogAppendices: TemplateStudio = {
       title: 'Templates and links',
       lesson:
         "Catalog the templates, trackers, and folders the next cohort needs. /pricing, /revenue, the marketing folder, the inventory tracker, the Decision Log itself, and the Playbook source — all of it.",
+      universalChecklist: {
+        enabled: true,
+        kind: 'templates-and-links',
+        title: 'Templates & Links Checklist',
+        intro: 'Each row = one template / tracker / folder. Owner, location, access notes.',
+        copyTitle: 'Templates and links',
+        fields: ['owner', 'materials', 'doneSignal']
+      },
       studentPrompts: [
         'List every internal tool and folder the team used (Workbench, /pricing, /revenue, shared drive folders).',
         'List every external tool (Square, vendors, photo storage).',
@@ -90,6 +129,14 @@ export const decisionLogAppendices: TemplateStudio = {
       title: 'Unresolved decisions',
       lesson:
         'Decisions explicitly punted to the next cohort. Naming them here keeps next cohort from rediscovering each one painfully.',
+      decisionMemo: {
+        enabled: true,
+        kind: 'unresolved-decisions',
+        title: 'Unresolved Decisions Memo',
+        intro: 'One card per decision the team chose not to settle. Decision (the open call), options on the table, evidence collected so far, owner once next cohort takes it.',
+        copyTitle: 'Unresolved decisions',
+        cardCount: 3
+      },
       studentPrompts: [
         'List 3–5 decisions the team did not finish.',
         'For each, name the trigger that would force a decision (a date, a buyer ask, a sales threshold).',
@@ -105,6 +152,14 @@ export const decisionLogAppendices: TemplateStudio = {
       title: 'Next-cohort instructions',
       lesson:
         'A short, plain-language guide to using the appendices. "Read this first, ratify these decisions, ask about these unresolved items, do not lose access to these tools."',
+      universalChecklist: {
+        enabled: true,
+        kind: 'next-cohort-instructions',
+        title: 'Next-Cohort Instructions Checklist',
+        intro: 'Each row = one instruction the next cohort should follow in their first week. Owner, materials, done signal.',
+        copyTitle: 'Next-cohort instructions',
+        fields: ['owner', 'due', 'materials', 'doneSignal']
+      },
       studentPrompts: [
         'Write a 1–2 paragraph "how to use this appendix" intro for the next cohort.',
         'List the 3 things they must do in their first week.',

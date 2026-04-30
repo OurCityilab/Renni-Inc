@@ -17,6 +17,21 @@ export const companyStructureContinuity: TemplateStudio = {
       title: 'Company roles',
       lesson:
         'Start by naming the team — Co-CEOs, chiefs (COO, CFO, CMO, CSGO), members, advisors. Each role gets a one-line "what this person owns" description so a stranger could read the chapter and tell who to ask about what.',
+      universalTable: {
+        enabled: true,
+        kind: 'company-roles',
+        title: 'Company Roles Table',
+        intro: 'Every role on the team. Name the role, person, what they own, and who reports / supports.',
+        copyTitle: 'Company roles',
+        columns: [
+          { key: 'role', label: 'Role', type: 'text', placeholder: 'Co-CEO · COO · CFO · CMO · CSGO · member · advisor' },
+          { key: 'person', label: 'Person', type: 'text', placeholder: 'name' },
+          { key: 'ownership', label: 'What they own', type: 'textarea', placeholder: 'one sentence', wide: true },
+          { key: 'reportsTo', label: 'Reports / supports', type: 'text', placeholder: 'who they pair with', wide: true },
+          { key: 'departments', label: 'Departments', type: 'text', placeholder: 'finance · ops · marketing · …', wide: true }
+        ],
+        starterRowCount: 5
+      },
       studentPrompts: [
         'List the C-Suite roles and the current student in each one.',
         'Write a one-line "what this role owns" description per role.',
@@ -51,6 +66,14 @@ export const companyStructureContinuity: TemplateStudio = {
       title: 'Decision rights',
       lesson:
         'Decision rights say who gets to decide what without asking. A clean rule beats a meeting. Co-CEOs make company-wide calls; chiefs decide inside their department; some calls need both chiefs and Co-CEOs.',
+      decisionMemo: {
+        enabled: true,
+        kind: 'decision-rights',
+        title: 'Decision Rights Memo',
+        intro: 'One card per decision type. Decision (the call), criteria (who decides + when), recommendation (the rule), owner, escalation path under risk.',
+        copyTitle: 'Decision rights',
+        cardCount: 4
+      },
       example:
         '"CFO decides product pricing inside /pricing. Co-CEOs approve any price change above 20% from last cohort."',
       studentPrompts: [
@@ -86,6 +109,14 @@ export const companyStructureContinuity: TemplateStudio = {
       title: 'Accountability rhythm',
       lesson:
         'Accountability rhythm is how often the team checks in, who runs the check-in, and what gets reported. A simple weekly + pre-pop-up + post-pop-up rhythm beats inconsistent ad hoc meetings.',
+      universalChecklist: {
+        enabled: true,
+        kind: 'accountability-rhythm',
+        title: 'Operating Rhythm Checklist',
+        intro: 'Each row = one recurring meeting / check-in / report. Owner, cadence, what gets reported.',
+        copyTitle: 'Operating rhythm',
+        fields: ['owner', 'due', 'doneSignal']
+      },
       studentPrompts: [
         'Name the recurring meetings — weekly stand-up, pre-pop-up review, post-pop-up debrief.',
         'For each meeting, name the owner and the decisions made there.',
@@ -119,6 +150,14 @@ export const companyStructureContinuity: TemplateStudio = {
       title: 'Succession and handoff',
       lesson:
         'Succession is who takes over when someone leaves a role mid-semester. Handoff is the package the next cohort receives in August — roster, trackers, decisions, contacts.',
+      universalChecklist: {
+        enabled: true,
+        kind: 'succession-and-handoff',
+        title: 'Handoff Checklist',
+        intro: 'Each row = one handoff item (asset / process / contact). Backup, lock date, done signal.',
+        copyTitle: 'Succession & handoff plan',
+        fields: ['owner', 'due', 'status', 'backup', 'doneSignal']
+      },
       studentPrompts: [
         'For each C-Suite role, name the backup or shadow.',
         'List what the next cohort receives at handoff: roster, decision log, vendor list, asset folder, KPI snapshot.',
@@ -187,6 +226,21 @@ export const companyStructureContinuity: TemplateStudio = {
       title: 'Continuity risks',
       lesson:
         'Continuity risks are the ways the company could lose knowledge between cohorts — a key student leaving, a vendor relationship that lives only in one inbox, a tool nobody renews.',
+      universalTable: {
+        enabled: true,
+        kind: 'continuity-risks',
+        title: 'Continuity Risk Register',
+        intro: 'One row per continuity risk. Risk, impact, prevention, owner.',
+        copyTitle: 'Continuity risks',
+        columns: [
+          { key: 'risk', label: 'Risk', type: 'text', placeholder: 'what could go wrong between cohorts', wide: true },
+          { key: 'impact', label: 'Impact', type: 'select', options: ['Low', 'Medium', 'High'] },
+          { key: 'prevention', label: 'Prevention', type: 'textarea', placeholder: 'what we do now to prevent it', wide: true },
+          { key: 'owner', label: 'Owner', type: 'text', placeholder: 'role / name' },
+          { key: 'lockDate', label: 'Lock by', type: 'text', placeholder: 'when prevention must be done' }
+        ],
+        starterRowCount: 3
+      },
       studentPrompts: [
         'List 2–3 real continuity risks the team is watching.',
         'For each one, write a one-line mitigation the next cohort can apply.',

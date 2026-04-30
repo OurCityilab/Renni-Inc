@@ -67,6 +67,21 @@ export const pricingBreakEven: TemplateStudio = {
       title: 'How many are we making?',
       lesson:
         'Planned quantity is your inventory bet. Over-order and you eat leftovers; under-order and you leave revenue behind. Small safety stock is better than stockouts for a one-day pop-up.',
+      universalTable: {
+        enabled: true,
+        kind: 'planned-quantity',
+        title: 'Planned Quantity Table',
+        intro: 'One row per product per channel. Cite the basis (past sales, comparable, labeled assumption).',
+        copyTitle: 'Planned quantity',
+        columns: [
+          { key: 'product', label: 'Product', type: 'text', placeholder: 'product name', wide: true, productAutocomplete: true },
+          { key: 'channel', label: 'Channel', type: 'select', options: ['TechTown', 'Phoenix Nest', 'School event', 'Other'] },
+          { key: 'plannedUnits', label: 'Planned units', type: 'number', placeholder: '0' },
+          { key: 'basis', label: 'Basis', type: 'textarea', placeholder: 'past sales · comparable · labeled assumption', wide: true },
+          { key: 'confidence', label: 'Confidence', type: 'select', options: ['Low', 'Medium', 'High'] }
+        ],
+        starterRowCount: 4
+      },
       studentPrompts: [
         'How many students will realistically walk the TechTown floor that day?',
         'What conversion rate does the team assume (10%, 15%)? Why?',
@@ -210,6 +225,20 @@ export const pricingBreakEven: TemplateStudio = {
       title: 'Post-event recap structure',
       lesson:
         'A post-event recap is the one chance to compare scenario to actuals while memory is fresh. Write the structure now so on Sunday after the pop-up, the team just fills it in.',
+      universalTable: {
+        enabled: true,
+        kind: 'post-event-recap',
+        title: 'Post-Event Recap Structure',
+        intro: 'One row per metric to capture after the pop-up. Source, owner, fill-by deadline.',
+        copyTitle: 'Post-event recap',
+        columns: [
+          { key: 'metric', label: 'Metric / lesson', type: 'text', placeholder: 'revenue · units · donations · conversion · lesson', wide: true },
+          { key: 'source', label: 'Source', type: 'text', placeholder: '/revenue · day-of tally · debrief notes', wide: true },
+          { key: 'owner', label: 'Owner', type: 'text', placeholder: 'role / name' },
+          { key: 'fillBy', label: 'Fill by', type: 'text', placeholder: 'within 48 hours of event' }
+        ],
+        starterRowCount: 5
+      },
       studentPrompts: [
         'List the recap sections: actual vs. scenario revenue, donation total, top sellers, slow movers, what to change next time.',
         'Name the owner (CFO) and the deadline (within 7 days of the pop-up).',

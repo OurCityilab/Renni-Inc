@@ -130,6 +130,23 @@ export interface TemplateStudioSection {
       | 'cost-structure'
     guidance?: string
   }
+  // Universal builder configs (Pass A — Universal Builder Foundation Pack).
+  // Three reusable copy-only builders that cover most table /
+  // checklist / decision-memo sections without forcing per-section
+  // bespoke components. Local-state only; no Firestore writes; no
+  // automatic Working-Draft writes; no save handler. Each builder
+  // surfaces a "Copy as markdown" button for the standard handoff:
+  // build → copy → paste → edit → add evidence → save → submit.
+  //
+  // Sections without these configs render exactly as they do today.
+  // When an existing primary builder (financeTable / operationsChecklist
+  // / chipPickQuickStart / keyActivities / marketFit / brandFit /
+  // pricingStrategy) is enabled on the same section, the workspace
+  // does NOT mount the universal builder — the existing primary
+  // wins to prevent duplicate / conflicting surfaces.
+  universalTable?: UniversalTableBuilderConfig
+  universalChecklist?: UniversalChecklistBuilderConfig
+  decisionMemo?: DecisionMemoBuilderConfig
   // Operations Checklist / SOP Builder visibility metadata. Same
   // opt-in pattern. The `kind` selector picks which checklist /
   // SOP shape the shared OperationsChecklistBuilder renders:
@@ -156,6 +173,117 @@ export interface TemplateStudioSection {
   // Renders via ExpertGuidanceCard inside the section workspace
   // alongside the existing SectionGuidanceSummary.
   expertGuidance?: ExpertGuidance
+}
+
+// Universal builder field types — Pass A.
+//
+// Three optional configs on TemplateStudioSection (universalTable,
+// universalChecklist, decisionMemo) drive three reusable copy-only
+// builders. Each renders a structured surface, ships a markdown
+// copy, and lets the student paste into Working Draft. None save
+// to Firestore.
+
+export type CopyOnlyBuilderFieldType =
+  | 'text'
+  | 'number'
+  | 'select'
+  | 'textarea'
+
+export interface CopyOnlyBuilderColumn {
+  /** Field key on the row object. */
+  key: string
+  /** Visible label. */
+  label: string
+  type: CopyOnlyBuilderFieldType
+  /** Options for select columns. */
+  options?: string[]
+  placeholder?: string
+  /** Whether the column should span two grid columns on the row
+   *  editor (used for free-text columns like assumption / source). */
+  wide?: boolean
+  /** When true and the parent passes `productOptions`, the column's
+   *  text input renders an HTML5 `<datalist>` autocomplete sourced
+   *  from the Renni Inc. product catalog. The input remains free
+   *  text — autocomplete only suggests. */
+  productAutocomplete?: boolean
+}
+
+export interface UniversalTableBuilderConfig {
+  enabled: boolean
+  /** Stable string used in copy headers and analytics. */
+  kind: string
+  title: string
+  intro?: string
+  columns: CopyOnlyBuilderColumn[]
+  /** Pre-populated rows. Each row is a map of column-key → string
+   *  value. The builder mounts these into local state on first
+   *  render. */
+  starterRows?: Array<Record<string, string>>
+  /** When `starterRows` is omitted, this many empty rows are seeded. */
+  starterRowCount?: number
+  /** Header label for the markdown copy block. */
+  copyTitle?: string
+  /** Optional one-line evidence reminder shown above the editor. */
+  evidencePrompt?: string
+}
+
+export interface UniversalChecklistBuilderRow {
+  label: string
+  owner?: string
+  due?: string
+  status?: 'Not started' | 'In progress' | 'Ready' | 'Blocked'
+  materials?: string
+  backup?: string
+  doneSignal?: string
+  risk?: string
+  nextStep?: string
+}
+
+export type UniversalChecklistBuilderField =
+  | 'owner'
+  | 'due'
+  | 'status'
+  | 'materials'
+  | 'backup'
+  | 'doneSignal'
+  | 'risk'
+  | 'nextStep'
+
+export interface UniversalChecklistBuilderConfig {
+  enabled: boolean
+  kind: string
+  title: string
+  intro?: string
+  /** Pre-populated rows. The builder mounts these into local state. */
+  rows?: UniversalChecklistBuilderRow[]
+  /** Optional explicit field list. When omitted, the builder shows
+   *  every supported field column. */
+  fields?: UniversalChecklistBuilderField[]
+  copyTitle?: string
+}
+
+export interface DecisionMemoBuilderCard {
+  decision?: string
+  options?: string
+  evidence?: string
+  criteria?: string
+  recommendation?: string
+  risk?: string
+  owner?: string
+  dueDate?: string
+  definitionOfDone?: string
+}
+
+export interface DecisionMemoBuilderConfig {
+  enabled: boolean
+  kind: string
+  title: string
+  intro?: string
+  /** Pre-populated cards. The builder mounts these into local state. */
+  starterCards?: DecisionMemoBuilderCard[]
+  /** When `starterCards` is omitted, this many empty cards are seeded. */
+  cardCount?: number
+  copyTitle?: string
 }
 
 // ChipPickQuickStartConfig — Customer Segments QuickStart Sprint.

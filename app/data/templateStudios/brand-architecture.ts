@@ -74,6 +74,27 @@ export const brandArchitecture: TemplateStudio = {
       title: 'The brand portfolio at a glance',
       lesson:
         'A brand portfolio diagram or list shows the family in one view: parent, primary, supporting. Use a simple diagram or a clear list — fancy is not the goal, clarity is.',
+      universalTable: {
+        enabled: true,
+        kind: 'brand-portfolio',
+        title: 'Brand Portfolio Table',
+        intro: 'One row per brand: parent, primary, supporting. Name role, audience, products, and how it relates to House Phoenix.',
+        copyTitle: 'Brand portfolio',
+        columns: [
+          { key: 'brand', label: 'Brand', type: 'text', placeholder: 'Renni Inc. · House Phoenix · Lumen · Notice · Humble Oven' },
+          { key: 'role', label: 'Role', type: 'select', options: ['Parent', 'Primary', 'Supporting'] },
+          { key: 'audience', label: 'Audience', type: 'text', placeholder: 'who it serves', wide: true },
+          { key: 'products', label: 'Products', type: 'text', placeholder: 'what it sells', wide: true },
+          { key: 'relationship', label: 'Relationship to House Phoenix', type: 'textarea', placeholder: 'how it connects but stays distinct', wide: true }
+        ],
+        starterRows: [
+          { brand: 'Renni Inc.', role: 'Parent' },
+          { brand: 'House Phoenix', role: 'Primary' },
+          { brand: 'Lumen', role: 'Supporting' },
+          { brand: 'Notice', role: 'Supporting' },
+          { brand: 'Humble Oven', role: 'Supporting' }
+        ]
+      },
       studentPrompts: [
         'List Renni Inc. (parent), House Phoenix (primary), and Lumen / Notice / Humble Oven (supporting).',
         'For each brand, write one line that names what it sells or represents.',
@@ -157,6 +178,26 @@ export const brandArchitecture: TemplateStudio = {
       title: 'Supporting brands — Lumen, Notice, Humble Oven',
       lesson:
         'Supporting brands add range without diluting the primary. Each one needs a clear role: candles, jewelry, baked goods. Write each as if you were introducing them to a Phoenix Nest buyer.',
+      universalTable: {
+        enabled: true,
+        kind: 'supporting-brands',
+        title: 'Supporting Brand Cards',
+        intro: 'One row per supporting brand. Purpose, product, audience, owner, current state.',
+        copyTitle: 'Supporting brands',
+        columns: [
+          { key: 'brand', label: 'Brand', type: 'select', options: ['Lumen', 'Notice', 'Humble Oven'] },
+          { key: 'purpose', label: 'Purpose', type: 'textarea', placeholder: 'why it exists', wide: true },
+          { key: 'product', label: 'Product', type: 'text', placeholder: 'what it sells', wide: true },
+          { key: 'audience', label: 'Audience', type: 'text', placeholder: 'who it serves', wide: true },
+          { key: 'owner', label: 'Owner', type: 'text', placeholder: 'role / name' },
+          { key: 'state', label: 'State', type: 'select', options: ['Live', 'Pilot', 'Pending', 'Pause'] }
+        ],
+        starterRows: [
+          { brand: 'Lumen' },
+          { brand: 'Notice' },
+          { brand: 'Humble Oven' }
+        ]
+      },
       studentPrompts: [
         'Lumen: what does the candle brand sell, and who is it for?',
         'Notice: what does the jewelry brand sell, and who is it for?',
@@ -239,6 +280,14 @@ export const brandArchitecture: TemplateStudio = {
       title: 'Open questions for the next cohort',
       lesson:
         'The brand system will keep evolving. Naming the open questions honestly is more useful than pretending everything is decided.',
+      decisionMemo: {
+        enabled: true,
+        kind: 'future-brand-questions',
+        title: 'Future Brand Decisions',
+        intro: 'One card per open question the next cohort will need to answer. Decision (the question), options on the table, evidence so far, owner.',
+        copyTitle: 'Future brand questions',
+        cardCount: 3
+      },
       studentPrompts: [
         'What brand questions are still unresolved (new sub-brand, naming, retired brand)?',
         'What customer confusion has the team observed so far?',
@@ -341,6 +390,19 @@ export const brandArchitecture: TemplateStudio = {
       title: 'Values — how Renni Inc. behaves',
       lesson:
         'Values are short and memorable. Three to five is the sweet spot. Each value should be specific enough that two students would behave the same way under it, and tied to student ownership and a professional standard.',
+      universalTable: {
+        enabled: true,
+        kind: 'values',
+        title: 'Values Table',
+        intro: 'Three to five values. Each row: value, definition, what it means in practice.',
+        copyTitle: 'Values',
+        columns: [
+          { key: 'value', label: 'Value', type: 'text', placeholder: 'one or two words' },
+          { key: 'definition', label: 'Definition', type: 'textarea', placeholder: 'one sentence', wide: true },
+          { key: 'inPractice', label: 'In practice', type: 'textarea', placeholder: 'a behavior anyone could repeat', wide: true }
+        ],
+        starterRowCount: 4
+      },
       studentPrompts: [
         'List 3–5 values. Pick words you can defend, not words that sound good.',
         'For each one, write a single line about what it means inside Renni Inc.',
@@ -376,6 +438,19 @@ export const brandArchitecture: TemplateStudio = {
       title: 'Values in action',
       lesson:
         'A value only counts if it changes behavior. Pair each value with a real example from a product, pricing, marketing, or operations decision the team has actually made.',
+      universalTable: {
+        enabled: true,
+        kind: 'values-in-action',
+        title: 'Values in Action Table',
+        intro: 'Each row pairs a value with a real decision the team made under it. Vague examples do not count.',
+        copyTitle: 'Values in action',
+        columns: [
+          { key: 'value', label: 'Value', type: 'text', placeholder: 'tie back to the values list' },
+          { key: 'decision', label: 'Real decision', type: 'textarea', placeholder: 'what we actually did', wide: true },
+          { key: 'why', label: 'Why this proves the value', type: 'textarea', placeholder: 'how it shows the value in practice', wide: true }
+        ],
+        starterRowCount: 3
+      },
       studentPrompts: [
         'For each value, name one decision the team made because of it.',
         'For each value, name one decision the team would refuse because of it.',
@@ -409,6 +484,14 @@ export const brandArchitecture: TemplateStudio = {
       title: 'Decision rules',
       lesson:
         'Translate the values into 3–5 simple rules the team can use when an in-the-moment call needs to be made — at the pop-up table, in a vendor email, in a Phoenix Nest pitch.',
+      decisionMemo: {
+        enabled: true,
+        kind: 'decision-rules',
+        title: 'Decision Rules Memo',
+        intro: 'One card per rule: the rule (decision), when it applies (criteria), the recommendation, owner, definition of done.',
+        copyTitle: 'Decision rules',
+        cardCount: 4
+      },
       studentPrompts: [
         'Write decision rules in the form "If X, we will Y."',
         'Make sure each rule traces back to a value.',

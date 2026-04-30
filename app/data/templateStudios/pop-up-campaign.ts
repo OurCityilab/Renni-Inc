@@ -89,6 +89,21 @@ export const popUpCampaign: TemplateStudio = {
       title: 'Customer problems and desires',
       lesson:
         'A problem is what the customer is trying to fix. A desire is what they are trying to feel. Both shape what the team should make and how the team should sell.',
+      universalTable: {
+        enabled: true,
+        kind: 'customer-problems-and-desires',
+        title: 'Problem & Desire Map',
+        intro: 'One row per customer segment. Problem they are fixing, desire they want to feel, evidence for both.',
+        copyTitle: 'Customer problems & desires',
+        columns: [
+          { key: 'segment', label: 'Customer segment', type: 'text', placeholder: 'specific group', wide: true },
+          { key: 'problem', label: 'Problem', type: 'textarea', placeholder: 'what they are trying to fix', wide: true },
+          { key: 'desire', label: 'Desire', type: 'textarea', placeholder: 'what they want to feel', wide: true },
+          { key: 'evidence', label: 'Evidence', type: 'textarea', placeholder: 'quote · observation · labeled assumption', wide: true },
+          { key: 'confidence', label: 'Confidence', type: 'select', options: ['Low', 'Medium', 'High'] }
+        ],
+        starterRowCount: 2
+      },
       studentPrompts: [
         'For each customer group, what problem does Renni Inc. or House Phoenix help solve?',
         'For each customer group, what do they want to feel by buying or wearing the product?',
@@ -153,6 +168,21 @@ export const popUpCampaign: TemplateStudio = {
       title: 'Evidence behind the insights',
       lesson:
         'Every insight needs a source. Sources can be conversations, observations, surveys, sales conversations, or assumptions — but assumptions must be labeled as assumptions.',
+      universalTable: {
+        enabled: true,
+        kind: 'insight-evidence',
+        title: 'Insight Evidence Table',
+        intro: 'One row per insight. Source, type, confidence, what to validate next.',
+        copyTitle: 'Insight evidence',
+        columns: [
+          { key: 'insight', label: 'Insight', type: 'textarea', placeholder: 'one sentence the team believes', wide: true },
+          { key: 'source', label: 'Source', type: 'text', placeholder: 'who/where it came from', wide: true },
+          { key: 'sourceType', label: 'Source type', type: 'select', options: ['Quote', 'Observation', 'Survey', 'Sales data', 'Labeled assumption'] },
+          { key: 'confidence', label: 'Confidence', type: 'select', options: ['Low', 'Medium', 'High'] },
+          { key: 'validateNext', label: 'Validate next', type: 'text', placeholder: 'what would prove this further', wide: true }
+        ],
+        starterRowCount: 3
+      },
       studentPrompts: [
         'For each problem or desire, name the source: feedback, observation, survey, sales conversation, or assumption.',
         'Quote real customers if you have notes — quotes are stronger than paraphrases.',
@@ -180,6 +210,14 @@ export const popUpCampaign: TemplateStudio = {
       title: 'Feedback plan',
       lesson:
         'Feedback is what makes the next cohort better than this one. Plan how the team will collect feedback at the pop-up, after the pop-up, and after the Phoenix Nest pitch.',
+      universalChecklist: {
+        enabled: true,
+        kind: 'feedback-plan',
+        title: 'Feedback Plan Checklist',
+        intro: 'Each row = one feedback collection moment. Owner, materials, when, where to log.',
+        copyTitle: 'Feedback plan',
+        fields: ['owner', 'due', 'materials', 'doneSignal']
+      },
       studentPrompts: [
         'How will the team collect customer feedback at the booth (paper, link, conversation)?',
         'What two questions will the team ask every customer?',
@@ -353,6 +391,21 @@ export const popUpCampaign: TemplateStudio = {
       title: 'How will we know what worked?',
       lesson:
         'Even a single question at the table — "How did you hear about us?" — gives next cohort signal. No analytics required.',
+      universalTable: {
+        enabled: true,
+        kind: 'campaign-measurement',
+        title: 'Campaign Measurement Table',
+        intro: 'One row per measurable signal. Source, how to capture, owner, what counts as success.',
+        copyTitle: 'Measurement plan',
+        columns: [
+          { key: 'signal', label: 'Signal', type: 'text', placeholder: 'foot traffic · revenue · conversations · sign-ups', wide: true },
+          { key: 'capture', label: 'How to capture', type: 'textarea', placeholder: 'tally · survey · /revenue · debrief', wide: true },
+          { key: 'source', label: 'Source', type: 'text', placeholder: 'where the data comes from' },
+          { key: 'owner', label: 'Owner', type: 'text', placeholder: 'role / name' },
+          { key: 'success', label: 'What counts as success', type: 'textarea', placeholder: 'the threshold or outcome', wide: true }
+        ],
+        starterRowCount: 3
+      },
       studentPrompts: [
         'What 1-2 signals will we capture pop-up day?',
         'Who owns asking?'

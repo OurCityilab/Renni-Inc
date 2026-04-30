@@ -137,6 +137,26 @@ export const supportingBrandSheets: TemplateStudio = {
       title: 'Supporting brand comparison',
       lesson:
         'A side-by-side view of all three supporting brands — audience, products, voice, price points — exposes overlaps and gaps the team should fix before launch.',
+      universalTable: {
+        enabled: true,
+        kind: 'supporting-brand-comparison',
+        title: 'Supporting Brand Comparison',
+        intro: 'One row per supporting brand. Compare audience, products, voice, price, overlap risk.',
+        copyTitle: 'Supporting brand comparison',
+        columns: [
+          { key: 'brand', label: 'Brand', type: 'select', options: ['Lumen', 'Notice', 'Humble Oven'] },
+          { key: 'audience', label: 'Audience', type: 'text', placeholder: 'who it serves', wide: true },
+          { key: 'products', label: 'Products', type: 'text', placeholder: 'what it sells', wide: true },
+          { key: 'voice', label: 'Voice', type: 'text', placeholder: 'how it sounds', wide: true },
+          { key: 'pricePoints', label: 'Price points', type: 'text', placeholder: 'rough range' },
+          { key: 'overlapRisk', label: 'Overlap / risk', type: 'textarea', placeholder: 'where it might step on House Phoenix or another brand', wide: true }
+        ],
+        starterRows: [
+          { brand: 'Lumen' },
+          { brand: 'Notice' },
+          { brand: 'Humble Oven' }
+        ]
+      },
       studentPrompts: [
         'Build a comparison table: brand × audience × products × voice × price range × launch status.',
         'Where do two brands compete for the same customer? Is that fine or a fix?',
@@ -181,6 +201,14 @@ export const supportingBrandSheets: TemplateStudio = {
       title: 'Launch readiness',
       lesson:
         'Each supporting brand has its own readiness state for TechTown and Phoenix Nest. Lay it out honestly — production status, inventory, signage, photography, pricing.',
+      universalChecklist: {
+        enabled: true,
+        kind: 'launch-readiness',
+        title: 'Launch Readiness Checklist',
+        intro: 'One row per supporting brand readiness item. Status, owner, fix needed, lock date.',
+        copyTitle: 'Launch readiness',
+        fields: ['owner', 'due', 'status', 'risk', 'nextStep']
+      },
       studentPrompts: [
         'For each supporting brand, name TechTown readiness on a "ready / behind / blocked" scale.',
         'For each, name Phoenix Nest carry readiness — could a buyer place an order today?',
@@ -206,6 +234,14 @@ export const supportingBrandSheets: TemplateStudio = {
       title: 'Open questions',
       lesson:
         'Close the chapter with the questions the next cohort should pick up — new SKUs, shared production, brand consolidation, retail-only lines.',
+      decisionMemo: {
+        enabled: true,
+        kind: 'supporting-brand-open-questions',
+        title: 'Open Question Memo',
+        intro: 'One card per open question. Decision (the question), options the team weighed, evidence so far, owner, definition of done.',
+        copyTitle: 'Open questions',
+        cardCount: 3
+      },
       studentPrompts: [
         'List 2–3 open questions about the supporting brands as a system.',
         'For each, name the trigger that would resolve it (a sales threshold, a buyer ask, a cohort decision).',

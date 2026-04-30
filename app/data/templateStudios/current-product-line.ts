@@ -17,6 +17,22 @@ export const currentProductLine: TemplateStudio = {
       title: 'Current product list',
       lesson:
         'Open the chapter by listing every product the pop-up actually sells. The list should match what is on /pricing and on the table at TechTown.',
+      universalTable: {
+        enabled: true,
+        kind: 'product-list',
+        title: 'Product List Table',
+        intro: 'One row per product. Use the product autocomplete on the Product column to pull from the Renni Inc. catalog.',
+        copyTitle: 'Current product list',
+        columns: [
+          { key: 'product', label: 'Product', type: 'text', placeholder: 'House Phoenix Beanie · Humble Oven Baked Good · Donations', wide: true, productAutocomplete: true },
+          { key: 'brand', label: 'Brand', type: 'text', placeholder: 'House Phoenix · Humble Oven · Renni Inc.' },
+          { key: 'qtyReady', label: 'Qty ready', type: 'number', placeholder: '12' },
+          { key: 'sizes', label: 'Sizes / variants', type: 'text', placeholder: 'S/M/L · flavor', wide: true },
+          { key: 'state', label: 'State', type: 'select', options: ['Ready', 'Pending', 'Pilot', 'Not in lineup'] },
+          { key: 'owner', label: 'Owner', type: 'text', placeholder: 'role / name' }
+        ],
+        starterRowCount: 4
+      },
       example:
         'House Phoenix beanies, House Phoenix sweatshirts, House Phoenix t-shirts, Humble Oven baked goods, Renni Inc. community donations.',
       studentPrompts: [
@@ -35,6 +51,20 @@ export const currentProductLine: TemplateStudio = {
       title: 'Product story',
       lesson:
         'Every product needs a one- or two-sentence story — what it is, who it is for, and why it belongs in the House Phoenix line. This is the language the CMO would use at the table.',
+      universalTable: {
+        enabled: true,
+        kind: 'product-story',
+        title: 'Product Story Table',
+        intro: 'One row per product. Customer in mind, why it matters, the line a CMO would say at the table.',
+        copyTitle: 'Product story',
+        columns: [
+          { key: 'product', label: 'Product', type: 'text', placeholder: 'product name', wide: true, productAutocomplete: true },
+          { key: 'customer', label: 'Customer in mind', type: 'text', placeholder: 'specific segment', wide: true },
+          { key: 'why', label: 'Why it matters', type: 'textarea', placeholder: 'what makes it worth more than a generic version', wide: true },
+          { key: 'tableLine', label: 'Line at the table', type: 'textarea', placeholder: 'one sentence to say at TechTown', wide: true }
+        ],
+        starterRowCount: 4
+      },
       studentPrompts: [
         'Write a short product story for each product (1–2 sentences).',
         'Tie each story back to House Phoenix — what makes it a Phoenix product, not just merch?',
@@ -105,6 +135,22 @@ export const currentProductLine: TemplateStudio = {
       title: 'Inventory readiness',
       lesson:
         'A buyer or teacher will ask "do you have it?" Inventory readiness is the honest answer — what is on hand, what is ordered, what is at risk.',
+      universalTable: {
+        enabled: true,
+        kind: 'inventory-readiness',
+        title: 'Inventory Readiness Table',
+        intro: 'One row per product. On hand vs expected vs gap, with owner + close-by date.',
+        copyTitle: 'Inventory readiness',
+        columns: [
+          { key: 'product', label: 'Product', type: 'text', placeholder: 'product name', wide: true, productAutocomplete: true },
+          { key: 'onHand', label: 'On hand', type: 'number', placeholder: '0' },
+          { key: 'expected', label: 'Expected', type: 'number', placeholder: '0' },
+          { key: 'gap', label: 'Gap', type: 'text', placeholder: 'units short or "ready"', wide: true },
+          { key: 'owner', label: 'Owner', type: 'text', placeholder: 'role / name' },
+          { key: 'closeBy', label: 'Close by', type: 'text', placeholder: 'when the gap must close' }
+        ],
+        starterRowCount: 4
+      },
       studentPrompts: [
         'For each product, state on-hand quantity, ordered quantity, and ETA.',
         'For baked goods, note when production happens and how shelf life is handled.',
@@ -127,6 +173,21 @@ export const currentProductLine: TemplateStudio = {
       title: 'Pricing risks and open questions',
       lesson:
         'Name the pricing risks honestly — too high, too low, vendor cost change, donation tracking. Two or three is enough.',
+      universalTable: {
+        enabled: true,
+        kind: 'pricing-risks',
+        title: 'Pricing Risk Register',
+        intro: 'One row per pricing risk. Missing data, owner, next step, impact if unresolved.',
+        copyTitle: 'Pricing risks',
+        columns: [
+          { key: 'risk', label: 'Risk', type: 'text', placeholder: 'what could go wrong', wide: true },
+          { key: 'missingData', label: 'Missing data', type: 'textarea', placeholder: 'what we still need to know', wide: true },
+          { key: 'owner', label: 'Owner', type: 'text', placeholder: 'role / name' },
+          { key: 'nextStep', label: 'Next step', type: 'text', placeholder: 'what unblocks the risk', wide: true },
+          { key: 'impact', label: 'Impact if unresolved', type: 'select', options: ['Low', 'Medium', 'High'] }
+        ],
+        starterRowCount: 3
+      },
       studentPrompts: [
         'List the top pricing risks the team is watching.',
         'For each risk, write one line on what the team will do if it materializes.',

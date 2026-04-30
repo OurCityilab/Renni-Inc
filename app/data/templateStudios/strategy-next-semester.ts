@@ -91,6 +91,14 @@ export const strategyNextSemester: TemplateStudio = {
       title: 'Operational lessons',
       lesson:
         'The COO\'s view: which SOPs held up under pop-up pressure, which broke, and what the next cohort should change. Include staffing, inventory, baked-goods handling, handoff.',
+      universalChecklist: {
+        enabled: true,
+        kind: 'operational-lessons',
+        title: 'Operational Lessons Checklist',
+        intro: 'Each row = one operational lesson. Owner of the change, what next cohort should do, done signal.',
+        copyTitle: 'Operational lessons',
+        fields: ['owner', 'status', 'doneSignal', 'nextStep']
+      },
       studentPrompts: [
         'Which SOP saved the team time? Which one cost the team time?',
         'What was the biggest day-of operational surprise?',
@@ -159,6 +167,22 @@ export const strategyNextSemester: TemplateStudio = {
       title: 'Next-semester goals',
       lesson:
         'A short list of measurable goals — three to five — for the next cohort. These should be ambitious but defensible against the actual results of this semester.',
+      universalTable: {
+        enabled: true,
+        kind: 'next-semester-goals',
+        title: 'Next-Semester Goals Table',
+        intro: 'Each row = one measurable goal. Metric, target, owner, baseline from this cohort.',
+        copyTitle: 'Next-semester goals',
+        columns: [
+          { key: 'goal', label: 'Goal', type: 'text', placeholder: 'one short headline', wide: true },
+          { key: 'metric', label: 'Metric', type: 'text', placeholder: 'gross revenue · units · segments validated' },
+          { key: 'target', label: 'Target', type: 'text', placeholder: 'e.g. $X,XXX or 25%' },
+          { key: 'owner', label: 'Owner', type: 'text', placeholder: 'CFO · CMO · CSGO · COO' },
+          { key: 'baseline', label: 'Baseline (this cohort)', type: 'text', placeholder: 'the actual number this cohort hit', wide: true },
+          { key: 'confidence', label: 'Confidence', type: 'select', options: ['Low', 'Medium', 'High'] }
+        ],
+        starterRowCount: 3
+      },
       studentPrompts: [
         'List 3–5 next-semester goals tied to measurable outcomes.',
         'For each goal, name the metric and the rough target.',
@@ -199,6 +223,20 @@ export const strategyNextSemester: TemplateStudio = {
       title: 'Risks and open questions',
       lesson:
         'Strategy without risks is wishful thinking. Name the things that could derail next semester and the questions the team did not have time to answer.',
+      universalTable: {
+        enabled: true,
+        kind: 'risks-and-open-questions',
+        title: 'Risks & Open Questions Table',
+        intro: 'One row per risk OR open question. Type, response option, owner.',
+        copyTitle: 'Risks and open questions',
+        columns: [
+          { key: 'item', label: 'Risk or question', type: 'textarea', placeholder: 'state it as a risk or as a real question', wide: true },
+          { key: 'type', label: 'Type', type: 'select', options: ['Risk', 'Open question'] },
+          { key: 'response', label: 'Response / experiment', type: 'textarea', placeholder: 'one-line plan', wide: true },
+          { key: 'owner', label: 'Owner', type: 'text', placeholder: 'role / name' }
+        ],
+        starterRowCount: 4
+      },
       studentPrompts: [
         'List 2–4 strategic risks for next semester.',
         'For each one, write a one-line response option.',

@@ -168,6 +168,21 @@ export const businessModelCanvas: TemplateStudio = {
       title: 'Channels',
       lesson:
         'Channels are where Renni Inc. customers find, buy, receive, and respond. TechTown is one sales channel, Phoenix Nest is another possible retail-carry channel, and student / community reach is how word spreads. Channels are not the same as activities — they are the routes the business uses, repeatedly.',
+      universalTable: {
+        enabled: true,
+        kind: 'channels',
+        title: 'Channel Map',
+        intro: 'One row per channel. Awareness vs sale vs fulfillment vs follow-up. Square is the external POS — never a checkout you build here.',
+        copyTitle: 'Channels',
+        columns: [
+          { key: 'channel', label: 'Channel', type: 'text', placeholder: 'TechTown · Phoenix Nest · school events · social', wide: true },
+          { key: 'stage', label: 'Stage', type: 'select', options: ['Awareness', 'Sale', 'Fulfillment', 'Follow-up'] },
+          { key: 'segment', label: 'Customer segment', type: 'text', placeholder: 'who this channel reaches', wide: true },
+          { key: 'state', label: 'State', type: 'select', options: ['Real today', 'Aspirational'] },
+          { key: 'evidence', label: 'Evidence / assumption', type: 'textarea', placeholder: 'past conversion · comparable · labeled assumption', wide: true }
+        ],
+        starterRowCount: 4
+      },
       studentPrompts: [
         'List every channel: TechTown pop-up, Phoenix Nest pitch, school / community events, social media, word-of-mouth.',
         'Mark which channels exist today vs. which are aspirational.',
@@ -212,6 +227,21 @@ export const businessModelCanvas: TemplateStudio = {
       title: 'Customer relationships',
       lesson:
         'Customer relationships describe how Renni Inc. treats customers — at TechTown, through Phoenix Nest carry, online, and after the sale. Relationships are how a one-time buyer becomes a repeat buyer or advocate, and they apply across every sales channel, not just one event.',
+      universalTable: {
+        enabled: true,
+        kind: 'customer-relationships',
+        title: 'Relationship Model Table',
+        intro: 'Each row: customer segment, before-sale interaction, sale moment, after-sale follow-up, brand-voice cue.',
+        copyTitle: 'Customer relationships',
+        columns: [
+          { key: 'segment', label: 'Customer segment', type: 'text', placeholder: 'tie back to Customer Segments', wide: true },
+          { key: 'beforeSale', label: 'Before sale', type: 'textarea', placeholder: 'how they hear about us / decide to come', wide: true },
+          { key: 'saleMoment', label: 'Sale moment', type: 'textarea', placeholder: 'how the buy itself feels', wide: true },
+          { key: 'afterSale', label: 'After sale', type: 'textarea', placeholder: 'thank-you · follow-up · second-purchase', wide: true },
+          { key: 'voiceCue', label: 'Brand-voice cue', type: 'text', placeholder: 'tone or scripted line', wide: true }
+        ],
+        starterRowCount: 2
+      },
       studentPrompts: [
         'How are customers treated at the TechTown table — fast checkout, personal pitch, both?',
         'What happens after a sale? Receipts, follow-up, none?',
@@ -359,6 +389,21 @@ export const businessModelCanvas: TemplateStudio = {
       title: 'Key resources',
       lesson:
         'Key resources are the assets, people, tools, systems, data, and inventory Renni Inc. depends on to run the business — not just the supplies for a single event. Think about what would still need to exist if the next cohort took over tomorrow.',
+      universalTable: {
+        enabled: true,
+        kind: 'key-resources',
+        title: 'Key Resources Map',
+        intro: 'One row per resource. Type, role / activity it enables, owner, risk if missing.',
+        copyTitle: 'Key resources',
+        columns: [
+          { key: 'resource', label: 'Resource', type: 'text', placeholder: 'people · physical · intellectual · inventory', wide: true },
+          { key: 'type', label: 'Type', type: 'select', options: ['People', 'Physical', 'Intellectual', 'Inventory'] },
+          { key: 'enables', label: 'Enables activity', type: 'text', placeholder: 'which key activity', wide: true },
+          { key: 'owner', label: 'Owner', type: 'text', placeholder: 'role / name' },
+          { key: 'risk', label: 'Risk if missing', type: 'textarea', placeholder: 'what breaks without it', wide: true }
+        ],
+        starterRowCount: 4
+      },
       studentPrompts: [
         'List people resources (chiefs, members, advisors).',
         'List physical resources (booth, signage, Square POS, oven, kitchen).',
@@ -393,6 +438,22 @@ export const businessModelCanvas: TemplateStudio = {
       title: 'Key partners',
       lesson:
         'Key partners are the business-enabling relationships Renni Inc. depends on — vendors, advisors, the school, TechTown, Phoenix Nest, and Square as the external POS partner. These are not one-time helpers; they are relationships the business returns to.',
+      universalTable: {
+        enabled: true,
+        kind: 'key-partners',
+        title: 'Partner Map',
+        intro: 'One row per business-enabling partner. Contribution, relationship state, owner, next ask, risk if they leave.',
+        copyTitle: 'Key partners',
+        columns: [
+          { key: 'partner', label: 'Partner', type: 'text', placeholder: 'vendor · school · TechTown · Phoenix Nest · Square (external POS)', wide: true },
+          { key: 'contribution', label: 'Contribution', type: 'textarea', placeholder: 'what they bring', wide: true },
+          { key: 'state', label: 'Relationship state', type: 'select', options: ['Confirmed', 'In conversation', 'Aspirational'] },
+          { key: 'owner', label: 'Owner', type: 'text', placeholder: 'role / name' },
+          { key: 'nextAsk', label: 'Next ask', type: 'text', placeholder: 'the concrete next move', wide: true },
+          { key: 'risk', label: 'Risk if they leave', type: 'textarea', placeholder: 'what we lose', wide: true }
+        ],
+        starterRowCount: 4
+      },
       studentPrompts: [
         'Name garment, baking, and printing vendors.',
         'Name advisors, teachers, and any community partners.',

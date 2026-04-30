@@ -55,6 +55,9 @@ import CustomerProfileBuilder from '~/components/CustomerProfileBuilder.vue'
 import KeyActivitiesBuilder from '~/components/KeyActivitiesBuilder.vue'
 import FinanceTableBuilder from '~/components/FinanceTableBuilder.vue'
 import OperationsChecklistBuilder from '~/components/OperationsChecklistBuilder.vue'
+import UniversalSectionTableBuilder from '~/components/UniversalSectionTableBuilder.vue'
+import UniversalChecklistBuilder from '~/components/UniversalChecklistBuilder.vue'
+import DecisionMemoBuilder from '~/components/DecisionMemoBuilder.vue'
 import SectionDependencyHint from '~/components/SectionDependencyHint.vue'
 import { getSectionDependencyHints } from '~/utils/sectionDependencyHints'
 import { productNameOptions } from '~/utils/productCatalog'
@@ -1550,6 +1553,41 @@ function shouldShowPricingStrategy(s: TemplateStudioSection): boolean {
   return s.pricingStrategy?.enabled === true
 }
 
+// Pass A — Universal Builder Foundation Pack.
+// Conflict guard: when a section already has a primary specialized
+// builder (chip-pick QuickStart / Customer Profile / Key Activities
+// / Finance Table / Operations Checklist / Market Fit / Brand Fit
+// / Pricing Strategy), the universal builder is suppressed to
+// prevent duplicate / conflicting surfaces. The existing primary
+// builder always wins; the universal config silently no-ops on
+// those sections.
+function hasPrimaryBuilder(s: TemplateStudioSection): boolean {
+  if (s.chipPickQuickStart?.enabled) return true
+  if (s.keyActivities?.enabled) return true
+  if (s.financeTable?.enabled) return true
+  if (s.operationsChecklist?.enabled) return true
+  if (s.marketFit?.enabled) return true
+  if (s.brandFit?.enabled) return true
+  if (s.pricingStrategy?.enabled) return true
+  if (customerProfileBuilderEnabled.value && s.id === 'customer-segments') return true
+  return false
+}
+
+function shouldShowUniversalTable(s: TemplateStudioSection): boolean {
+  if (s.universalTable?.enabled !== true) return false
+  return !hasPrimaryBuilder(s)
+}
+
+function shouldShowUniversalChecklist(s: TemplateStudioSection): boolean {
+  if (s.universalChecklist?.enabled !== true) return false
+  return !hasPrimaryBuilder(s)
+}
+
+function shouldShowDecisionMemo(s: TemplateStudioSection): boolean {
+  if (s.decisionMemo?.enabled !== true) return false
+  return !hasPrimaryBuilder(s)
+}
+
 function persistedPricingStrategy(
   s: TemplateStudioSection
 ): PricingStrategyBuilderState | null {
@@ -2509,6 +2547,41 @@ function shouldOpenDefend(s: TemplateStudioSection): boolean {
             {{ s.operationsChecklist.guidance }}
           </p>
           <OperationsChecklistBuilder :kind="s.operationsChecklist.kind" />
+        </div>
+
+        <!-- Universal Section Table Builder (Pass A).
+             Mounts only when section.universalTable.enabled is true
+             AND no other primary builder is enabled on the same
+             section. Pure UI + clipboard; no Firestore writes. -->
+        <div
+          v-if="shouldShowUniversalTable(s)"
+          :id="`ust-${s.id}`"
+          class="space-y-1"
+        >
+          <UniversalSectionTableBuilder
+            :config="s.universalTable!"
+            :product-options="productNameList"
+          />
+        </div>
+
+        <!-- Universal Checklist Builder (Pass A).
+             Same conflict guard as Universal Table. -->
+        <div
+          v-if="shouldShowUniversalChecklist(s)"
+          :id="`ucl-${s.id}`"
+          class="space-y-1"
+        >
+          <UniversalChecklistBuilder :config="s.universalChecklist!" />
+        </div>
+
+        <!-- Decision Memo Builder (Pass A).
+             Same conflict guard as Universal Table. -->
+        <div
+          v-if="shouldShowDecisionMemo(s)"
+          :id="`dmb-${s.id}`"
+          class="space-y-1"
+        >
+          <DecisionMemoBuilder :config="s.decisionMemo!" />
         </div>
 
         <!-- Independent Student Mode: section-level mismatch warnings.

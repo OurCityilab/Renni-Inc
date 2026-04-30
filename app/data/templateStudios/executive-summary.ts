@@ -74,6 +74,25 @@ export const executiveSummary: TemplateStudio = {
       title: 'What are we launching, and where?',
       lesson:
         'The pop-up, the Playbook, and the Phoenix Nest pitch are three different deliverables — name each one so readers can tell them apart.',
+      universalTable: {
+        enabled: true,
+        kind: 'launch-focus',
+        title: 'Launch Focus Table',
+        intro: 'One row per final output. Name the audience, the success measure, and the owner so a reader can tell the three apart at a glance.',
+        copyTitle: 'Launch focus',
+        columns: [
+          { key: 'output', label: 'Final output', type: 'select', options: ['TechTown pop-up', 'Brand & Operations Playbook', 'Phoenix Nest retail carry pitch'] },
+          { key: 'audience', label: 'Audience', type: 'text', placeholder: 'who is this for?', wide: true },
+          { key: 'whatHappens', label: 'What happens', type: 'textarea', placeholder: 'one sentence', wide: true },
+          { key: 'successMeasure', label: 'Success measure', type: 'text', placeholder: 'how we know it worked', wide: true },
+          { key: 'owner', label: 'Owner', type: 'text', placeholder: 'role / name' }
+        ],
+        starterRows: [
+          { output: 'TechTown pop-up' },
+          { output: 'Brand & Operations Playbook' },
+          { output: 'Phoenix Nest retail carry pitch' }
+        ]
+      },
       studentPrompts: [
         'Describe the TechTown pop-up in one or two sentences (when, where, who is it for).',
         'Describe the Brand & Operations Playbook — what it is and why the next cohort will use it.',
@@ -134,6 +153,21 @@ export const executiveSummary: TemplateStudio = {
       title: 'What is currently in the lineup?',
       lesson:
         'List the products Renni Inc. is actually selling so the summary matches the pop-up. Donations sit alongside products but should be called out separately.',
+      universalTable: {
+        enabled: true,
+        kind: 'current-progress',
+        title: 'Current Progress Table',
+        intro: 'One row per product (and one for donations). Mark ready / blocked, owner, and the next step so chiefs can scan readiness.',
+        copyTitle: 'Current progress',
+        columns: [
+          { key: 'product', label: 'Product', type: 'text', placeholder: 'beanie · sweatshirt · baked good · donations', wide: true, productAutocomplete: true },
+          { key: 'state', label: 'State', type: 'select', options: ['Ready', 'In progress', 'Blocked', 'Pending'] },
+          { key: 'owner', label: 'Owner', type: 'text', placeholder: 'role / name' },
+          { key: 'nextStep', label: 'Next step', type: 'text', placeholder: 'what unblocks it', wide: true },
+          { key: 'note', label: 'Note', type: 'text', placeholder: 'qty · vendor · risk', wide: true }
+        ],
+        starterRowCount: 4
+      },
       example:
         'Current pop-up lineup: House Phoenix beanies, sweatshirts, t-shirts, and Humble Oven baked goods. Donations are accepted at the table for community programs.',
       studentPrompts: [
@@ -191,6 +225,21 @@ export const executiveSummary: TemplateStudio = {
       title: 'What are the open questions or risks?',
       lesson:
         'A real executive summary names risks. Two or three is enough — pick the ones a buyer or teacher would actually want to know about.',
+      universalTable: {
+        enabled: true,
+        kind: 'key-risks',
+        title: 'Key Risks Register',
+        intro: 'Two or three real risks. Each row: risk, impact if it lands, mitigation, owner. Vague risks are no better than none.',
+        copyTitle: 'Key risks',
+        columns: [
+          { key: 'risk', label: 'Risk', type: 'text', placeholder: 'what could go wrong', wide: true },
+          { key: 'impact', label: 'Impact', type: 'select', options: ['Low', 'Medium', 'High'] },
+          { key: 'likelihood', label: 'Likelihood', type: 'select', options: ['Low', 'Medium', 'High'] },
+          { key: 'mitigation', label: 'Mitigation', type: 'textarea', placeholder: 'what we are doing about it', wide: true },
+          { key: 'owner', label: 'Owner', type: 'text', placeholder: 'role / name' }
+        ],
+        starterRowCount: 3
+      },
       studentPrompts: [
         'List 2–3 current risks or open questions (inventory, pricing, marketing, time).',
         'For each one, write a one-line explanation of why it matters.',
@@ -246,6 +295,14 @@ export const executiveSummary: TemplateStudio = {
       title: 'What happens next before launch?',
       lesson:
         'Close the summary with concrete next actions. This is what the team is doing this week — not aspirations.',
+      universalChecklist: {
+        enabled: true,
+        kind: 'launch-next-steps',
+        title: 'Next Steps Checklist',
+        intro: 'List the concrete actions before launch. Each item: owner, due, dependency, done signal.',
+        copyTitle: 'Next steps before launch',
+        fields: ['owner', 'due', 'status', 'doneSignal']
+      },
       studentPrompts: [
         'List the 3–5 next actions before TechTown.',
         'Name who owns each one (Co-CEO, CMO, CFO, COO, CSGO).',

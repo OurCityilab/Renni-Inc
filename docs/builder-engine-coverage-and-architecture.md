@@ -826,3 +826,94 @@ NITRO_PRESET=node-server npm run build
 
 Return PASS / PASS WITH WARNINGS / FAIL with exact file and line references.
 ```
+
+## 12. Implementation Status — Pass A (Universal Builder Foundation Pack)
+
+**Pass A is implemented.** Three reusable copy-only builders ship,
+plus `~38 sections` opt in across 11 studio files. The build is
+green, classifier tests pass, and zero Firestore / AI / OAuth
+introduced.
+
+### Files added
+- `app/components/UniversalSectionTableBuilder.vue` — generic table
+  builder driven by `section.universalTable`. Supports text /
+  number / select / textarea columns, optional product
+  autocomplete, and copy-as-markdown.
+- `app/components/UniversalChecklistBuilder.vue` — generic checklist
+  / SOP builder driven by `section.universalChecklist`. Configurable
+  field set (owner / due / status / materials / backup / doneSignal
+  / risk / nextStep). Copy-as-markdown.
+- `app/components/DecisionMemoBuilder.vue` — generic decision memo
+  builder driven by `section.decisionMemo`. Each card carries
+  decision · options · evidence · criteria · recommendation · risk
+  · owner · dueDate · definitionOfDone. Copy-as-markdown.
+
+### Files updated
+- `app/types/templateStudio.ts` — adds optional `universalTable`,
+  `universalChecklist`, `decisionMemo` configs on
+  `TemplateStudioSection` plus the `CopyOnlyBuilderColumn` /
+  `CopyOnlyBuilderFieldType` / config types.
+- `app/components/DeliverableOutputWorkspace.vue` — registers the
+  three new components, adds `hasPrimaryBuilder()` conflict guard,
+  mounts the universal builders directly after the existing
+  primary builder mounts (Operations Checklist), with `ust-<id>` /
+  `ucl-<id>` / `dmb-<id>` anchor wrappers.
+- 11 studio files configured (executive-summary, brand-architecture,
+  company-structure-continuity, business-model-canvas,
+  house-phoenix-brand-story, supporting-brand-sheets,
+  current-product-line, pricing-break-even, pop-up-campaign,
+  strategy-next-semester, decision-log-appendices).
+
+### Sections configured (Pass A)
+
+**Universal Table (27):**
+- Ch. 1: launch-focus, current-progress, key-risks
+- Ch. 2: brand-portfolio, supporting-brands, values, values-in-action
+- Ch. 3: company-roles, continuity-risks
+- Ch. 4: channels, customer-relationships, key-resources, key-partners
+- Ch. 5: audience
+- Ch. 6: supporting-brand-comparison
+- Ch. 7: product-list, product-story, inventory-readiness, pricing-risks
+- Ch. 8: planned-quantity, post-event-recap
+- Ch. 10: customer-problems-and-desires, insight-evidence, measurement
+- Ch. 12: next-semester-goals, risks-and-open-questions
+- Ch. 13: evidence-appendix
+
+**Universal Checklist (8):**
+- Ch. 1: next-steps
+- Ch. 3: accountability-rhythm, succession-and-handoff
+- Ch. 6: launch-readiness
+- Ch. 10: feedback-plan
+- Ch. 12: operational-lessons
+- Ch. 13: templates-and-links, next-cohort-instructions
+
+**Decision Memo (7):**
+- Ch. 2: future-brand-questions, decision-rules
+- Ch. 3: decision-rights
+- Ch. 6: open-questions
+- Ch. 13: major-decisions, decision-rationale, unresolved-decisions
+
+### Conflict guard
+`hasPrimaryBuilder(section)` short-circuits the universal mount
+whenever a section already has an existing primary builder
+(chip-pick QuickStart / Customer Profile / Key Activities / Finance
+Table / Operations Checklist / Market Fit / Brand Fit / Pricing
+Strategy). The existing primary always wins; the universal config
+silently no-ops on those sections.
+
+### Known limitations
+- The `pricing-summary` (Ch. 7), `target-customers` (Ch. 10), and
+  `audience` / `messaging` (Ch. 10) sections have existing primary
+  builders (Market Fit / Brand Fit) that already cover their
+  artifact need. They were not opted into the universal builders
+  per the conflict guard.
+- The `next-cohort-playbook` (Ch. 3) and `canvas-insights` (Ch. 4)
+  sections were tagged in the doc as Strategy Memo Builder targets —
+  Pass B work.
+- Brand System Builder (Ch. 5 voice/identity, Ch. 6 brand sheets) is
+  Pass B work — not in Pass A scope. The existing Brand Fit Builder
+  continues to render on those sections.
+- No live browser smoke this pass. Verification is static review +
+  green build. Recommend a 60-second click-through on a few
+  configured sections before the next class.
+

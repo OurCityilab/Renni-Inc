@@ -17,6 +17,20 @@ export const housePhoenixBrandStory: TemplateStudio = {
       title: 'Who is this for?',
       lesson:
         'Every strong brand starts with a specific audience. "Everyone" is not an audience — it is how brands get bland.',
+      universalTable: {
+        enabled: true,
+        kind: 'brand-audience',
+        title: 'Brand Audience Table',
+        intro: 'One row per audience. Who they are, the feeling House Phoenix gives them, and the evidence the team has.',
+        copyTitle: 'House Phoenix audience',
+        columns: [
+          { key: 'audience', label: 'Audience', type: 'text', placeholder: 'specific group, not "everyone"', wide: true },
+          { key: 'feeling', label: 'Feeling House Phoenix gives them', type: 'textarea', placeholder: 'what they feel when they wear it', wide: true },
+          { key: 'evidence', label: 'Evidence', type: 'textarea', placeholder: 'quote / observation / labeled assumption', wide: true },
+          { key: 'confidence', label: 'Confidence', type: 'select', options: ['Low', 'Medium', 'High'] }
+        ],
+        starterRowCount: 2
+      },
       example:
         'For Renaissance students and the Renni Inc. cohort audience who are first-time pop-up buyers at TechTown.',
       studentPrompts: [
