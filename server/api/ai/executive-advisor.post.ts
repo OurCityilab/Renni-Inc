@@ -348,7 +348,9 @@ export default defineEventHandler(async (event) => {
   // 2. Feature flag + provider key gate. Both must be present or
   //    we short-circuit with a generic ai_disabled.
   const config = useRuntimeConfig()
-  const enabled = (config.executiveAdvisorEnabled as boolean | undefined) === true
+  const enabled =
+    config.executiveAdvisorEnabled === true ||
+    config.executiveAdvisorEnabled === 'true'
   const apiKey = (config.aiCritiqueApiKey as string | undefined) || ''
   if (!enabled || !apiKey) {
     disabled('Executive Advisor is unavailable.')

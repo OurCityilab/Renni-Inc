@@ -51,6 +51,7 @@ env:
   - variable: NUXT_EXECUTIVE_ADVISOR_ENABLED
     value: "true"
     availability:
+      - BUILD
       - RUNTIME
   # projectId fallback the server admin util reads when NUXT_PUBLIC_* isn't
   # available (e.g. on direct tsx invocations). Safe to set to the same
