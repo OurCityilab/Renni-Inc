@@ -74,6 +74,38 @@ export const SECTION_DEPENDENCY_HINTS: SectionDependencyHints = {
     'Lists everything the next cohort inherits — accounts, processes, vendor list, designs.',
     'Pulls from every Ch. 9 SOP and from Ch. 13 Decision Log.'
   ],
+  'operating-cadence': [
+    'Names the weekly + monthly routines that keep Renni Inc. running between events.',
+    'Feeds the operating handoff so the next cohort inherits a rhythm, not a single event.'
+  ],
+  'fulfillment-workflow': [
+    'Maps the steps from customer interest to product in hand. Square is the external POS — Renni Command Center is not a checkout.',
+    'Pulls from inventory + vendors; feeds the customer service issue tracker.'
+  ],
+  'vendor-coordination': [
+    'Tracks vendors and partners (printer, baker, school, TechTown, Phoenix Nest).',
+    'Feeds quality control and the operating handoff.'
+  ],
+  'quality-control': [
+    'Defines what "good enough" looks like for product, packaging, signage, and food.',
+    'References the Baked Goods SOP for food-safety checks; feeds customer service issue tracking.'
+  ],
+  'customer-service-issues': [
+    'Logs issues + response + fix + lesson. Not a refund engine — Renni Command Center never processes payments.',
+    'Feeds post-launch operations and next-cohort instructions.'
+  ],
+  'interest-tracking': [
+    'Tracks non-transactional interest only (name + need, never PII or payment data). Square remains the external POS.',
+    'Feeds post-launch operations and the campaign feedback plan.'
+  ],
+  'post-launch-operations': [
+    'The operating recap — keep / change / kill on routines, vendors, and SOPs.',
+    'Pulls from event actuals; feeds Ch. 12 strategy + Ch. 13 decision log.'
+  ],
+  'operating-handoff': [
+    'The next cohort inherits a running operating system, not just an inventory list.',
+    'Pulls from operating cadence + vendors + quality control + interest tracker; feeds Ch. 13 next-cohort instructions.'
+  ],
 
   // Ch. 4 — Business Model Canvas
   'customer-segments': [

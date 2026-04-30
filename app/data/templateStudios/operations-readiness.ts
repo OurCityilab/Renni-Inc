@@ -1,15 +1,15 @@
 import type { TemplateStudio } from '~/types/templateStudio'
 
 export const operationsReadiness: TemplateStudio = {
-  title: 'Operations + Inventory Readiness',
+  title: 'Business Operations + Continuity',
   purpose:
-    'Make the pop-up run day-of. Inventory counted, SOPs written, handoff documented, baked goods handled safely.',
+    'Build the repeatable system that lets Renni Inc. deliver products, fix issues, learn from customers, and hand the company off. The TechTown pop-up is one operating test; this chapter covers the rest.',
   learningObjective:
-    'Turn a one-day event into a repeatable operation: what happens, who does it, and how we hand it to next cohort.',
+    'Operations is the repeatable system that lets Renni Inc. deliver products, fix issues, learn from customers, and hand off the company to the next team. Inventory + day-of SOP + baked-goods handling + cadence + fulfillment + vendor coordination + quality control + customer service + safe interest tracking + post-launch operations + continuity all live here.',
   whyItMatters:
-    'The Marketing campaign drives foot traffic. The Finance model decides what to charge. Operations is what makes the table actually open at 10am with the right inventory, the right signage, and the right people. Without an ops SOP, next cohort starts from zero.',
+    'Marketing drives foot traffic. Finance decides what to charge. Operations is what makes the table actually open at 10am AND keeps Renni Inc. running between events. Without a broader operating system, the next cohort inherits a one-day playbook instead of a company.',
   finalOutput:
-    'Inventory counts per product, a day-of SOP (setup → selling → handoff), a baked-goods handling SOP, and a continuity note for next cohort.',
+    'Inventory counts, day-of SOP, baked-goods handling SOP, weekly / monthly operating cadence, fulfillment workflow, vendor and partner tracker, quality-control checklist, customer-service issue tracker, safe interest tracker, post-launch operations memo, and a continuity / handoff plan.',
   connectedOutcome: 'TechTown pop-up',
   sections: [
     {
@@ -177,6 +177,238 @@ export const operationsReadiness: TemplateStudio = {
         ownerHint: 'COO',
         doneLooksLike: 'A reader can act in week one without asking for clarification.'
       }
+    },
+    // ===== Business Operations Expansion (Pass — Ch. 9 reframe).
+    // The four sections above cover pop-up readiness. The eight
+    // sections below cover the rest of the operating system: cadence,
+    // fulfillment, vendors, quality, customer service, safe interest
+    // tracking, post-launch operations, and continuity. Every new
+    // section is a copy-only builder — no Firestore writes, no AI
+    // calls, no payment / checkout / inventory-decrement code.
+    {
+      id: 'operating-cadence',
+      title: 'Operating cadence',
+      lesson:
+        'Operations is what happens *between* events. A weekly / monthly rhythm — short stand-up, restock check, vendor follow-up, customer follow-up — keeps Renni Inc. running so the next cohort inherits a company, not a single event.',
+      universalChecklist: {
+        enabled: true,
+        kind: 'operating-cadence',
+        title: 'Weekly / Monthly Operating Cadence',
+        intro:
+          'Each row = one recurring routine. Owner, cadence, dependency, done signal, backup, next review date.',
+        copyTitle: 'Operating cadence',
+        fields: ['owner', 'due', 'status', 'doneSignal', 'backup', 'nextStep']
+      },
+      studentPrompts: [
+        'List the routines Renni Inc. runs every week (chief sync, restock check, customer follow-up).',
+        'List the routines we run monthly (financial review, partner outreach, brand audit).',
+        'For each, name the owner, cadence, and how we know it is done.'
+      ],
+      completionCriteria: [
+        'Each routine has an owner + cadence + done signal.',
+        'A backup person is named for any single-owner routine.'
+      ]
+    },
+    {
+      id: 'fulfillment-workflow',
+      title: 'Fulfillment workflow',
+      lesson:
+        'How does a customer interest become a delivered product? Map the steps from order / interest to handoff: confirm, prepare, package, hand to customer, follow up. Renni Command Center does not process payments or run a checkout — Square is the external POS.',
+      universalChecklist: {
+        enabled: true,
+        kind: 'fulfillment-workflow',
+        title: 'Fulfillment Workflow Steps',
+        intro:
+          'Each row = one step from request to handoff. Owner, input, output, risk, backup, done signal.',
+        copyTitle: 'Fulfillment workflow',
+        fields: ['owner', 'materials', 'doneSignal', 'risk', 'backup', 'nextStep']
+      },
+      studentPrompts: [
+        'Walk a customer through the steps from "I want this" to "I have this in my hand."',
+        'For each step, name the owner, what they need (input), what they hand off (output), and the risk if it stalls.',
+        'Add a backup person for any solo step.'
+      ],
+      completionCriteria: [
+        'Steps cover the path from request → fulfilled → followed up.',
+        'Each step has an owner + done signal + backup.',
+        'No POS / payment / checkout / refund / tax behavior is implied — Square is external.'
+      ]
+    },
+    {
+      id: 'vendor-coordination',
+      title: 'Vendor and partner coordination',
+      lesson:
+        'Vendors and partners (apparel printer, baker, school, TechTown organizers, Phoenix Nest contact) are the relationships Renni Inc. depends on. Track who, what, when, and the next contact so things do not slip through email threads.',
+      universalTable: {
+        enabled: true,
+        kind: 'vendor-coordination',
+        title: 'Vendor / Partner Tracker',
+        intro:
+          'One row per vendor or partner. Need, contact owner, next contact date, dependency, risk, status.',
+        copyTitle: 'Vendor / partner coordination',
+        columns: [
+          { key: 'partner', label: 'Vendor / partner', type: 'text', placeholder: 'apparel printer · baker · school · TechTown · Phoenix Nest', wide: true },
+          { key: 'need', label: 'What we need from them', type: 'textarea', placeholder: 'product · venue · approval', wide: true },
+          { key: 'owner', label: 'Contact owner', type: 'text', placeholder: 'role / name' },
+          { key: 'nextContact', label: 'Next contact', type: 'text', placeholder: 'date / trigger' },
+          { key: 'dependency', label: 'Dependency', type: 'text', placeholder: 'what blocks them or us', wide: true },
+          { key: 'risk', label: 'Risk', type: 'text', placeholder: 'what could go wrong', wide: true },
+          { key: 'status', label: 'Status', type: 'select', options: ['Confirmed', 'In progress', 'At risk', 'Blocked', 'Not started'] }
+        ],
+        starterRowCount: 3
+      },
+      studentPrompts: [
+        'List the vendors / partners Renni Inc. depends on.',
+        'For each, name the contact owner, the next contact date, and what we need.',
+        'Mark status honestly. "In progress" means a real next step exists.'
+      ],
+      completionCriteria: [
+        'Each vendor/partner has owner + next contact + status.',
+        'At-risk and blocked entries name the blocker.'
+      ]
+    },
+    {
+      id: 'quality-control',
+      title: 'Quality control',
+      lesson:
+        'Quality control is what stops a customer from getting a sweatshirt with a bad print or a baked good with the wrong allergen note. Define the checks Renni Inc. runs, who runs them, and what counts as "good enough."',
+      universalChecklist: {
+        enabled: true,
+        kind: 'quality-control',
+        title: 'Quality Control Checklist',
+        intro:
+          'Each row = one quality check. Standard, owner, when checked, issue found (if any), fix, done signal.',
+        copyTitle: 'Quality control',
+        fields: ['owner', 'due', 'status', 'doneSignal', 'risk']
+      },
+      studentPrompts: [
+        'List the quality checks Renni Inc. runs (print quality, packaging, allergen labels, signage, table setup).',
+        'For each, name the standard ("good enough" definition), the owner, and when it gets checked.',
+        'Add the fix path when a check fails.'
+      ],
+      completionCriteria: [
+        'Each check has a standard + owner + when checked.',
+        'A failure path / fix is named for each check.',
+        'Baked-goods checks reference the existing food-safety SOP, not new legal claims.'
+      ]
+    },
+    {
+      id: 'customer-service-issues',
+      title: 'Customer service and issue tracking',
+      lesson:
+        'Customers will tell us what is wrong (or not buy). Operations needs a place to log issues, decide who responds, and pull the lesson into the next round. Issue tracking is not a refund engine — Renni Command Center never processes payments or refunds.',
+      universalTable: {
+        enabled: true,
+        kind: 'customer-service-issues',
+        title: 'Customer Issue Tracker',
+        intro:
+          'One row per issue or complaint. Customer impact, owner, response, fix, lesson, status.',
+        copyTitle: 'Customer service / issue tracking',
+        columns: [
+          { key: 'issueType', label: 'Issue type', type: 'select', options: ['Quality', 'Sizing', 'Wait time', 'Communication', 'Pricing concern', 'Other'] },
+          { key: 'customerImpact', label: 'Customer impact', type: 'textarea', placeholder: 'what the customer experienced', wide: true },
+          { key: 'owner', label: 'Owner', type: 'text', placeholder: 'role / name' },
+          { key: 'response', label: 'Response', type: 'textarea', placeholder: 'what the team said / did', wide: true },
+          { key: 'fix', label: 'Fix', type: 'textarea', placeholder: 'what changed so it does not happen again', wide: true },
+          { key: 'lesson', label: 'Lesson', type: 'text', placeholder: 'one-line takeaway', wide: true },
+          { key: 'status', label: 'Status', type: 'select', options: ['Open', 'In progress', 'Resolved', 'Pending'] }
+        ],
+        starterRowCount: 2
+      },
+      studentPrompts: [
+        'List any customer complaints or issues from past events or test interactions.',
+        'For each, name the owner who responded, what we said / did, and the fix.',
+        'Capture the lesson so the next cohort does not repeat it.'
+      ],
+      completionCriteria: [
+        'Each issue has owner + response + fix + lesson.',
+        'No refund / payment / checkout language — Square handles all transactions externally.'
+      ]
+    },
+    {
+      id: 'interest-tracking',
+      title: 'Safe interest tracking',
+      lesson:
+        'Sometimes a customer wants something we do not have on hand — a different size, a future product, a Phoenix Nest carry note. Track non-sensitive interest so the team can follow up, without turning Renni Command Center into a checkout, payment, refund, tax, or order-processing system. Square remains the external POS for any actual transaction.',
+      universalTable: {
+        enabled: true,
+        kind: 'interest-tracking',
+        title: 'Safe Interest Tracker',
+        intro:
+          'One row per non-transactional interest signal. Customer type, product interest, question / need, follow-up owner, evidence source, next step, privacy note.',
+        copyTitle: 'Safe interest tracking',
+        columns: [
+          { key: 'customerType', label: 'Customer type', type: 'text', placeholder: 'archetype or short description', wide: true },
+          { key: 'productInterest', label: 'Product interest', type: 'text', placeholder: 'what they asked about', wide: true },
+          { key: 'questionNeed', label: 'Question or need', type: 'textarea', placeholder: 'their actual ask', wide: true },
+          { key: 'followUpOwner', label: 'Follow-up owner', type: 'text', placeholder: 'role / name' },
+          { key: 'evidenceSource', label: 'Evidence source', type: 'text', placeholder: 'event / email / conversation', wide: true },
+          { key: 'nextStep', label: 'Next step', type: 'text', placeholder: 'what we will do', wide: true },
+          { key: 'privacyNote', label: 'Privacy note', type: 'text', placeholder: 'no payment / no PII beyond name + need', wide: true }
+        ],
+        starterRowCount: 2,
+        evidencePrompt:
+          'This is not checkout, payment, refund, tax, or order-processing software. Use it only to track non-sensitive interest, questions, and follow-up needs. Square is the external POS for any actual transaction.'
+      },
+      studentPrompts: [
+        'List people who told us they were interested but did not (or could not) buy.',
+        'For each, name the customer type, what they asked about, and the follow-up.',
+        'Keep the data non-sensitive — name + need, never payment info or PII beyond contact preference.'
+      ],
+      completionCriteria: [
+        'Each row has customer type + interest + follow-up owner + next step.',
+        'No payment / order / refund / tax data appears in the tracker.',
+        'Privacy note is set on every row.'
+      ]
+    },
+    {
+      id: 'post-launch-operations',
+      title: 'Post-launch operations',
+      lesson:
+        'After the pop-up: what worked, what broke, what we should do differently. This is not the marketing recap — it is the operating recap that tells next cohort which routines, vendors, and SOPs to keep, change, or kill.',
+      strategyMemo: {
+        enabled: true,
+        kind: 'lesson',
+        title: 'Post-Launch Operations Memo',
+        intro:
+          'One card per operating lesson from the launch. Insight, evidence, recommendation, owner, dependency, definition of done, next validation, risk.',
+        copyTitle: 'Post-launch operations',
+        cardCount: 4,
+        fields: ['insight', 'evidence', 'recommendation', 'owner', 'dependency', 'definitionOfDone', 'nextValidation', 'risk']
+      },
+      studentPrompts: [
+        'Three operating lessons from the launch — keep, change, or kill?',
+        'For each, cite the evidence (numbers, observations, customer quotes).',
+        'Name the owner who will act on the recommendation and what proves it is done.'
+      ],
+      completionCriteria: [
+        'At least three lessons are evidenced (numbers / quotes / observation), not opinion.',
+        'Each lesson has owner + recommendation + definition of done.'
+      ]
+    },
+    {
+      id: 'operating-handoff',
+      title: 'Operating handoff and continuity',
+      lesson:
+        'The next cohort needs to inherit a running operating system, not just an inventory list. Document the operating knowledge: cadence schedules, vendor contacts, quality standards, issue patterns, follow-up tracker, and where to find each system.',
+      universalChecklist: {
+        enabled: true,
+        kind: 'operating-handoff',
+        title: 'Operating Handoff Checklist',
+        intro:
+          'Each row = one operating asset or knowledge package the next cohort inherits. Owner, where it lives, next-cohort action, risk if lost, done signal.',
+        copyTitle: 'Operating handoff',
+        fields: ['owner', 'due', 'status', 'doneSignal', 'risk', 'nextStep']
+      },
+      studentPrompts: [
+        'List the operating knowledge the next cohort needs to inherit (cadence schedules, vendor contacts, quality standards, issue tracker, follow-up tracker).',
+        'For each, name the owner, where it lives, and what next cohort should do in week one.',
+        'Mark the risk if any of these is lost or unclear.'
+      ],
+      completionCriteria: [
+        'Each operating asset has owner + location + next-cohort action.',
+        'Risk-if-lost is named for at least the cadence schedule, vendor list, and quality standards.'
+      ]
     }
   ],
   requirements: [

@@ -245,6 +245,103 @@ export const FINAL_WEEK_TASK_TEMPLATES: readonly FinalWeekTaskTemplate[] = [
     sectionId: 'baked-goods-sop',
     priority: 'P0'
   },
+  // Business Operations Expansion (Pass — Ch. 9 reframe).
+  {
+    id: 'ch-09:operating-handoff',
+    title: 'Build the operating handoff checklist',
+    owner: 'COO',
+    reviewer: 'Co-CEOs',
+    dueLabel: 'Final week — last',
+    dependency: 'Operating cadence · Vendor coordination · Quality control',
+    doneWhen: 'Each operating asset has owner + location + next-cohort action; risk-if-lost named for cadence, vendors, and quality standards.',
+    playbookChapter: 9,
+    sectionId: 'operating-handoff',
+    priority: 'P0'
+  },
+  {
+    id: 'ch-09:operating-cadence',
+    title: 'Document Renni Inc. weekly + monthly operating cadence',
+    owner: 'COO',
+    reviewer: 'Co-CEOs',
+    dueLabel: 'Final week — mid',
+    dependency: null,
+    doneWhen: 'Each routine has owner + cadence + done signal + backup.',
+    playbookChapter: 9,
+    sectionId: 'operating-cadence',
+    priority: 'P1'
+  },
+  {
+    id: 'ch-09:fulfillment-workflow',
+    title: 'Map the fulfillment workflow (request → handoff)',
+    owner: 'COO · CFO support',
+    reviewer: 'Co-CEOs',
+    dueLabel: 'Final week — mid',
+    dependency: 'Inventory',
+    doneWhen: 'Each step has owner + input + output + risk + backup; no payment / checkout language.',
+    playbookChapter: 9,
+    sectionId: 'fulfillment-workflow',
+    priority: 'P1'
+  },
+  {
+    id: 'ch-09:vendor-coordination',
+    title: 'Build the vendor / partner tracker',
+    owner: 'COO',
+    reviewer: 'Co-CEOs',
+    dueLabel: 'Final week — mid',
+    dependency: null,
+    doneWhen: 'Each vendor has owner + next contact + status; at-risk and blocked entries name the blocker.',
+    playbookChapter: 9,
+    sectionId: 'vendor-coordination',
+    priority: 'P1'
+  },
+  {
+    id: 'ch-09:quality-control',
+    title: 'Seed the quality control checklist (print, packaging, signage, food)',
+    owner: 'COO · baker for food checks',
+    reviewer: 'Co-CEOs',
+    dueLabel: 'Final week — mid',
+    dependency: 'Baked goods SOP for food-safety checks',
+    doneWhen: 'Each check has standard + owner + when checked + fix path.',
+    playbookChapter: 9,
+    sectionId: 'quality-control',
+    priority: 'P1'
+  },
+  {
+    id: 'ch-09:customer-service-issues',
+    title: 'Log customer service issues + responses + lessons',
+    owner: 'COO · CMO for messaging',
+    reviewer: 'Co-CEOs',
+    dueLabel: 'Final week — late',
+    dependency: 'Customer feedback from events',
+    doneWhen: 'Each issue has owner + response + fix + lesson; no refund / payment language.',
+    playbookChapter: 9,
+    sectionId: 'customer-service-issues',
+    priority: 'P1'
+  },
+  {
+    id: 'ch-09:interest-tracking',
+    title: 'Seed the safe interest tracker (non-transactional interest only)',
+    owner: 'CMO · COO support',
+    reviewer: 'Co-CEOs',
+    dueLabel: 'Final week — late',
+    dependency: null,
+    doneWhen: 'Each row has customer type + interest + follow-up owner + next step + privacy note. No payment / order / refund / tax data.',
+    playbookChapter: 9,
+    sectionId: 'interest-tracking',
+    priority: 'P1'
+  },
+  {
+    id: 'ch-09:post-launch-operations',
+    title: 'Write the post-launch operations memo (3+ evidenced lessons)',
+    owner: 'COO',
+    reviewer: 'Co-CEOs',
+    dueLabel: 'Final week — late',
+    dependency: 'Post-event recap actuals',
+    doneWhen: 'At least three operating lessons evidenced; each has owner + recommendation + definition of done.',
+    playbookChapter: 9,
+    sectionId: 'post-launch-operations',
+    priority: 'P1'
+  },
   // Marketing
   {
     id: 'ch-10:audience',

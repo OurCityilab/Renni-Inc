@@ -549,6 +549,84 @@ BuilderHandoffCallout posture.
   required fields populated, so future contributors catch missing
   copy at PR time.
 
+## 11.6. Implementation status — Business Operations Expansion (Ch. 9)
+
+**Shipped.** Reuses existing copy-only builders. No Firestore writes,
+no AI calls, no payment / checkout / inventory-decrement code added.
+Every new section carries a guardrail line forbidding those
+behaviors.
+
+### Studio header reframed
+`operationsReadiness` (Ch. 9):
+- Title: `Business Operations + Continuity` (was Operations + Inventory Readiness).
+- Purpose: "Build the repeatable system that lets Renni Inc.
+  deliver products, fix issues, learn from customers, and hand
+  the company off. The TechTown pop-up is one operating test;
+  this chapter covers the rest."
+
+### Existing Ch. 9 sections preserved
+- `inventory`, `day-of-sop`, `baked-goods-sop`, `continuity` — all
+  four still mount the existing OperationsChecklistBuilder. Inventory
+  + pop-up readiness coverage is unchanged.
+
+### New Ch. 9 sections added (8 sections)
+| section id | builder | priority |
+|---|---|---|
+| `operating-cadence` | UniversalChecklistBuilder | P1 |
+| `fulfillment-workflow` | UniversalChecklistBuilder | P1 |
+| `vendor-coordination` | UniversalSectionTableBuilder | P1 |
+| `quality-control` | UniversalChecklistBuilder | P1 |
+| `customer-service-issues` | UniversalSectionTableBuilder | P1 |
+| `interest-tracking` | UniversalSectionTableBuilder + safe-interest evidence prompt | P1 |
+| `post-launch-operations` | StrategyMemoBuilder | P1 |
+| `operating-handoff` | UniversalChecklistBuilder | **P0** |
+
+### Task coverage / final-week template changes
+- 8 new entries in `app/utils/finalWeekCompletion.ts` operations
+  lane (1 P0 + 7 P1).
+- 8 new entries in `app/utils/finalWeekTaskTemplates.ts` so the
+  Task Coverage Map and Advisor `task-coverage-doctor` mode
+  surface the recommended task titles for the new sections.
+
+### Section dependency hints
+8 new entries in `app/utils/sectionDependencyHints.ts`. Each hint
+explains what feeds the section and what it feeds, with the
+non-checkout / non-payment guardrail repeated where relevant.
+
+### Advisor posture
+Coach prompt gains one line: *"Operations means the repeatable
+system that lets Renni Inc. deliver products, fix issues, learn
+from customers, and hand off the company. It includes recurring
+cadence, fulfillment, vendor coordination, quality control,
+customer service, issue tracking, safe (non-transactional) interest
+tracking, post-launch operations, and continuity / handoff — not
+only the TechTown pop-up. NEVER recommend checkout, payment,
+refund, tax, or inventory-decrement features. Square remains the
+external POS."*
+
+### Safe interest tracking guardrail
+The new `interest-tracking` section ships a non-removable evidence
+prompt: *"This is not checkout, payment, refund, tax, or
+order-processing software. Use it only to track non-sensitive
+interest, questions, and follow-up needs. Square is the external
+POS for any actual transaction."* The Privacy note column is
+mandatory per row; completion criteria explicitly forbid payment /
+order / refund / tax data in the tracker.
+
+### Known limitations
+- The 8 new sections inherit the existing chapter route and the
+  existing DeliverableOutputWorkspace mount. No new routes added.
+- The TaskCoverageMap will show the new sections as "Missing
+  task" until chiefs seed tasks manually — the manual-seed posture
+  is intentional and surfaced in the MissingTaskCoveragePanel.
+- The new sections are P1 except `operating-handoff` (P0). If
+  cohort feedback shows another section is launch-critical, bump
+  it in `finalWeekCompletion.ts`.
+- No live browser smoke this pass. Recommend a 60-second
+  click-through on `/deliverables/ch-09-operations-and-continuity-systems`
+  to confirm the 8 new sections render and the 4 original
+  Operations Checklist sections still mount their builder.
+
 ## 12. Bottom Line
 
 Claude Code should build **Advisor Mentor + deterministic task visualization** next because it gives chiefs the map they need to direct the room and gives the Advisor grounded facts to explain.
