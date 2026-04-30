@@ -28,6 +28,13 @@
 <script setup lang="ts">
 import { computed, reactive, ref } from 'vue'
 import BuilderHandoffCallout from '~/components/BuilderHandoffCallout.vue'
+import {
+  unitCostRowsToImport,
+  breakEvenRowsToImport,
+  revenueScenarioRowsToImport,
+  donationScenarioRowsToImport,
+  starterKpiRows
+} from '~/utils/productCatalog'
 
 type FinanceTableKind =
   | 'unit-cost'
@@ -297,6 +304,103 @@ function clearAll(): void {
   }
 }
 
+// ---- Product catalog import --------------------------------------
+//
+// Append-only. Helpers in productCatalog dedupe candidate rows
+// against existing rows by product name (case-insensitive), so
+// repeated clicks of the same Import button never duplicate
+// catalog products. Edited values on existing rows are never
+// touched. Donations are excluded from product helpers; donation
+// import has its own helper.
+//
+// `importLabel` returns null when the kind has no useful import.
+// `runImport` is a no-op when the helper returns zero new rows.
+
+const importLabel = computed<string | null>(() => {
+  switch (props.kind) {
+    case 'unit-cost':
+    case 'break-even':
+    case 'revenue-scenarios':
+      return 'Import product list'
+    case 'donation-scenarios':
+      return 'Import donation starter row'
+    case 'kpi':
+      return 'Add starter KPIs'
+  }
+})
+
+const importStatus = ref<string>('')
+
+function productKeyForKind(): string {
+  switch (props.kind) {
+    case 'unit-cost':
+    case 'break-even':
+    case 'revenue-scenarios':
+      return 'product'
+    case 'donation-scenarios':
+      return 'donorType'
+    case 'kpi':
+      return 'kpi'
+  }
+}
+
+function buildImportRows(): Row[] {
+  const target = {
+    existingRows: rows.slice(),
+    productKey: productKeyForKind()
+  }
+  switch (props.kind) {
+    case 'unit-cost':
+      return unitCostRowsToImport(target)
+    case 'break-even':
+      return breakEvenRowsToImport(target)
+    case 'revenue-scenarios':
+      return revenueScenarioRowsToImport(target)
+    case 'donation-scenarios':
+      return donationScenarioRowsToImport(target)
+    case 'kpi':
+      return starterKpiRows(target)
+  }
+}
+
+function runImport(): void {
+  const candidates = buildImportRows()
+  if (candidates.length === 0) {
+    importStatus.value = 'Nothing new to import — every starter row is already in the table.'
+    window.setTimeout(() => {
+      importStatus.value = ''
+    }, 4000)
+    return
+  }
+
+  // Replace fully-blank starter rows in-place with the first imported
+  // rows so the import doesn't leave empty rows hanging at the top
+  // when the table is still on its starter shape. Anything past the
+  // last blank slot is appended.
+  let replaceIndex = 0
+  let replaced = 0
+  for (const candidate of candidates) {
+    while (replaceIndex < rows.length && !rowIsBlank(rows[replaceIndex])) {
+      replaceIndex++
+    }
+    if (replaceIndex < rows.length) {
+      rows.splice(replaceIndex, 1, candidate)
+      replaceIndex++
+      replaced++
+    } else {
+      rows.push(candidate)
+    }
+  }
+  const appended = candidates.length - replaced
+  const replacedNote = replaced ? `replaced ${replaced} blank row${replaced === 1 ? '' : 's'}` : ''
+  const appendedNote = appended ? `added ${appended} row${appended === 1 ? '' : 's'}` : ''
+  const parts = [replacedNote, appendedNote].filter(Boolean)
+  importStatus.value = `Imported ${candidates.length} starter row${candidates.length === 1 ? '' : 's'} (${parts.join(', ')}). Edit the values before saving.`
+  window.setTimeout(() => {
+    importStatus.value = ''
+  }, 6000)
+}
+
 // ---- Helpers -----------------------------------------------------
 
 function parseNum(v: unknown): number | null {
@@ -491,6 +595,14 @@ async function copyTable(): Promise<void> {
         + Add row
       </button>
       <button
+        v-if="importLabel"
+        type="button"
+        class="rounded border border-amber-400 bg-amber-100 px-2 py-1 text-xs font-medium text-amber-900 hover:bg-amber-200"
+        @click="runImport"
+      >
+        {{ importLabel }}
+      </button>
+      <button
         type="button"
         class="rounded border border-stone-300 bg-white px-2 py-1 text-xs font-medium text-stone-700 hover:bg-stone-100"
         @click="clearAll"
@@ -498,6 +610,19 @@ async function copyTable(): Promise<void> {
         Clear all
       </button>
     </div>
+    <p
+      v-if="importLabel"
+      class="text-[11px] italic text-stone-600"
+    >
+      Imported values are starter assumptions. Edit them before saving.
+    </p>
+    <p
+      v-if="importStatus"
+      class="text-[11px] font-semibold text-amber-900"
+      role="status"
+    >
+      {{ importStatus }}
+    </p>
 
     <!-- ===== Copy block ===== -->
     <div class="rounded border border-stone-200 bg-stone-50 p-3">

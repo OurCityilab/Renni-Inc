@@ -31,6 +31,7 @@
 <script setup lang="ts">
 import { computed, reactive, ref } from 'vue'
 import BuilderHandoffCallout from '~/components/BuilderHandoffCallout.vue'
+import { inventoryRowsToImport } from '~/utils/productCatalog'
 
 type OperationsChecklistKind =
   | 'inventory'
@@ -200,6 +201,61 @@ function clearAll(): void {
   }
 }
 
+// ---- Product catalog import (inventory only) ---------------------
+//
+// Append-only. We deliberately scope this to the inventory checklist
+// — Day-of SOP / Baked Goods SOP / Continuity describe processes
+// not products, so importing the product list there would clutter
+// the SOP without helping. Other kinds get no import button.
+//
+// Existing rows that already name a catalog product (case-insensitive
+// match on the `item` column) are skipped so repeated clicks never
+// duplicate. Edited values on existing rows are never touched.
+
+const importLabel = computed<string | null>(() => {
+  return props.kind === 'inventory' ? 'Import product list' : null
+})
+
+const importStatus = ref<string>('')
+
+function runImport(): void {
+  if (props.kind !== 'inventory') return
+  const candidates = inventoryRowsToImport({
+    existingRows: rows.slice(),
+    productKey: 'item'
+  })
+  if (candidates.length === 0) {
+    importStatus.value = 'Nothing new to import — every product is already in the checklist.'
+    window.setTimeout(() => {
+      importStatus.value = ''
+    }, 4000)
+    return
+  }
+
+  let replaceIndex = 0
+  let replaced = 0
+  for (const candidate of candidates) {
+    while (replaceIndex < rows.length && !rowIsBlank(rows[replaceIndex])) {
+      replaceIndex++
+    }
+    if (replaceIndex < rows.length) {
+      rows.splice(replaceIndex, 1, candidate)
+      replaceIndex++
+      replaced++
+    } else {
+      rows.push(candidate)
+    }
+  }
+  const appended = candidates.length - replaced
+  const replacedNote = replaced ? `replaced ${replaced} blank row${replaced === 1 ? '' : 's'}` : ''
+  const appendedNote = appended ? `added ${appended} row${appended === 1 ? '' : 's'}` : ''
+  const parts = [replacedNote, appendedNote].filter(Boolean)
+  importStatus.value = `Imported ${candidates.length} product${candidates.length === 1 ? '' : 's'} (${parts.join(', ')}). Confirm quantity, location, and owner before saving.`
+  window.setTimeout(() => {
+    importStatus.value = ''
+  }, 6000)
+}
+
 // ---- Helpers -----------------------------------------------------
 
 function rowIsBlank(row: Row): boolean {
@@ -343,6 +399,14 @@ async function copyTable(): Promise<void> {
         + Add row
       </button>
       <button
+        v-if="importLabel"
+        type="button"
+        class="rounded border border-emerald-400 bg-emerald-100 px-2 py-1 text-xs font-medium text-emerald-900 hover:bg-emerald-200"
+        @click="runImport"
+      >
+        {{ importLabel }}
+      </button>
+      <button
         type="button"
         class="rounded border border-stone-300 bg-white px-2 py-1 text-xs font-medium text-stone-700 hover:bg-stone-100"
         @click="clearAll"
@@ -350,6 +414,19 @@ async function copyTable(): Promise<void> {
         Clear all
       </button>
     </div>
+    <p
+      v-if="importLabel"
+      class="text-[11px] italic text-stone-600"
+    >
+      Imported values are starter assumptions. Edit them before saving.
+    </p>
+    <p
+      v-if="importStatus"
+      class="text-[11px] font-semibold text-emerald-900"
+      role="status"
+    >
+      {{ importStatus }}
+    </p>
 
     <!-- ===== Copy block ===== -->
     <div class="rounded border border-stone-200 bg-stone-50 p-3">

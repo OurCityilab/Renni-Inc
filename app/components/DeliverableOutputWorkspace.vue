@@ -55,6 +55,8 @@ import CustomerProfileBuilder from '~/components/CustomerProfileBuilder.vue'
 import KeyActivitiesBuilder from '~/components/KeyActivitiesBuilder.vue'
 import FinanceTableBuilder from '~/components/FinanceTableBuilder.vue'
 import OperationsChecklistBuilder from '~/components/OperationsChecklistBuilder.vue'
+import SectionDependencyHint from '~/components/SectionDependencyHint.vue'
+import { getSectionDependencyHints } from '~/utils/sectionDependencyHints'
 import MarketFitBuilder from '~/components/MarketFitBuilder.vue'
 import MarketFitReferencePanel, {
   type ReferencedMarketFitRow
@@ -2360,6 +2362,16 @@ function shouldOpenDefend(s: TemplateStudioSection): boolean {
           :section="s"
           :deliverable-id="deliverable.id"
         />
+
+        <!-- SectionDependencyHint — non-blocking copy that names the
+             upstream sections this one pulls from and the downstream
+             sections it feeds. Hints only; no hard locks, no soft
+             locks, no status changes, no Firestore writes. The
+             hint set lives in app/utils/sectionDependencyHints.ts
+             so adding / editing a hint never touches studio files
+             or completion criteria. The component renders nothing
+             when the section has no entry. -->
+        <SectionDependencyHint :hints="getSectionDependencyHints(s.id)" />
 
         <!-- ChipPickQuickStart — lightweight chip-pick scaffolding.
              Renders ONLY for sections that opt in via
