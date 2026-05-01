@@ -360,6 +360,8 @@ export function buildCoachModeRegistryStub(
   }
 }
 
-// Re-export the V1 shared template version so audit log entries can
-// distinguish V1 vs V2 templates.
-export { EXECUTIVE_ADVISOR_TEMPLATE_VERSION }
+// Note: EXECUTIVE_ADVISOR_TEMPLATE_VERSION is canonically exported
+// from ./executiveAdvisorShared. Removing the convenience re-export
+// here resolves a Nuxt auto-import duplicate-export warning;
+// audit-log callers should import the constant from its canonical
+// source.

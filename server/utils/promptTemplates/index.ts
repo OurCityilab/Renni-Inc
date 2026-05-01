@@ -24,42 +24,18 @@
 import type { BrandContext } from '~~/app/config/brandContext'
 import type { ProgramContext } from '~~/app/config/programContext'
 
-import {
-  marketEvidenceCritiqueTemplate,
-  type MarketEvidenceCritiquePayload,
-  type MarketEvidenceCritiqueResult
-} from './marketEvidenceCritique'
-import {
-  dailyCommandBriefTemplate,
-  buildDailyCommandBriefTemplate,
-  type DailyCommandBriefPayload,
-  type DailyCommandBriefResult
-} from './dailyCommandBrief'
-import {
-  whatsNextTemplate,
-  buildWhatsNextTemplate,
-  type WhatsNextPayload,
-  type WhatsNextResult
-} from './whatsNext'
-import {
-  runTheMeetingTemplate,
-  buildRunTheMeetingTemplate,
-  type RunTheMeetingPayload,
-  type RunTheMeetingResult
-} from './runTheMeeting'
-import {
-  assignTheWorkTemplate,
-  buildAssignTheWorkTemplate,
-  type AssignTheWorkPayload,
-  type AssignTheWorkResult
-} from './assignTheWork'
-import {
-  buildCoachModeTemplate,
-  buildCoachModeRegistryStub,
-  COACH_MODE_TEMPLATE_VERSION,
-  type CoachModePayload
-} from './coachModeShared'
-import { ADVISOR_MODES, type AdvisorModeResult } from '~~/app/types/executiveAdvisor'
+// Imports are limited to what the registry / dispatcher needs
+// here. Per-template payload / result types and request-bound
+// factories are imported directly by endpoints from each
+// template's own module — see the comment on the removed
+// re-export block at the bottom of this file.
+import { marketEvidenceCritiqueTemplate } from './marketEvidenceCritique'
+import { dailyCommandBriefTemplate } from './dailyCommandBrief'
+import { whatsNextTemplate } from './whatsNext'
+import { runTheMeetingTemplate } from './runTheMeeting'
+import { assignTheWorkTemplate } from './assignTheWork'
+import { buildCoachModeRegistryStub } from './coachModeShared'
+import { ADVISOR_MODES } from '~~/app/types/executiveAdvisor'
 
 /**
  * A prompt template for one AI critique mode. Generic over the
@@ -157,33 +133,12 @@ export const SUPPORTED_PROMPT_MODES: readonly string[] = Object.freeze(
   Object.keys(REGISTRY)
 )
 
-// Re-export each template's payload / result types so endpoints
-// can type their handlers without reaching into individual
-// template modules.
-export type {
-  MarketEvidenceCritiquePayload,
-  MarketEvidenceCritiqueResult,
-  DailyCommandBriefPayload,
-  DailyCommandBriefResult,
-  WhatsNextPayload,
-  WhatsNextResult,
-  RunTheMeetingPayload,
-  RunTheMeetingResult,
-  AssignTheWorkPayload,
-  AssignTheWorkResult
-}
-
-// Re-export the per-mode request-bound template factories so the
-// executive-advisor endpoint can construct a fresh template per
-// request (the action-card validator needs the deliverable
-// due-date map from the payload context).
-export {
-  buildDailyCommandBriefTemplate,
-  buildWhatsNextTemplate,
-  buildRunTheMeetingTemplate,
-  buildAssignTheWorkTemplate
-}
-
-// V2 coach-mode factory + shared types.
-export { buildCoachModeTemplate, COACH_MODE_TEMPLATE_VERSION }
-export type { CoachModePayload, AdvisorModeResult }
+// Note: convenience re-exports of per-template types and factories
+// were removed to resolve Nuxt auto-import duplicate-export
+// warnings. Endpoints now import payload / result types and
+// request-bound template factories directly from each template's
+// own module (`./marketEvidenceCritique`, `./dailyCommandBrief`,
+// `./whatsNext`, `./runTheMeeting`, `./assignTheWork`,
+// `./coachModeShared`). The dispatcher exports above
+// (`PromptTemplate`, `resolvePromptTemplate`,
+// `SUPPORTED_PROMPT_MODES`) remain canonical here.

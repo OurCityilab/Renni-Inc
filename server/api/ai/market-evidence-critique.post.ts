@@ -46,11 +46,11 @@
 import { defineEventHandler, getHeader, readBody, createError } from 'h3'
 import { useRuntimeConfig } from 'nitropack/runtime'
 import { adminAuth } from '~~/server/utils/admin'
-import {
-  resolvePromptTemplate,
-  type MarketEvidenceCritiquePayload,
-  type MarketEvidenceCritiqueResult
-} from '~~/server/utils/promptTemplates'
+import { resolvePromptTemplate } from '~~/server/utils/promptTemplates'
+import type {
+  MarketEvidenceCritiquePayload,
+  MarketEvidenceCritiqueResult
+} from '~~/server/utils/promptTemplates/marketEvidenceCritique'
 import {
   AI_DAILY_LIMIT,
   recordSuccessfulCall,

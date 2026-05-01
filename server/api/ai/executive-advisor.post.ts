@@ -57,14 +57,12 @@ import {
   recordSuccessfulCall,
   withinDailyLimit
 } from '~~/server/utils/aiRateLimit'
-import {
-  resolvePromptTemplate,
-  buildDailyCommandBriefTemplate,
-  buildWhatsNextTemplate,
-  buildRunTheMeetingTemplate,
-  buildAssignTheWorkTemplate,
-  buildCoachModeTemplate
-} from '~~/server/utils/promptTemplates'
+import { resolvePromptTemplate } from '~~/server/utils/promptTemplates'
+import { buildDailyCommandBriefTemplate } from '~~/server/utils/promptTemplates/dailyCommandBrief'
+import { buildWhatsNextTemplate } from '~~/server/utils/promptTemplates/whatsNext'
+import { buildRunTheMeetingTemplate } from '~~/server/utils/promptTemplates/runTheMeeting'
+import { buildAssignTheWorkTemplate } from '~~/server/utils/promptTemplates/assignTheWork'
+import { buildCoachModeTemplate } from '~~/server/utils/promptTemplates/coachModeShared'
 import {
   buildExecutiveContextPackage,
   type ExecutiveContextPackage

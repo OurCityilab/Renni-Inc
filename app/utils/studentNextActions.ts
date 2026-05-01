@@ -1160,11 +1160,12 @@ function addDays(iso: IsoDate, days: number): IsoDate {
 }
 
 /* -------------------------------------------------------------------
- * Helpful re-export so the page doesn't need to chase down the
- * studio registry.
+ * Note: no longer re-exporting `templateStudios` from here.
+ * Callers import it directly from `~/data/templateStudios`.
+ * Removing the re-export resolves a Nuxt auto-import
+ * duplicate-export warning between this file and
+ * app/utils/finalWeekCompletion.ts.
  * ------------------------------------------------------------------ */
-
-export { templateStudios }
 
 /* -------------------------------------------------------------------
  * Section recipe (for the section workspace)

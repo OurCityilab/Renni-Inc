@@ -945,6 +945,8 @@ export function validateFinalWeekMap(): FinalWeekDriftIssue[] {
   return issues
 }
 
-// Re-export the studio registry so callers don't have to chase the
-// path themselves.
-export { templateStudios }
+// Note: no longer re-exporting `templateStudios` from here.
+// Callers import it directly from `~/data/templateStudios`.
+// Removing the re-export resolves a Nuxt auto-import
+// duplicate-export warning between this file and
+// app/utils/studentNextActions.ts.

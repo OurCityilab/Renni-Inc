@@ -21,3 +21,13 @@ Suggested first move:
 4. Customize `seeds/seeded_deliverables_template.csv`
 5. Hand `prompts/claude-code-implementation-brief.md` to Claude Code
 6. Hand `prompts/codex-implementation-brief.md` to Codex for a second pass or focused implementation tasks
+
+## Release gate
+
+Before pushing student-facing changes, run:
+
+```
+npm run check:release
+```
+
+This runs `npm run typecheck`, `npm run test:classifier`, and a production build (`NITRO_PRESET=node-server npm run build`) in sequence. All three must pass.

@@ -41,8 +41,13 @@ const CHIEF_ROLES: ReadonlySet<Role> = new Set<Role>([
   'admin'
 ])
 
-/** True iff the role string belongs to the chief set. */
-export function isChiefForRole(role: Role | null | undefined): boolean {
+/** True iff the role string belongs to the chief set. Local helper
+ *  used by other predicates in this file. The canonical exported
+ *  name lives in app/composables/useRoster.ts; consumers of the
+ *  team-page derivation should import from there. Keeping this one
+ *  unexported avoids a Nuxt auto-import duplicate-export warning
+ *  while preserving the more-permissive signature this file needs. */
+function isChiefForRole(role: Role | null | undefined): boolean {
   return !!role && CHIEF_ROLES.has(role)
 }
 
