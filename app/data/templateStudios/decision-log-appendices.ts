@@ -17,6 +17,20 @@ export const decisionLogAppendices: TemplateStudio = {
       title: 'Major decisions',
       lesson:
         "List the big calls of the semester — pricing, product, brand, partnerships, ops. A 'major decision' is any call that would have changed downstream chapters if it went the other way.",
+      modelAnswerCard: {
+        title: 'What good looks like — major decisions',
+        minimumViableAnswer:
+          '8–15 decisions in chronological order, each with a date, the decider, and a one-line summary the next cohort can scan in 30 seconds.',
+        strongAnswerPattern:
+          'Major decisions (chronological):\n— [Date / week]: [Decision in one line]. Decider: [role / name]. Why it matters: [downstream chapter that would have changed if it went the other way].\n— Repeat 8–15 times. Group similar decisions (pricing, product, brand, partnerships, ops) when natural.',
+        evidenceExpectation:
+          'Cite the Ch. 7 / Ch. 8 finance tables, /revenue, customer feedback, or vendor quotes that informed each call. Mark confidence honestly when the call was made under uncertainty.',
+        avoid: [
+          'Decisions reconstructed from memory without a source.',
+          'Lumping every minor call together — keep "major" honest.',
+          'Skipping the date or decider.'
+        ]
+      },
       decisionMemo: {
         enabled: true,
         kind: 'major-decisions',
@@ -152,6 +166,20 @@ export const decisionLogAppendices: TemplateStudio = {
       title: 'Next-cohort instructions',
       lesson:
         'A short, plain-language guide to using the appendices. "Read this first, ratify these decisions, ask about these unresolved items, do not lose access to these tools."',
+      modelAnswerCard: {
+        title: 'What good looks like — next-cohort instructions',
+        minimumViableAnswer:
+          'A 1–2 paragraph "how to use this appendix" intro plus a short "must do in week one" list and a "do not change before you learn why" list.',
+        strongAnswerPattern:
+          'How to use this appendix (plain-language intro, 1–2 paragraphs).\nMust do in your first week:\n— [3 specific actions tied to specific tools / chapters].\nDo not change before you understand why:\n— [3 specific calls this cohort made deliberately].\nClose with: "Ask [role / advisor] before changing [highest-stakes call]."',
+        evidenceExpectation:
+          'Cite the templates-and-links checklist (so the next cohort can find every tool) and the unresolved-decisions list (so they know what is still in play).',
+        avoid: [
+          'Vague "be the best version of Renni Inc." copy — give specific actions.',
+          'Skipping access notes for tools (Workbench, /pricing, /revenue, Square, vendor relationships).',
+          'Telling next cohort "do not change anything" without saying why.'
+        ]
+      },
       universalChecklist: {
         enabled: true,
         kind: 'next-cohort-instructions',

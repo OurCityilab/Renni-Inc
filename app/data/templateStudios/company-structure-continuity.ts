@@ -17,6 +17,20 @@ export const companyStructureContinuity: TemplateStudio = {
       title: 'Company roles',
       lesson:
         'Start by naming the team — Co-CEOs, chiefs (COO, CFO, CMO, CSGO), members, advisors. Each role gets a one-line "what this person owns" description so a stranger could read the chapter and tell who to ask about what.',
+      modelAnswerCard: {
+        title: 'What good looks like — company roles',
+        minimumViableAnswer:
+          'A role list that covers the C-Suite (Co-CEOs, COO, CFO, CMO, CSGO), names the current student in each, and gives each role a one-sentence "owns this" scope.',
+        strongAnswerPattern:
+          'Renni Inc. roles for this cohort:\n— [role]: [student name] owns [scope]; pairs with [reviewer / advisor].\n— Repeat per role, including advisors and instructor.\n— Add a one-sentence note if any role is currently shared or open.',
+        evidenceExpectation:
+          'Cite each student name from the live roster. Note advisors / instructor only after confirming they have agreed.',
+        avoid: [
+          'Listing roles without an owner.',
+          'Two roles claiming the same scope (write a tiebreaker if it happens).',
+          'Skipping the advisors / instructor entry — they are part of the team for routing.'
+        ]
+      },
       universalTable: {
         enabled: true,
         kind: 'company-roles',
@@ -150,6 +164,20 @@ export const companyStructureContinuity: TemplateStudio = {
       title: 'Succession and handoff',
       lesson:
         'Succession is who takes over when someone leaves a role mid-semester. Handoff is the package the next cohort receives in August — roster, trackers, decisions, contacts.',
+      modelAnswerCard: {
+        title: 'What good looks like — succession & handoff',
+        minimumViableAnswer:
+          'A list pairing every C-Suite role with a backup / shadow, the handoff package contents, and a locked handoff date the next cohort can rely on.',
+        strongAnswerPattern:
+          'Succession plan:\n— [role]: primary [student], backup / shadow [student].\nHandoff package (locked by [date]):\n— Roster + contacts\n— Decision log link (Ch. 13)\n— Vendor / advisor list\n— Asset folder + brand book\n— KPI snapshot + open risks\nFirst-30-days note for next cohort: [one-paragraph "start here"].',
+        evidenceExpectation:
+          'Cite the live roster, the decision log location, and the asset folder. Confirm advisors are named with their permission.',
+        avoid: [
+          'Listing a backup who has not actually agreed.',
+          'Skipping the lock date — the package needs a hard cut-off.',
+          'Dropping the first-30-days note (the next cohort will need it on day one).'
+        ]
+      },
       universalChecklist: {
         enabled: true,
         kind: 'succession-and-handoff',
@@ -318,6 +346,86 @@ export const companyStructureContinuity: TemplateStudio = {
       title: 'Corporate Structure and Ownership Model',
       lesson:
         'Draft an educational model for how Renni Inc. could be structured and owned. Compare entity types, define the 30% Our City nonprofit / 70% student ownership split, propose how the 70% student pool gets allocated, draft vesting + distribution policy, sketch governance, and list every question the instructor / adult / legal reviewer needs to answer before any of this is real. This builder is NOT legal, tax, securities, accounting, or investment advice; Renni Command Center cannot create entities, grant equity, or maintain a real cap table.',
+      modelAnswerCard: {
+        title: 'What good looks like — corporate structure draft',
+        minimumViableAnswer:
+          'A short paragraph that names the entity type the team is studying, locks in the 30 % Our City nonprofit / 70 % student split, sketches how the 70 % is shared, and lists every adult / legal review question still open.',
+        strongAnswerPattern:
+          'We are drafting [entity type] for Renni Inc.\nOwnership model: 30 % Our City nonprofit / 70 % student pool, allocated across cohorts as [allocation rule].\nVesting: [schedule]; exit rules cover graduation, transfer, and re-allocation.\nDistributions: [policy] — educational language only.\nGovernance: [Co-CEOs / COO / CFO / advisor] decide [scope]; [reviewer] reviews [scope].\nContinuity: handoff to next cohort happens through [process].\nUnresolved adult-review questions: [list with named owner].',
+        evidenceExpectation:
+          'Cite which entity-type tradeoffs were considered, which adults / legal reviewers will see the draft, and which questions are still open. The output is a draft educational model — never a real cap table.',
+        avoid: [
+          'Claiming the model is legal, tax, securities, or investment advice.',
+          'Promising real equity, real distributions, or real entity formation in the app.',
+          'Skipping the unresolved-review questions list.'
+        ]
+      },
+      glossaryChips: [
+        {
+          term: 'Entity',
+          definition:
+            'The legal form a business takes (LLC, C-corp, S-corp, co-op, etc.). Different entities follow different rules about ownership, taxes, and decision rights.',
+          safetyNote:
+            'Educational draft only. Adult / legal review required before forming any real entity.'
+        },
+        {
+          term: 'Ownership model',
+          definition:
+            'How a company is split among the people or groups that own it. For Renni Inc. the educational draft uses a 30 % Our City nonprofit / 70 % student pool model.',
+          safetyNote:
+            'Educational draft only. Not a real cap table or equity grant.'
+        },
+        {
+          term: 'Governance',
+          definition:
+            'The rules for who gets to decide what and how decisions are reviewed. Includes who chairs meetings, who breaks ties, and who has veto rights.',
+          safetyNote:
+            'Educational draft only. Real governance rules require adult / legal review.'
+        },
+        {
+          term: 'Voting rights',
+          definition:
+            'Who is allowed to vote on which decisions, and how votes are weighted. In an educational draft these are sketches — not enforceable.'
+        },
+        {
+          term: 'Vesting',
+          definition:
+            'A schedule for when someone earns a right over time — for example, equity that becomes the student\'s only after they finish a cohort or hit a milestone.',
+          safetyNote:
+            'This is only an educational draft. Adult / legal review required before any real vesting policy.'
+        },
+        {
+          term: 'Distributions',
+          definition:
+            'Money paid out to owners after costs, taxes (handled externally), and rules are taken care of. In an educational draft these are planning rules, not real payouts.',
+          safetyNote:
+            'Not legal, tax, or investment advice. Real distributions require adult / legal / tax review.'
+        },
+        {
+          term: 'Dividends',
+          definition:
+            'A specific kind of distribution — money a company pays out to its owners, usually from profit. In an educational draft this is planning language.',
+          safetyNote:
+            'Not legal, tax, or investment advice. Educational draft only.'
+        },
+        {
+          term: 'Continuity',
+          definition:
+            'How the team makes sure the company keeps running when people leave — graduation, role changes, or end-of-cohort handoffs. Continuity is the plan that survives the team.'
+        },
+        {
+          term: 'Handoff',
+          definition:
+            'The hand-over from this cohort to the next: who owns what, where the work lives, and what the next team needs to know on day one.'
+        },
+        {
+          term: 'Review checklist',
+          definition:
+            'The list of questions an adult / instructor / legal reviewer needs to answer before any draft becomes real. Every Ch. 3 entry should produce a review checklist.',
+          safetyNote:
+            'Always required for corporate / equity drafts. Adult / legal review must clear the list before any real-world use.'
+        }
+      ],
       corporateStructure: {
         enabled: true,
         title: 'Corporate Structure and Ownership Model (draft)',

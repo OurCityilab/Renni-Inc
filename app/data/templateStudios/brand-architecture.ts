@@ -19,6 +19,20 @@ export const brandArchitecture: TemplateStudio = {
         'The parent company is the legal and strategic umbrella every other brand sits under. Stakeholders need to know it exists even if customers rarely interact with it directly.',
       example:
         'Renni Inc. is the student-led parent company at Renaissance High School. It owns and operates House Phoenix and the supporting brand line.',
+      modelAnswerCard: {
+        title: 'What good looks like — parent company',
+        minimumViableAnswer:
+          'A two-sentence introduction to Renni Inc. — what it is, where it sits, and how it shows up (or stays in the background) for customers.',
+        strongAnswerPattern:
+          'Renni Inc. is [legal-style sentence: parent company, Renaissance, Detroit]. Co-CEOs lead it; chiefs run finance, operations, marketing, and Strategy and Growth.\nRenni Inc. owns House Phoenix (apparel) and the supporting brand line (Lumen, Notice, Humble Oven).\nCustomer visibility: [where Renni Inc. shows up — e.g., a small parent endorsement on hangtags — and where it stays behind House Phoenix].',
+        evidenceExpectation:
+          'Cite Ch. 3 (roles + decision rights), the live org-chart, and Ch. 5 House Phoenix for the customer-facing contrast.',
+        avoid: [
+          'Collapsing Renni Inc. and House Phoenix into one company.',
+          'Old terminology (Bible, R&D, CDO).',
+          'Naming "Strategy and Growth" by an old research-team name.'
+        ]
+      },
       studentPrompts: [
         'Write one sentence that introduces Renni Inc. as the parent company.',
         'Explain in one line how Renni Inc. shows up to customers (or why it stays in the background).',
@@ -334,6 +348,20 @@ export const brandArchitecture: TemplateStudio = {
         'A mission says what the company does today, for whom, and why. Keep it to one sentence. If it could describe any school project, it is too generic.',
       example:
         'Renni Inc. equips Renaissance students to launch real student-led brands and produce a pop-up that funds the next cohort.',
+      modelAnswerCard: {
+        title: 'What good looks like — mission',
+        minimumViableAnswer:
+          'One sentence that names who Renni Inc. serves, what Renni Inc. does for them, and why it is true of Renni Inc. and not any school club.',
+        strongAnswerPattern:
+          'Renni Inc. [verb] [audience: Renaissance students + Detroit civic / parent / alumni buyers] by [concrete action: launching student-led brands, running the TechTown pop-up, funding the next cohort].',
+        evidenceExpectation:
+          'Cite Ch. 5 House Phoenix audience and Ch. 12 next-semester strategy — the mission should track with both.',
+        avoid: [
+          'Inspirational verbs ("empower", "transform") with no concrete what.',
+          'Generic missions that could describe any entrepreneurship class.',
+          'Writing the mission first and shaping behavior later.'
+        ]
+      },
       studentPrompts: [
         'Who does Renni Inc. serve right now?',
         'What does Renni Inc. actually do for them?',

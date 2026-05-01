@@ -191,6 +191,67 @@ export interface TemplateStudioSection {
   // Renders via ExpertGuidanceCard inside the section workspace
   // alongside the existing SectionGuidanceSummary.
   expertGuidance?: ExpertGuidance
+  // Model Answer Card (P1 — answer examples sprint). Optional
+  // additive metadata that gives students "what good looks like"
+  // without handing them a final answer. Renders as a compact card
+  // near the top of the section workspace, before long text inputs.
+  // Pure curriculum metadata — no Firestore writes, no AI, no
+  // submit-gate behavior, no readiness change.
+  //
+  // Posture (do not relax in V1):
+  //   - never required: every studio without `modelAnswerCard`
+  //     renders exactly as before
+  //   - never gates submit, status, approval, or Playbook readiness
+  //   - never invokes AI; the card is static text
+  //   - never auto-fills the student's draft; the strongAnswerPattern
+  //     is a sentence skeleton, not a final answer
+  modelAnswerCard?: ModelAnswerCard
+  // Glossary chips (P1 — answer examples sprint). Optional list of
+  // student-friendly term + definition pairs surfaced at the top of
+  // the section workspace as a "Key terms" card. Used in Ch. 3
+  // corporate structure / continuity sections and Ch. 8 finance /
+  // break-even / KPI sections so students can read a definition
+  // without leaving the workflow.
+  //
+  // Posture (do not relax in V1):
+  //   - definitions are plain-language student copy, never legal,
+  //     tax, securities, accounting, or investment advice
+  //   - corporate structure terms must keep the existing safety
+  //     framing (educational draft only, adult / legal review
+  //     required); chips display this in `safetyNote` when present
+  //   - never gates submit, status, approval, or readiness
+  //   - never invokes AI; chips are static text
+  glossaryChips?: GlossaryChip[]
+}
+
+export interface ModelAnswerCard {
+  /** Compact title shown above the card. Defaults to
+   *  "What good looks like" when omitted. */
+  title?: string
+  /** One-sentence description of a minimum viable answer. Plain
+   *  language; never a final draft the student should copy. */
+  minimumViableAnswer: string
+  /** One- to three-sentence skeleton for a strong answer. Use
+   *  bracketed placeholders the student fills in. */
+  strongAnswerPattern: string
+  /** Short reminder of the evidence / source the answer should
+   *  cite. Optional. */
+  evidenceExpectation?: string
+  /** Bullet list of common pitfalls. Optional. */
+  avoid?: string[]
+}
+
+export interface GlossaryChip {
+  /** Term shown on the chip / inline help affordance. */
+  term: string
+  /** Plain-language definition. One or two sentences max — never
+   *  textbook-heavy, never legal advice. */
+  definition: string
+  /** Optional safety note shown beneath the definition when the
+   *  term has legal / tax / securities / accounting weight (Ch. 3
+   *  ownership terms). The Corporate Structure builder already
+   *  carries the canonical disclaimer; this is an in-line reminder. */
+  safetyNote?: string
 }
 
 // Universal builder field types — Pass A.

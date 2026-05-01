@@ -268,6 +268,20 @@ export const popUpCampaign: TemplateStudio = {
       title: 'Who are we trying to reach?',
       lesson:
         'Start with the same audience the brand story picked. If the campaign is aimed at someone else, one of them is wrong. Use the Ch. 4 local archetype application table to translate national archetypes (Rising City Renters, Cause-First Supporters, etc.) into Renni local contexts (Renaissance student buyer, parent / family buyer, alumni / supporter, TechTown pop-up visitor, Phoenix Nest buyer, donor / supporter) before naming channels and message.',
+      modelAnswerCard: {
+        title: 'What good looks like — campaign audience',
+        minimumViableAnswer:
+          '2–3 named audiences carried over from Ch. 4 local-application rows, each paired with one or two specific channels and a one-line "why this audience is actually there".',
+        strongAnswerPattern:
+          'Audience for this campaign:\n— [Local context from Ch. 4]: reached at [channel], because [one-line why this audience is there]. National archetype: [canonical 10].\n— Repeat 2–3 times. If a Ch. 4 row is not used here, say why.',
+        evidenceExpectation:
+          'Cite the matching Ch. 4 local-application row and any real observation that explains why the channel works for that audience.',
+        avoid: [
+          'Listing every channel the team has access to; pick the ones the audience actually uses.',
+          'Diverging from the brand-story audience without flagging the mismatch.',
+          'Channel names without a "why this audience is there".'
+        ]
+      },
       studentPrompts: [
         'List the 2-3 groups you most want at the pop-up.',
         'Where do they already spend attention — Instagram, group chats, hallway conversations?',
@@ -330,6 +344,20 @@ export const popUpCampaign: TemplateStudio = {
       title: 'What touchpoints?',
       lesson:
         'A touchpoint is every moment someone could see us before they show up. Signage, posts, classroom mentions, peer DMs. Map them as a real calendar so the team can see overlap, gaps, and who owns each one. The audience column should reference the Ch. 4 local archetype application — touchpoints designed for "Renaissance student buyer" look different from touchpoints aimed at the "donor / supporter" local context.',
+      modelAnswerCard: {
+        title: 'What good looks like — campaign touchpoints',
+        minimumViableAnswer:
+          'A real two-week calendar with at least three distinct touchpoint types, each row carrying channel, date, owner, audience (from Ch. 4 local application), message angle, proof, dependency, and done signal.',
+        strongAnswerPattern:
+          'Touchpoint row:\n— Channel: [IG reel · hallway flyer · group text · table sign].\n— Date: [YYYY-MM-DD or week-of].\n— Owner: [role / name].\n— Audience: [Ch. 4 local context].\n— Message angle: [one-line hook in brand voice].\n— Proof / asset: [link · file name · approved by].\n— Dependency: [what must be ready first].\n— Done signal: [what proves this touchpoint shipped].',
+        evidenceExpectation:
+          'Cite the Ch. 4 local-application row each touchpoint targets and the brand-voice rules from Ch. 9.',
+        avoid: [
+          'Touchpoints with no owner or no done signal — they will silently slip.',
+          'Generic audiences; pull from Ch. 4 local-application rows.',
+          'Calendars with no dependency mapping — easy way to launch out of order.'
+        ]
+      },
       example:
         'Week-before flyer in hallway → two IG reels → day-before text to 20 friends → day-of table signage.',
       universalTable: {

@@ -66,6 +66,8 @@ import CorporateStructureBuilder from '~/components/CorporateStructureBuilder.vu
 import SectionDependencyHint from '~/components/SectionDependencyHint.vue'
 import { getSectionDependencyHints } from '~/utils/sectionDependencyHints'
 import CrossChapterReferencePanel from '~/components/CrossChapterReferencePanel.vue'
+import ModelAnswerCard from '~/components/ModelAnswerCard.vue'
+import GlossaryChips from '~/components/GlossaryChips.vue'
 import { productNameOptions } from '~/utils/productCatalog'
 import MarketFitBuilder from '~/components/MarketFitBuilder.vue'
 import MarketFitReferencePanel, {
@@ -2488,6 +2490,24 @@ function shouldOpenDefend(s: TemplateStudioSection): boolean {
              or completion criteria. The component renders nothing
              when the section has no entry. -->
         <SectionDependencyHint :hints="getSectionDependencyHints(s.id)" />
+
+        <!-- ModelAnswerCard — student-facing "what good looks like"
+             pattern. Renders only when section.modelAnswerCard is
+             populated. Pure curriculum metadata; no Firestore
+             writes, no AI, no submit-gate behavior. -->
+        <ModelAnswerCard
+          v-if="s.modelAnswerCard"
+          :card="s.modelAnswerCard"
+        />
+
+        <!-- GlossaryChips — compact "Key terms" card. Renders only
+             when section.glossaryChips is populated. Definitions
+             are plain-language student copy; Ch. 3 entries carry
+             the educational-draft safety note inline. -->
+        <GlossaryChips
+          v-if="s.glossaryChips && s.glossaryChips.length"
+          :chips="s.glossaryChips"
+        />
 
         <!-- CrossChapterReferencePanel — small read-only callout that
              reminds students working in Ch. 10 audience / touchpoints

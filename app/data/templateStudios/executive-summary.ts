@@ -19,6 +19,20 @@ export const executiveSummary: TemplateStudio = {
         'Open by naming the parent company and the launch brand. Stakeholders need to know in one paragraph who you are and what you make.',
       example:
         'Renni Inc. is a student-led company at Renaissance High School. Its first launch brand is House Phoenix, a Detroit-student-led merchandise brand built for the TechTown pop-up.',
+      modelAnswerCard: {
+        title: 'What good looks like — company overview',
+        minimumViableAnswer:
+          'Two short sentences: one names Renni Inc. as the parent company, one introduces House Phoenix as the launch brand. A parent or buyer should follow it on the first read.',
+        strongAnswerPattern:
+          'Renni Inc. is [parent-company sentence — student-led, at Renaissance, Detroit].\nHouse Phoenix is [launch-brand sentence — what we sell, who it is for, where it shows up first (TechTown pop-up)].\nSupporting brands (Lumen, Notice, Humble Oven) play [brief role] when relevant.',
+        evidenceExpectation:
+          'Cite Ch. 2 brand architecture for the parent / flagship / supporting framing, and Ch. 5 House Phoenix Brand Story for audience and value prop.',
+        avoid: [
+          'Jargon a parent would not follow.',
+          'Treating Renni Inc. and House Phoenix as the same company — Renni Inc. is the parent; House Phoenix is the flagship brand.',
+          'Naming old terminology (Bible, R&D, CDO, JRLA, or old company names).'
+        ]
+      },
       studentPrompts: [
         'Write one sentence that names Renni Inc. as the parent company.',
         'Write one sentence that introduces House Phoenix as the launch brand.',
@@ -225,6 +239,20 @@ export const executiveSummary: TemplateStudio = {
       title: 'What are the open questions or risks?',
       lesson:
         'A real executive summary names risks. Two or three is enough — pick the ones a buyer or teacher would actually want to know about.',
+      modelAnswerCard: {
+        title: 'What good looks like — key risks',
+        minimumViableAnswer:
+          'Two or three real risks, each with a one-line explanation of why it matters and a named owner who is moving it.',
+        strongAnswerPattern:
+          'Key risks before launch:\n— [Risk]: [why it matters in one line]. Mitigation: [next concrete step] by [date]. Owner: [role / name].\n— Repeat 2–3 times. Skip vague risks ("we might run out of time"); name the actual handle.',
+        evidenceExpectation:
+          'Cite the C-Suite Advisor signals, the Intelligence Sync panel, or the chapter hub that surfaced the risk. If the mitigation is in /pricing or /timeline, link the surface.',
+        avoid: [
+          'Vague risks with no owner.',
+          'Adding risks just to look thorough.',
+          'Hiding hard risks because they sound bad — naming them honestly reads as professional.'
+        ]
+      },
       universalTable: {
         enabled: true,
         kind: 'key-risks',
@@ -295,6 +323,20 @@ export const executiveSummary: TemplateStudio = {
       title: 'What happens next before launch?',
       lesson:
         'Close the summary with concrete next actions. This is what the team is doing this week — not aspirations.',
+      modelAnswerCard: {
+        title: 'What good looks like — next steps',
+        minimumViableAnswer:
+          'Three to five concrete actions before TechTown / final presentation, each with a named owner and a due date that already exists on /timeline.',
+        strongAnswerPattern:
+          'Next steps before launch:\n— [Action with concrete verb (ship / lock / preorder)] by [date]. Owner: [role / name].\n— Repeat 3–5 times.\n— Cross-check: every line should already be on /timeline as a task.',
+        evidenceExpectation:
+          'Cite /timeline for due dates, /c-suite-advisor Today\'s Moves for current pushes, and Intelligence Sync for what is missing.',
+        avoid: [
+          'Aspirational verbs ("explore", "consider", "look into").',
+          'Steps that do not appear on /timeline.',
+          'Forgetting the Phoenix Nest carry pitch ask if it is on the docket.'
+        ]
+      },
       universalChecklist: {
         enabled: true,
         kind: 'launch-next-steps',

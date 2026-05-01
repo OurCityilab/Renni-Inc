@@ -124,7 +124,21 @@ export const businessModelCanvas: TemplateStudio = {
       id: 'customer-archetype-local-application',
       title: 'Local archetype application',
       lesson:
-        'Picking a national archetype is a starting point — not the answer. This step turns a national archetype (Rising City Renters, Cause-First Supporters, etc.) into a local Renni context: Renaissance student buyer, parent / family buyer, alumni / supporter, TechTown pop-up visitor, Phoenix Nest buyer, or donor / supporter. National archetypes stay the canonical taxonomy; local roles are application contexts only.',
+        'Picking a national archetype is a starting point — not the answer. This step turns a national archetype (Rising City Renters, Cause-First Supporters, etc.) into a local Renni context: Renaissance student buyer, parent / family buyer, alumni / supporter, TechTown pop-up visitor, Phoenix Nest buyer, or donor / supporter. National archetypes stay the canonical taxonomy; local roles are application contexts only. The local-application table is a planning / evidence tool — never a final customer truth.',
+      modelAnswerCard: {
+        title: 'What good looks like — local archetype application',
+        minimumViableAnswer:
+          'One row per national archetype the team is using, paired with a Renni local context, the product fit, where to reach them, the message, the proof, the risk, and a next validation step the team can run inside two weeks.',
+        strongAnswerPattern:
+          '[National archetype] · [Local context: Renaissance student / parent / alumni / TechTown visitor / Phoenix Nest buyer / donor]\nWhere we reach them: [specific channel — TechTown, school community, family networks, Phoenix Nest aisle].\nProduct fit: [beanie · sweatshirt · t-shirt · baked good · donation tier].\nMessage: [one-line hook in the buyer\'s language].\nProof needed: [what would convince this buyer it is real].\nRisk: [what could make this assumption wrong].\nNext validation: [one specific test the team can run this week].',
+        evidenceExpectation:
+          'Cite Ch. 7 segment evidence and any real conversation, observation, or survey notes. Label assumptions as assumptions.',
+        avoid: [
+          'Treating a local role as a primary archetype — it is an application of the national taxonomy.',
+          'Skipping the next-validation column — without it, the row is just a guess.',
+          'Listing too many archetypes; one or two is plenty before adding more.'
+        ]
+      },
       whyThisMatters:
         'A campaign and a Phoenix Nest pitch read different audiences. Without a local application, the team picks an archetype label and never explains where that buyer actually shows up for Renni.',
       actionSummary:

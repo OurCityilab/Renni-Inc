@@ -106,6 +106,47 @@ export const pricingBreakEven: TemplateStudio = {
       title: 'Does the math work?',
       lesson:
         'Break-even units = fixed cost share ÷ (sale price − unit cost). Below that number, the product loses money on allocated overhead.',
+      modelAnswerCard: {
+        title: 'What good looks like — break-even',
+        minimumViableAnswer:
+          'Each product has a calculated break-even unit count and a one-line note that says whether the planned quantity clears it with room.',
+        strongAnswerPattern:
+          'Break-even per product:\n— [product]: unit cost $[x], sale price $[y], unit margin $[y-x], allocated fixed cost $[z], break-even = [n] units. Plan = [m] units. Buffer = [m-n].\nIf any product is close to or below break-even, write: "Risk response: drop price by [%], push marketing through [channel], or cut from launch."',
+        evidenceExpectation:
+          'Cite /pricing for unit cost and sale price, and the Ch. 7 demand estimate for planned quantity.',
+        avoid: [
+          'Reporting break-even without naming a risk response for products that are close to the line.',
+          'Letting sale price slip below unit cost — fix the price before continuing.',
+          'Implying tax handling — Square remains the external partner.'
+        ]
+      },
+      glossaryChips: [
+        {
+          term: 'Unit cost',
+          definition:
+            'What it costs Renni Inc. to make or buy one of an item — vendor cost, baked-goods supplies, or per-unit packaging. Excludes fixed overhead.'
+        },
+        {
+          term: 'Margin',
+          definition:
+            'The money left after subtracting the cost to make or buy the item. "Unit margin" is per item; "gross margin" is total revenue minus total cost-of-goods.'
+        },
+        {
+          term: 'Break-even',
+          definition:
+            'The point where revenue covers costs, so the project is no longer losing money. "Break-even units" is how many you have to sell to get there.'
+        },
+        {
+          term: 'Cost assumption',
+          definition:
+            'A cost number the team is using because the real number is not yet final (e.g. estimated packaging cost). Always label confidence.'
+        },
+        {
+          term: 'Transaction fee as a cost assumption',
+          definition:
+            'When Square charges a percentage on a sale, that percentage shows up as a cost assumption per unit. Square stays external — Renni Command Center never processes the transaction.'
+        }
+      ],
       example:
         'If T-shirt fixed cost share is $200 and contribution margin is $15, break-even is 14 units. We plan 25 → safe margin of 11.',
       financeTable: {
@@ -128,6 +169,37 @@ export const pricingBreakEven: TemplateStudio = {
       title: 'Revenue scenarios — low / target / stretch',
       lesson:
         'A single revenue number is a guess. Three scenarios — low, target, and stretch — let the team prepare for the best and the worst without sounding overconfident.',
+      modelAnswerCard: {
+        title: 'What good looks like — revenue scenarios',
+        minimumViableAnswer:
+          'Three labeled scenarios (Low, Target, Stretch) with one driving assumption each, and a clear "plan-of-record" callout the rest of the chapters key off.',
+        strongAnswerPattern:
+          'Revenue scenarios:\n— Low: $[amount] — driven by [assumption: low foot traffic / weather / half-conversion].\n— Target: $[amount] — driven by [assumption: planned conversion at planned inventory]. PLAN OF RECORD.\n— Stretch: $[amount] — driven by [assumption: sellout on [product]].\nReconcile each scenario with the Ch. 7 demand entry for the same product.',
+        evidenceExpectation:
+          'Cite the Ch. 7 Market Builder entry, the /pricing inputs, and the segment each scenario is keyed against.',
+        avoid: [
+          'Presenting estimates as facts.',
+          'Skipping the plan-of-record label — operations and marketing need it.',
+          'Letting scenarios drift away from the Ch. 7 demand numbers.'
+        ]
+      },
+      glossaryChips: [
+        {
+          term: 'Revenue scenario',
+          definition:
+            'One of three possible revenue outcomes the team plans against (Low / Target / Stretch). Each one names the assumption it depends on.'
+        },
+        {
+          term: 'Conversion rate',
+          definition:
+            'Of the people who walk past the booth or hear about the pop-up, the share who actually buy. Used to turn foot-traffic estimates into revenue estimates.'
+        },
+        {
+          term: 'Forecast',
+          definition:
+            'A specific revenue or unit estimate the team commits to ahead of an event. Forecasts get compared to actuals in the post-event recap.'
+        }
+      ],
       example:
         'Target: $1,800 (target conversion at planned inventory). Low: $1,100 (half-conversion / weather). Stretch: $2,400 (sellout on at least one product).',
       financeTable: {
@@ -204,6 +276,37 @@ export const pricingBreakEven: TemplateStudio = {
       title: 'Key financial KPIs',
       lesson:
         'Pick the small set of KPIs the team will actually watch — gross revenue, gross profit, donation total, sell-through rate per product, average transaction. Two or three is plenty; eight is noise.',
+      modelAnswerCard: {
+        title: 'What good looks like — financial KPIs',
+        minimumViableAnswer:
+          'Three to five KPIs, each with a clear definition / formula, a target tied to the target revenue scenario, a source the next cohort can pull from, and an owner.',
+        strongAnswerPattern:
+          'Financial KPIs:\n— [KPI]: [definition / formula]. Target = [number]. Source = [/pricing | /revenue | donation tracker]. Owner = [CFO / Co-CEOs]. Review = [weekly / pre-pop-up / post-pop-up].\nRepeat per KPI. Note any KPI whose target depends on a Ch. 7 demand or Ch. 8 scenario assumption.',
+        evidenceExpectation:
+          'Cite the live source (/pricing, /revenue, donation tracker) and the target revenue scenario each KPI was sized against.',
+        avoid: [
+          'Listing more than five KPIs — extra metrics become noise.',
+          'KPIs the team cannot pull from existing tools.',
+          'Targets without a source for the actual number.'
+        ]
+      },
+      glossaryChips: [
+        {
+          term: 'KPI',
+          definition:
+            'Key Performance Indicator — a small, specific number the team watches to see whether the plan is working (e.g. gross revenue, sell-through rate, average gift).'
+        },
+        {
+          term: 'Variance',
+          definition:
+            'The difference between the planned number (target / scenario) and the actual number after the event. Variance shows up in the post-event recap.'
+        },
+        {
+          term: 'Forecast',
+          definition:
+            'A specific revenue, unit, or KPI value the team commits to ahead of an event. The recap compares forecast to actual.'
+        }
+      ],
       financeTable: {
         enabled: true,
         kind: 'kpi',

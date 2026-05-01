@@ -80,6 +80,20 @@ export const phoenixNestPitch: TemplateStudio = {
       title: 'What would retail carry look like?',
       lesson:
         'Buyers need a concrete offer per SKU — not a paragraph. One row per product the team is proposing for the shelf, with the brand fit, the price/margin math, the readiness behind it, the evidence the team can defend, the risk, the exact ask, the owner, and the done signal that says "this offer is ready to take into the meeting." Use the Ch. 4 local archetype application when explaining buyer fit — the shelf-fit story should name the local context (Phoenix Nest buyer, donor / supporter, alumni / supporter, etc.) rooted in a canonical national archetype.',
+      modelAnswerCard: {
+        title: 'What good looks like — Phoenix Nest carry offer',
+        minimumViableAnswer:
+          'One offer card per SKU naming the buyer, product, shelf-fit story (tied to a Ch. 4 local context), price/margin math, proof, readiness, risk, exact ask, and next step.',
+        strongAnswerPattern:
+          'Offer card per SKU:\n— Buyer: [named Phoenix Nest contact].\n— Product / SKU: [House Phoenix beanie / sweatshirt / t-shirt / Humble Oven baked good / donation tier].\n— Shelf fit: [why this belongs on the buyer\'s shelf — local context from Ch. 4 + canonical archetype].\n— Price / margin: [retail $· wholesale $· cost $· margin %].\n— Proof: [sell-through · customer quote · comparable].\n— Readiness: [inventory + production we can defend].\n— Risk: [what could make this offer wrong].\n— Ask: [one yes/no the buyer can act on].\n— Next step: [done signal after the meeting].',
+        evidenceExpectation:
+          'Cite the Ch. 4 local-application row, the Ch. 7 demand estimate, the Ch. 8 revenue scenario, and /pricing for the price / margin math.',
+        avoid: [
+          'A single paragraph instead of one card per SKU.',
+          'Asking for the full commitment in the first meeting — keep the ask small enough to say yes to.',
+          'Skipping the local context tie-back — without it, the shelf-fit story reads as generic.'
+        ]
+      },
       retailPitch: {
         enabled: true,
         kind: 'offer',
