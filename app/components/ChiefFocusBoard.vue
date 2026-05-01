@@ -12,7 +12,10 @@
       creates tasks automatically.
 -->
 <script setup lang="ts">
-import type { ChiefFocusItem } from '~/utils/taskCoverageMap'
+import type {
+  ChiefFocusItem,
+  CoverageMatchConfidence
+} from '~/utils/taskCoverageMap'
 
 defineProps<{
   items: readonly ChiefFocusItem[]
@@ -28,6 +31,35 @@ function priorityChipClass(p: 'P0' | 'P1' | 'P2'): string {
       return 'border-neutral-300 bg-neutral-50 text-neutral-700'
   }
 }
+
+function confidenceChipClass(c: CoverageMatchConfidence): string {
+  switch (c) {
+    case 'high':
+      return 'border-emerald-300 bg-emerald-50 text-emerald-900'
+    case 'medium':
+      return 'border-sky-300 bg-sky-50 text-sky-900'
+    case 'low':
+      return 'border-amber-300 bg-amber-50 text-amber-900'
+    case 'none':
+      return 'border-neutral-300 bg-neutral-50 text-neutral-700'
+  }
+}
+
+function confidenceChipLabel(c: CoverageMatchConfidence): string {
+  switch (c) {
+    case 'high':
+      return 'High confidence'
+    case 'medium':
+      return 'Medium confidence'
+    case 'low':
+      return 'Low confidence'
+    case 'none':
+      return 'No match'
+  }
+}
+
+const COVERAGE_HELP_TEXT =
+  'Coverage means a task appears connected to this section. It does not mean the work is complete or approved.'
 </script>
 
 <template>
@@ -61,16 +93,31 @@ function priorityChipClass(p: 'P0' | 'P1' | 'P2'): string {
           <p class="text-sm font-semibold text-neutral-900 break-words">
             {{ item.node.sectionTitle }}
           </p>
-          <span
-            class="inline-flex items-center rounded border px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide"
-            :class="priorityChipClass(item.node.priority)"
-          >
-            {{ item.node.priority }}
-          </span>
+          <div class="flex flex-wrap items-baseline gap-1">
+            <span
+              class="inline-flex items-center rounded border px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide"
+              :class="priorityChipClass(item.node.priority)"
+            >
+              {{ item.node.priority }}
+            </span>
+            <span
+              class="inline-flex items-center rounded border px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide"
+              :class="confidenceChipClass(item.node.matchConfidence)"
+              :title="item.node.matchReason"
+            >
+              {{ confidenceChipLabel(item.node.matchConfidence) }}
+            </span>
+          </div>
         </header>
 
         <p class="mt-1 text-xs text-neutral-700 break-words">
           {{ item.reason }}
+        </p>
+        <p
+          class="mt-0.5 text-[11px] italic text-neutral-600 break-words"
+          :title="COVERAGE_HELP_TEXT"
+        >
+          {{ item.node.matchReason }}
         </p>
 
         <dl class="mt-1 space-y-0.5 text-[11px] text-neutral-700">
@@ -104,9 +151,11 @@ function priorityChipClass(p: 'P0' | 'P1' | 'P2'): string {
       </li>
     </ul>
 
-    <p class="text-[11px] italic text-neutral-500">
-      Advisor prepares · Chiefs decide. This board surfaces facts;
-      the chief acts through the existing Tasks / Deliverables flow.
+    <p
+      class="text-[11px] italic text-neutral-500"
+      :title="COVERAGE_HELP_TEXT"
+    >
+      Advisor prepares · Chiefs decide. {{ COVERAGE_HELP_TEXT }}
     </p>
   </section>
 </template>

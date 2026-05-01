@@ -10,6 +10,7 @@
       mutation. Drives off TaskCoverageSummary.byLane.
 -->
 <script setup lang="ts">
+import { computed } from 'vue'
 import type { TaskCoverageSummary, TaskCoverageNode } from '~/utils/taskCoverageMap'
 
 const props = defineProps<{
@@ -26,6 +27,26 @@ function topNextSectionTitle(sectionId: string): string | null {
   const n = nodeById.get(sectionId)
   return n ? n.sectionTitle : null
 }
+
+// Per-lane confidence breakdown of covered sections. Helps chiefs
+// see when a "covered" lane is actually full of low-confidence
+// matches that may need re-linking.
+const confidenceByLane = computed<
+  Record<string, { high: number; medium: number; low: number }>
+>(() => {
+  const out: Record<string, { high: number; medium: number; low: number }> = {}
+  for (const n of props.nodes) {
+    if (!n.hasTask) continue
+    const slot = (out[n.lane] ??= { high: 0, medium: 0, low: 0 })
+    if (n.matchConfidence === 'high') slot.high++
+    else if (n.matchConfidence === 'medium') slot.medium++
+    else if (n.matchConfidence === 'low') slot.low++
+  }
+  return out
+})
+
+const COVERAGE_HELP_TEXT =
+  'Coverage means a task appears connected to this section. It does not mean the work is complete or approved.'
 </script>
 
 <template>
@@ -34,9 +55,14 @@ function topNextSectionTitle(sectionId: string): string | null {
       <h2 class="text-sm font-semibold text-neutral-700">
         Lane Coverage — by team
       </h2>
-      <p class="text-xs text-neutral-500">
+      <p
+        class="text-xs text-neutral-500"
+        :title="COVERAGE_HELP_TEXT"
+      >
         Display-only. Per-lane roll-up of task coverage and live
-        status counts. Sourced from the Final Week lane map.
+        status counts. Sourced from the Final Week lane map. Covered
+        sections are split by match confidence so chiefs can spot
+        weak links to clean up.
       </p>
     </header>
 
@@ -73,6 +99,17 @@ function topNextSectionTitle(sectionId: string): string | null {
             <span class="text-neutral-500"> · </span>
             <dt class="inline font-semibold text-neutral-800">Done:</dt>
             {{ ' ' + lane.done }}
+          </div>
+          <div
+            v-if="confidenceByLane[lane.lane]"
+            :title="COVERAGE_HELP_TEXT"
+          >
+            <dt class="inline font-semibold text-neutral-800">Match confidence:</dt>
+            high {{ ' ' + (confidenceByLane[lane.lane]?.high ?? 0) }}
+            <span class="text-neutral-500"> · </span>
+            medium {{ ' ' + (confidenceByLane[lane.lane]?.medium ?? 0) }}
+            <span class="text-neutral-500"> · </span>
+            low {{ ' ' + (confidenceByLane[lane.lane]?.low ?? 0) }}
           </div>
         </dl>
 

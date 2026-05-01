@@ -121,6 +121,124 @@ export const businessModelCanvas: TemplateStudio = {
       }
     },
     {
+      id: 'customer-archetype-local-application',
+      title: 'Local archetype application',
+      lesson:
+        'Picking a national archetype is a starting point — not the answer. This step turns a national archetype (Rising City Renters, Cause-First Supporters, etc.) into a local Renni context: Renaissance student buyer, parent / family buyer, alumni / supporter, TechTown pop-up visitor, Phoenix Nest buyer, or donor / supporter. National archetypes stay the canonical taxonomy; local roles are application contexts only.',
+      whyThisMatters:
+        'A campaign and a Phoenix Nest pitch read different audiences. Without a local application, the team picks an archetype label and never explains where that buyer actually shows up for Renni.',
+      actionSummary:
+        'Translate each selected national archetype into a Renni local context with where, what, message, price concern, proof, risk, and next validation.',
+      universalTable: {
+        enabled: true,
+        kind: 'customer-archetype-local-application',
+        title: 'Local Archetype Application',
+        intro:
+          'One row per national archetype the team is using. Map it to a local Renni context (Renaissance student buyer, parent/family buyer, alumni/supporter, TechTown pop-up visitor, Phoenix Nest buyer, donor/supporter), then explain where you reach them, what they might buy, what message fits, what price concern they may have, what proof you need, and the next validation step. The national archetype taxonomy is canonical — local roles here are applications, not primary archetypes.',
+        copyTitle: 'Local archetype application',
+        evidencePrompt:
+          'Each row should be defended by at least one piece of real evidence (conversation, observation, comparable, labeled assumption).',
+        columns: [
+          {
+            key: 'nationalArchetype',
+            label: 'Selected national archetype',
+            type: 'select',
+            options: [
+              'Rising City Renters',
+              'Value-Driven Family Households',
+              'Settled Suburban Households',
+              'Established Affluent Households',
+              'Practical Small-Town Households',
+              'Legacy-Stage Affluent Households',
+              'Rural Fixed-Income Households',
+              'Multigenerational Urban Households',
+              'Digital-First Premium Buyers',
+              'Cause-First Supporters'
+            ]
+          },
+          {
+            key: 'localContext',
+            label: 'Local context',
+            type: 'select',
+            options: [
+              'Renaissance student buyer',
+              'Parent / family buyer',
+              'Alumni / supporter buyer',
+              'TechTown pop-up visitor',
+              'Phoenix Nest buyer',
+              'Donor / supporter'
+            ]
+          },
+          { key: 'whereWeReach', label: 'Where we reach them', type: 'textarea', placeholder: 'TechTown · school community · family networks · Phoenix Nest aisle', wide: true },
+          { key: 'productFit', label: 'Product most likely to fit', type: 'text', placeholder: 'beanie · sweatshirt · t-shirt · baked good · donation', productAutocomplete: true },
+          { key: 'message', label: 'Message or hook', type: 'textarea', placeholder: 'one-line hook in the buyer\'s language', wide: true },
+          { key: 'priceConcern', label: 'Price concern', type: 'textarea', placeholder: 'what they worry about at the price point', wide: true },
+          { key: 'proofNeeded', label: 'Proof / evidence needed', type: 'textarea', placeholder: 'what would convince them this is real', wide: true },
+          { key: 'risk', label: 'Risk or objection', type: 'textarea', placeholder: 'what could make this assumption wrong', wide: true },
+          { key: 'nextValidation', label: 'Next validation step', type: 'text', placeholder: 'one specific test the team can run this week', wide: true }
+        ],
+        starterRowCount: 2
+      },
+      studentPrompts: [
+        'Now make the archetype local. Where does this buyer show up for Renni, what might they buy, what message would make sense, and what proof do we need before we trust this assumption?',
+        'Use one row per national archetype the team is committing to.',
+        'Local roles (Renaissance student, parent, alumni, TechTown visitor, Phoenix Nest buyer, donor) are applications — they never replace the national archetype label.'
+      ],
+      requiredInputs: [
+        'At least one national archetype mapped to a local context.',
+        'Where to reach them, product fit, message, price concern, proof, risk, and next validation.'
+      ],
+      completionCriteria: [
+        'Each row picks a canonical national archetype AND a local context.',
+        'Where, product fit, message, price concern, proof, risk, and next validation are filled in.',
+        'No row treats a local role as a primary archetype.'
+      ],
+      sourceGuidance: [
+        'National archetypes are the canonical taxonomy. Local roles here are application examples only.',
+        'Defend each row with real evidence or a clearly labeled assumption.',
+        'Do not present estimates as facts.'
+      ],
+      expertGuidance: {
+        expertRole: 'CSGO + CMO',
+        whyThisMatters:
+          'Ch. 10 and Ch. 11 both read this table. The campaign chapter uses local context to pick channel and message; the Phoenix Nest pitch uses local context to explain who actually walks past the shelf.',
+        whatToGather: [
+          'For every selected national archetype, one local-Renni context they appear in.',
+          'A specific channel where the team can actually reach that local context.',
+          'A product the team already sells that fits — beanies, sweatshirts, t-shirts, baked goods, or a donation tier.',
+          'A defensible next validation step the team can run inside two weeks.'
+        ],
+        whereToFindIt: [
+          'Customer Archetype Picker on this same page (Ch. 4 customer-segments).',
+          'Chapter 7 — Segments and Customer Insights (segment evidence the team has captured).',
+          'Real conversation notes from prior pop-ups, school-store interactions, or Phoenix Nest store-walks.'
+        ],
+        weakAnswerLooksLike:
+          '"Cause-First Supporters · everyone who likes Renni." — no local context, no proof, no validation step.',
+        strongAnswerLooksLike:
+          '"Cause-First Supporters · donor / supporter · TechTown pop-up + family networks · donation tier or House Phoenix sweatshirt · message names student ownership · price concern is impact transparency · proof is a one-line student-impact statement · risk is supporter likes the mission but does not buy · next validation is asking 10 adults which support option feels most compelling."',
+        expertPushback: [
+          'Did the team pick a real local context (Renaissance student, parent, alumni, etc.) instead of treating the national archetype as the only label?',
+          'Is the next validation step something the team can actually do in the next two weeks?',
+          'Does the message sound like the local buyer or like the team?'
+        ],
+        commonMistakes: [
+          'Skipping the local context column and leaving the national archetype label as the only descriptor.',
+          'Listing too many archetypes — start with one or two before adding more.',
+          'Naming a generic "Detroit community" as the local context instead of a specific Renni-relevant role.'
+        ],
+        decisionSupported: 'Ch. 10 audience + touchpoints, Ch. 11 Phoenix Nest offer / pitch.',
+        connectsTo: [
+          'Chapter 7 — Segment Composer',
+          'Chapter 10 — Marketing and Campaign (audience + touchpoints)',
+          'Chapter 11 — Phoenix Nest pitch (offer + buyer fit)'
+        ],
+        ownerHint: 'Chief Strategy and Growth Officer · CMO support',
+        doneLooksLike:
+          'Each canonical national archetype the team uses has at least one local-context row with where, product fit, message, price concern, proof, risk, and a next validation step.'
+      }
+    },
+    {
       id: 'value-propositions',
       title: 'Value propositions',
       lesson:

@@ -26,6 +26,9 @@ function priorityChipClass(p: 'P0' | 'P1' | 'P2'): string {
       return 'border-neutral-300 bg-neutral-50 text-neutral-700'
   }
 }
+
+const COVERAGE_HELP_TEXT =
+  'Coverage means a task appears connected to this section. It does not mean the work is complete or approved.'
 </script>
 
 <template>
@@ -34,10 +37,13 @@ function priorityChipClass(p: 'P0' | 'P1' | 'P2'): string {
       <h2 class="text-sm font-semibold text-neutral-700">
         Missing task coverage
       </h2>
-      <p class="text-xs text-neutral-500">
+      <p
+        class="text-xs text-neutral-500"
+        :title="COVERAGE_HELP_TEXT"
+      >
         These are manual task suggestions. The platform does not
         create them automatically — paste the recommended title into
-        the existing Tasks form when you decide to seed one.
+        the existing Tasks form when you decide to seed one. {{ COVERAGE_HELP_TEXT }}
       </p>
     </header>
 
@@ -69,6 +75,13 @@ function priorityChipClass(p: 'P0' | 'P1' | 'P2'): string {
 
         <p class="text-[11px] text-neutral-500 break-words">
           {{ node.laneTitle }} · {{ node.chapterId }}
+        </p>
+
+        <p
+          class="mt-1 rounded border border-rose-200 bg-white/70 p-1.5 text-[11px] text-rose-900 break-words"
+        >
+          <span class="font-semibold">Why missing:</span>
+          {{ ' ' + (node.coverageNote || node.matchReason) }}
         </p>
 
         <dl class="mt-1 space-y-0.5 text-[11px] text-neutral-700">

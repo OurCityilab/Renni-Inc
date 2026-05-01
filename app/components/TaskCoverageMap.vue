@@ -12,7 +12,11 @@
 -->
 <script setup lang="ts">
 import { computed } from 'vue'
-import type { TaskCoverageNode, TaskCoveragePriority } from '~/utils/taskCoverageMap'
+import type {
+  CoverageMatchConfidence,
+  TaskCoverageNode,
+  TaskCoveragePriority
+} from '~/utils/taskCoverageMap'
 
 const props = defineProps<{
   nodes: readonly TaskCoverageNode[]
@@ -59,6 +63,35 @@ function coverageChipLabel(node: TaskCoverageNode): string {
   if (node.statusSummary.done > 0) return 'Done'
   return 'Has task'
 }
+
+function confidenceChipClass(c: CoverageMatchConfidence): string {
+  switch (c) {
+    case 'high':
+      return 'border-emerald-300 bg-emerald-50 text-emerald-900'
+    case 'medium':
+      return 'border-sky-300 bg-sky-50 text-sky-900'
+    case 'low':
+      return 'border-amber-300 bg-amber-50 text-amber-900'
+    case 'none':
+      return 'border-neutral-300 bg-neutral-50 text-neutral-700'
+  }
+}
+
+function confidenceChipLabel(c: CoverageMatchConfidence): string {
+  switch (c) {
+    case 'high':
+      return 'High confidence'
+    case 'medium':
+      return 'Medium confidence'
+    case 'low':
+      return 'Low confidence'
+    case 'none':
+      return 'No match'
+  }
+}
+
+const COVERAGE_HELP_TEXT =
+  'Coverage means a task appears connected to this section. It does not mean the work is complete or approved.'
 </script>
 
 <template>
@@ -67,7 +100,10 @@ function coverageChipLabel(node: TaskCoverageNode): string {
       <span class="text-sm font-semibold text-neutral-700">
         Task Coverage Map — by section
       </span>
-      <span class="ml-2 text-xs text-neutral-500">
+      <span
+        class="ml-2 text-xs text-neutral-500"
+        :title="COVERAGE_HELP_TEXT"
+      >
         Display-only. Does not create tasks or change statuses.
       </span>
     </summary>
@@ -99,16 +135,37 @@ function coverageChipLabel(node: TaskCoverageNode): string {
               <p class="text-sm font-semibold text-neutral-900 break-words">
                 {{ node.sectionTitle }}
               </p>
-              <span
-                class="inline-flex items-center rounded border px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide"
-                :class="coverageChipClass(node)"
-              >
-                {{ coverageChipLabel(node) }}
-              </span>
+              <div class="flex flex-wrap items-baseline gap-1">
+                <span
+                  class="inline-flex items-center rounded border px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide"
+                  :class="coverageChipClass(node)"
+                >
+                  {{ coverageChipLabel(node) }}
+                </span>
+                <span
+                  class="inline-flex items-center rounded border px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide"
+                  :class="confidenceChipClass(node.matchConfidence)"
+                  :title="node.matchReason"
+                >
+                  {{ confidenceChipLabel(node.matchConfidence) }}
+                </span>
+              </div>
             </header>
 
             <p class="text-[11px] text-neutral-500 break-words">
               {{ node.laneTitle }} · {{ node.chapterId }}
+            </p>
+            <p
+              class="mt-1 text-[11px] italic text-neutral-600 break-words"
+              :title="COVERAGE_HELP_TEXT"
+            >
+              {{ node.matchReason }}
+            </p>
+            <p
+              v-if="node.coverageNote"
+              class="text-[11px] text-neutral-600 break-words"
+            >
+              {{ node.coverageNote }}
             </p>
 
             <dl class="mt-1 space-y-0.5 text-[11px] text-neutral-700">
@@ -155,8 +212,7 @@ function coverageChipLabel(node: TaskCoverageNode): string {
       </div>
 
       <p class="text-[11px] italic text-neutral-500">
-        Task coverage means a required section has a matching task
-        chiefs can manage. Missing coverage does not mean the
+        {{ COVERAGE_HELP_TEXT }} Missing coverage does not mean the
         section is impossible — it means chiefs should assign or
         clarify the work.
       </p>

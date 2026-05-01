@@ -267,13 +267,19 @@ export const popUpCampaign: TemplateStudio = {
       id: 'audience',
       title: 'Who are we trying to reach?',
       lesson:
-        'Start with the same audience the brand story picked. If the campaign is aimed at someone else, one of them is wrong.',
+        'Start with the same audience the brand story picked. If the campaign is aimed at someone else, one of them is wrong. Use the Ch. 4 local archetype application table to translate national archetypes (Rising City Renters, Cause-First Supporters, etc.) into Renni local contexts (Renaissance student buyer, parent / family buyer, alumni / supporter, TechTown pop-up visitor, Phoenix Nest buyer, donor / supporter) before naming channels and message.',
       studentPrompts: [
         'List the 2-3 groups you most want at the pop-up.',
-        'Where do they already spend attention — Instagram, group chats, hallway conversations?'
+        'Where do they already spend attention — Instagram, group chats, hallway conversations?',
+        'Cross-check each audience against the Ch. 4 local archetype application — does the audience here match the local contexts the team committed to?'
       ],
       completionCriteria: [
-        'Audience list matches the brand story; channels are specific, not generic.'
+        'Audience list matches the brand story; channels are specific, not generic.',
+        'Each audience here can be tied back to a Ch. 4 local archetype application row.'
+      ],
+      sourceGuidance: [
+        'Use your Ch. 4 local archetype application when choosing audience and message — it names the buyer in Renni-specific language.',
+        'If the campaign needs an audience that is not in the Ch. 4 table, add a row there first.'
       ],
       brandFit: {
         enabled: true,
@@ -323,7 +329,7 @@ export const popUpCampaign: TemplateStudio = {
       id: 'touchpoints',
       title: 'What touchpoints?',
       lesson:
-        'A touchpoint is every moment someone could see us before they show up. Signage, posts, classroom mentions, peer DMs. Map them as a real calendar so the team can see overlap, gaps, and who owns each one.',
+        'A touchpoint is every moment someone could see us before they show up. Signage, posts, classroom mentions, peer DMs. Map them as a real calendar so the team can see overlap, gaps, and who owns each one. The audience column should reference the Ch. 4 local archetype application — touchpoints designed for "Renaissance student buyer" look different from touchpoints aimed at the "donor / supporter" local context.',
       example:
         'Week-before flyer in hallway → two IG reels → day-before text to 20 friends → day-of table signage.',
       universalTable: {

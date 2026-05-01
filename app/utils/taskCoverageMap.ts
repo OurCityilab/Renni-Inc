@@ -39,6 +39,31 @@ export interface TaskCoverageStatusSummary {
   done: number
 }
 
+// ---- Match confidence model -------------------------------------
+//
+// Coverage match confidence describes HOW the matcher matched a
+// real task to a section, not WHETHER the work is done. Chiefs and
+// students should treat coverage as a planning signal: a "high
+// confidence" match means the task is clearly seeded against the
+// right requirement; a "low confidence" match means the matcher
+// guessed by title token and may be wrong; "none" means no task
+// could be matched at all.
+//
+// Coverage confidence NEVER affects submit gates, approval, status,
+// or task creation. It is a display-only annotation on top of the
+// existing matcher.
+
+export type CoverageMatchConfidence = 'high' | 'medium' | 'low' | 'none'
+
+export interface CoverageMatchOutcome {
+  matchedTaskIds: string[]
+  matchConfidence: CoverageMatchConfidence
+  matchReason: string
+  matchedTaskId: string | null
+  matchedTaskTitle: string | null
+  coverageNote: string
+}
+
 export interface TaskCoverageNode {
   /** Stable composite id (`<deliverableId>:<sectionId>`). */
   id: string
@@ -80,6 +105,22 @@ export interface TaskCoverageNode {
   definitionOfDone: string
   /** Section deeplink the UI should target. */
   route: string
+  // ---- Match confidence (additive; existing consumers may
+  //      ignore these fields). Always present on every node so
+  //      consumers don't have to null-check. ----
+  /** How confident the matcher is in its task → section match. */
+  matchConfidence: CoverageMatchConfidence
+  /** Student-friendly explanation of the match (or non-match). */
+  matchReason: string
+  /** First matched task id, if any. Mirrors matchedTaskIds[0] for
+   *  consumers that only need the strongest single match. */
+  matchedTaskId: string | null
+  /** First matched task title, if any. */
+  matchedTaskTitle: string | null
+  /** Optional plain-language note explaining WHY a section is
+   *  missing or why a low-confidence match looks suspicious.
+   *  Empty string when there is no note to add. */
+  coverageNote: string
 }
 
 export interface TaskCoverageSummary {
@@ -142,10 +183,10 @@ function buildNodeForEntry(
   input: DeriveTaskCoverageInput
 ): TaskCoverageNode {
   const template = findTemplateForEntry(entry)
-  const matchedTaskIds = matchTasksForEntry(entry, template, input.tasks)
+  const outcome = matchTasksForEntry(entry, template, input.tasks)
   const statusSummary = summarizeMatchedStatuses(
     input.tasks,
-    matchedTaskIds,
+    outcome.matchedTaskIds,
     input.todayIso
   )
   const requiredTaskTitle = template?.title ?? entry.firstAction
@@ -160,12 +201,17 @@ function buildNodeForEntry(
     reviewer: entry.reviewer,
     priority: entry.priority,
     requiredTaskTitle,
-    hasTask: matchedTaskIds.length > 0,
-    matchedTaskIds,
+    hasTask: outcome.matchedTaskIds.length > 0,
+    matchedTaskIds: outcome.matchedTaskIds,
     statusSummary,
     dependency: entry.dependency ?? '',
     definitionOfDone: entry.doneWhen,
-    route: `/deliverables/${entry.deliverableId}/sections/${entry.sectionId}`
+    route: `/deliverables/${entry.deliverableId}/sections/${entry.sectionId}`,
+    matchConfidence: outcome.matchConfidence,
+    matchReason: outcome.matchReason,
+    matchedTaskId: outcome.matchedTaskId,
+    matchedTaskTitle: outcome.matchedTaskTitle,
+    coverageNote: outcome.coverageNote
   }
 }
 
@@ -188,7 +234,7 @@ function findTemplateForEntry(
  *     This is the strongest signal — a chief seeded the task on the
  *     right deliverable AND used recognizable language.
  *  2. Exact match on `task.deliverableId` only, when the deliverable
- *     has only one open section in the lane map (the task can only
+ *     has only one section in the lane map (the task can only
  *     belong to that section in this case).
  *  3. Title substring fallback on tasks with no `deliverableId`. The
  *     matcher walks the recommended title's 5+ char tokens and the
@@ -198,12 +244,17 @@ function findTemplateForEntry(
  *  task) are preferred to false positives (claiming coverage that
  *  isn't there). False negatives produce "needs a task" prompts
  *  which the chief can resolve quickly; false positives would
- *  produce phantom green checkmarks. */
+ *  produce phantom green checkmarks.
+ *
+ *  Returns a structured outcome including which pass produced the
+ *  match (mapped to a confidence level) and a student-friendly
+ *  reason string. The match confidence is for display only; it
+ *  never changes statuses or submit behavior. */
 function matchTasksForEntry(
   entry: FinalWeekSectionEntry,
   template: FinalWeekTaskTemplate | null,
   tasks: readonly Task[]
-): string[] {
+): CoverageMatchOutcome {
   const matched = new Set<string>()
   const recommendedLower = (template?.title ?? '').toLowerCase()
   const titleLower = entry.title.toLowerCase()
@@ -217,41 +268,108 @@ function matchTasksForEntry(
     ...sectionTokens
   ]
 
-  // Pass 1: deliverableId match + token overlap.
+  // Pass 1: deliverableId match + token overlap. STRONGEST.
+  let pass1Hits = 0
   for (const t of tasks) {
     if (t.deliverableId !== entry.deliverableId) continue
     const haystack = (t.title ?? '').toLowerCase()
     if (!haystack) continue
     const overlap = titleTokens.some((tok) => tok && haystack.includes(tok))
-    if (overlap) matched.add(t.id)
+    if (overlap) {
+      matched.add(t.id)
+      pass1Hits++
+    }
   }
 
   // Pass 2: deliverableId match alone, only when this is the only
   // section in its lane on the same deliverable. Avoids stealing a
   // task that could legitimately belong to a sibling section.
+  let pass2Hits = 0
   if (matched.size === 0) {
     const sameDeliverableSiblings = countSiblingsOnSameDeliverable(entry)
     if (sameDeliverableSiblings === 1) {
       for (const t of tasks) {
         if (t.deliverableId === entry.deliverableId) {
           matched.add(t.id)
+          pass2Hits++
         }
       }
     }
   }
 
   // Pass 3: title-substring fallback for tasks with null
-  // deliverableId.
+  // deliverableId. WEAKEST.
+  let pass3Hits = 0
   for (const t of tasks) {
     if (matched.has(t.id)) continue
     if (t.deliverableId) continue
     const haystack = (t.title ?? '').toLowerCase()
     if (!haystack) continue
     const overlap = titleTokens.some((tok) => tok && haystack.includes(tok))
-    if (overlap) matched.add(t.id)
+    if (overlap) {
+      matched.add(t.id)
+      pass3Hits++
+    }
   }
 
-  return Array.from(matched)
+  const matchedTaskIds = Array.from(matched)
+  const firstId = matchedTaskIds[0] ?? null
+  const firstTitle = firstId
+    ? (tasks.find((t) => t.id === firstId)?.title ?? null)
+    : null
+
+  // Pick the strongest pass that contributed. Pass 1 wins, then 2, then 3.
+  let confidence: CoverageMatchConfidence
+  let reason: string
+  let note = ''
+  if (pass1Hits > 0) {
+    confidence = 'high'
+    reason = 'High confidence: matched a task on this deliverable that names this section.'
+  } else if (pass2Hits > 0) {
+    confidence = 'medium'
+    reason = 'Medium confidence: matched by deliverable. This section is the only candidate on the deliverable, so the task is assumed to belong here.'
+    note = 'The matched task does not name this section by title — confirm before treating coverage as solid.'
+  } else if (pass3Hits > 0) {
+    confidence = 'low'
+    reason = 'Low confidence: matched only by task title. The task has no deliverable link, so the matcher guessed by language.'
+    note = 'The matched task has no deliverable link. A chief should re-link the task to the right deliverable to upgrade this match.'
+  } else {
+    confidence = 'none'
+    reason = 'Missing: no matching task found for this section.'
+    note = explainMissingMatch(entry, tasks, titleTokens)
+  }
+
+  return {
+    matchedTaskIds,
+    matchConfidence: confidence,
+    matchReason: reason,
+    matchedTaskId: firstId,
+    matchedTaskTitle: firstTitle,
+    coverageNote: note
+  }
+}
+
+/** When a section has no matching task, name the most likely cause
+ *  so chiefs and students can act. Returns a one-sentence
+ *  student-friendly note. */
+function explainMissingMatch(
+  entry: FinalWeekSectionEntry,
+  tasks: readonly Task[],
+  titleTokens: readonly string[]
+): string {
+  const tasksOnDeliverable = tasks.filter(
+    (t) => t.deliverableId === entry.deliverableId
+  )
+  if (tasksOnDeliverable.length === 0) {
+    return 'No task on this deliverable yet — the chief has not seeded one.'
+  }
+  // A task exists on this deliverable but its title does not contain
+  // any of the recognized section/recommended-task tokens.
+  const distinctTokens = titleTokens.filter((t) => t).length
+  if (distinctTokens <= 1) {
+    return 'A task exists on this deliverable, but the section\'s suggested-task title is too short to match by language. Consider clarifying the suggested task title.'
+  }
+  return 'A task exists on this deliverable, but its title does not name this section. Either rename the task to include the section name, or seed a section-specific task.'
 }
 
 function countSiblingsOnSameDeliverable(
@@ -541,6 +659,25 @@ export function topChiefFocusItems(
         suggestedChiefMove: !n.hasTask
           ? `Open the section and decide whether ${n.owner} should seed a task this week.`
           : `Quick check-in with ${n.owner}: confirm we still want this in scope this week.`
+      })
+    }
+  }
+  // 7. Filler — covered P0 sections with low / medium confidence.
+  //    Chiefs can quickly re-link or rename the matched task to
+  //    upgrade the match. Never blocks anything; just adds clarity.
+  if (items.length < cap) {
+    for (const n of nodes) {
+      if (items.length >= cap) break
+      if (n.priority !== 'P0') continue
+      if (!n.hasTask) continue
+      if (n.matchConfidence !== 'low' && n.matchConfidence !== 'medium') continue
+      if (items.find((i) => i.node.id === n.id)) continue
+      items.push({
+        node: n,
+        reason: `P0 section is covered, but the match is ${n.matchConfidence} confidence — the link could be clearer.`,
+        suggestedChiefMove:
+          n.coverageNote ||
+          `Open the section and confirm the matched task ("${n.matchedTaskTitle ?? '—'}") really belongs here. Rename or re-link if not.`
       })
     }
   }

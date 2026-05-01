@@ -79,7 +79,7 @@ export const phoenixNestPitch: TemplateStudio = {
       id: 'offer',
       title: 'What would retail carry look like?',
       lesson:
-        'Buyers need a concrete offer per SKU — not a paragraph. One row per product the team is proposing for the shelf, with the brand fit, the price/margin math, the readiness behind it, the evidence the team can defend, the risk, the exact ask, the owner, and the done signal that says "this offer is ready to take into the meeting."',
+        'Buyers need a concrete offer per SKU — not a paragraph. One row per product the team is proposing for the shelf, with the brand fit, the price/margin math, the readiness behind it, the evidence the team can defend, the risk, the exact ask, the owner, and the done signal that says "this offer is ready to take into the meeting." Use the Ch. 4 local archetype application when explaining buyer fit — the shelf-fit story should name the local context (Phoenix Nest buyer, donor / supporter, alumni / supporter, etc.) rooted in a canonical national archetype.',
       retailPitch: {
         enabled: true,
         kind: 'offer',
@@ -112,7 +112,8 @@ export const phoenixNestPitch: TemplateStudio = {
         'Reference the Chapter 7 demand estimate and Chapter 8 revenue scenario used to support each carry quantity.',
         'Use a clearly labeled demand assumption, not a guess.',
         'Do not present estimates as facts.',
-        'Phoenix Nest reads both retail and carry buyers — the shelf-fit field should compare segments and name the strongest evidence (a defended pitch, not a single guess).'
+        'Phoenix Nest reads both retail and carry buyers — the shelf-fit field should compare segments and name the strongest evidence (a defended pitch, not a single guess).',
+        'Use your Ch. 4 local archetype application when explaining buyer fit — name the local context (Phoenix Nest buyer, donor / supporter, alumni, etc.) and the canonical national archetype it ties back to.'
       ],
       marketBuilder: {
         enabled: true,
