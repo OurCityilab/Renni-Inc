@@ -9,9 +9,9 @@ const auth = useAuthStore()
 const bmc = useBmc()
 const { data: blocks, loading } = bmc.watchAll()
 
-// Firestore rule: admin, Co-CEO, or CSGO may edit any Canvas block.
-// UI gates the textarea/Save on the same predicate so failed writes
-// aren't the first feedback.
+// Firestore rule: admin, Co-CEO, or Strategy and Growth (csgo role
+// enum) may edit any Canvas block. UI gates the textarea/Save on
+// the same predicate so failed writes aren't the first feedback.
 const canEdit = computed(
   () =>
     auth.isAdmin ||
@@ -120,7 +120,7 @@ const statusTone = {
         and <NuxtLink to="/revenue" class="text-phoenix-700 hover:underline">Revenue</NuxtLink>.
       </p>
       <p v-if="!canEdit" class="mt-1 text-xs text-neutral-500">
-        Read-only. Admin, Co-CEO, or CSGO can edit.
+        Read-only. Admin, Co-CEO, or Strategy and Growth can edit.
       </p>
     </header>
 
@@ -157,7 +157,7 @@ const statusTone = {
             :disabled="!canEdit"
             rows="5"
             class="w-full rounded border border-neutral-300 p-2 text-sm disabled:bg-neutral-50"
-            :placeholder="canEdit ? 'Fill in your team\'s answer…' : 'Read-only until admin / Co-CEO / CSGO edits.'"
+            :placeholder="canEdit ? 'Fill in your team\'s answer…' : 'Read-only until admin / Co-CEO / Strategy and Growth edits.'"
             @input="markDirty(key)"
           />
 

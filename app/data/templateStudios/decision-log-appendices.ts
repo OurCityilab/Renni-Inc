@@ -222,7 +222,7 @@ export const decisionLogAppendices: TemplateStudio = {
       playbookChapter: 13,
       suggestedTaskTitle: 'Add decision rationale and open questions',
       definitionOfDone:
-        'CSGO reviews rationales for honesty and includes "we would change this" notes where they apply.'
+        'Strategy and Growth reviews rationales for honesty and includes "we would change this" notes where they apply.'
     },
     {
       id: 'appendix-evidence-linked',
@@ -293,7 +293,7 @@ export const decisionLogAppendices: TemplateStudio = {
       ownerRole: 'csgo',
       requirementId: 'appendix-rationale-included',
       definitionOfDone:
-        'CSGO writes rationales and unresolved decisions; flags "would change" calls.',
+        'Strategy and Growth writes rationales and unresolved decisions; flags "would change" calls.',
       dueOffsetDays: 5
     },
     {
@@ -319,7 +319,7 @@ export const decisionLogAppendices: TemplateStudio = {
       ownerRole: 'csgo',
       requirementId: 'appendix-evidence-linked',
       definitionOfDone:
-        'CSGO assembles evidence links across brand, finance, operations, and customer research; CMO, CFO, and COO verify their own source links.',
+        'Strategy and Growth assembles evidence links across brand, finance, operations, and customer research; CMO, CFO, and COO verify their own source links.',
       dueOffsetDays: 5
     },
     {
@@ -328,7 +328,7 @@ export const decisionLogAppendices: TemplateStudio = {
       ownerRole: 'csgo',
       requirementId: 'appendix-unresolved-decisions',
       definitionOfDone:
-        'CSGO lists unresolved decisions with triggers and next-cohort owners, then routes the handoff to Co-CEO for review.',
+        'Strategy and Growth lists unresolved decisions with triggers and next-cohort owners, then routes the handoff to Co-CEO for review.',
       dueOffsetDays: 6
     },
     {

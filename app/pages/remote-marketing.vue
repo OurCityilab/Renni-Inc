@@ -94,9 +94,9 @@ const WORKSTREAMS: Workstream[] = [
     whatGoodLooksLike:
       'Reaction is specific to the named buyer, not generic. Names a concrete objection in customer language. Suggests evidence the team can realistically gather before May 27.',
     whatRenniDoesWithIt:
-      'Renaissance CSGO + CMO read feedback, decide which objections to address in Ch. 10 messaging, log decisions in Ch. 13.',
+      'Renaissance Strategy and Growth + CMO read feedback, decide which objections to address in Ch. 10 messaging, log decisions in Ch. 13.',
     remoteOwnerHint: 'Remote class — segment critique, objection identification.',
-    renaissanceOwnerHint: 'Renaissance CSGO + CMO — own segment definitions.',
+    renaissanceOwnerHint: 'Renaissance Strategy and Growth + CMO — own segment definitions.',
     playbookChapters: 'Ch. 7, Ch. 10'
   },
   {

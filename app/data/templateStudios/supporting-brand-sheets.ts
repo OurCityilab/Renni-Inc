@@ -310,7 +310,7 @@ export const supportingBrandSheets: TemplateStudio = {
       playbookChapter: 6,
       suggestedTaskTitle: 'Identify customer fit and retail/launch assumptions',
       definitionOfDone:
-        'CSGO writes audience and retail assumptions per brand and flags any unverified ones.'
+        'Strategy and Growth writes audience and retail assumptions per brand and flags any unverified ones.'
     },
     {
       id: 'brand-sheet-cross-brand-rules',
@@ -381,7 +381,7 @@ export const supportingBrandSheets: TemplateStudio = {
       ownerRole: 'csgo',
       requirementId: 'brand-sheet-customer-fit',
       definitionOfDone:
-        'CSGO writes per-brand audience and retail assumptions, flags unverified ones.',
+        'Strategy and Growth writes per-brand audience and retail assumptions, flags unverified ones.',
       dueOffsetDays: 5
     },
     {

@@ -16,11 +16,11 @@ export const companyStructureContinuity: TemplateStudio = {
       id: 'company-roles',
       title: 'Company roles',
       lesson:
-        'Start by naming the team — Co-CEOs, chiefs (COO, CFO, CMO, CSGO), members, advisors. Each role gets a one-line "what this person owns" description so a stranger could read the chapter and tell who to ask about what.',
+        'Start by naming the team — Co-CEOs, chiefs (COO, CFO, CMO, Strategy and Growth), members, advisors. Each role gets a one-line "what this person owns" description so a stranger could read the chapter and tell who to ask about what.',
       modelAnswerCard: {
         title: 'What good looks like — company roles',
         minimumViableAnswer:
-          'A role list that covers the C-Suite (Co-CEOs, COO, CFO, CMO, CSGO), names the current student in each, and gives each role a one-sentence "owns this" scope.',
+          'A role list that covers the C-Suite (Co-CEOs, COO, CFO, CMO, Strategy and Growth), names the current student in each, and gives each role a one-sentence "owns this" scope.',
         strongAnswerPattern:
           'Renni Inc. roles for this cohort:\n— [role]: [student name] owns [scope]; pairs with [reviewer / advisor].\n— Repeat per role, including advisors and instructor.\n— Add a one-sentence note if any role is currently shared or open.',
         evidenceExpectation:
@@ -38,7 +38,7 @@ export const companyStructureContinuity: TemplateStudio = {
         intro: 'Every role on the team. Name the role, person, what they own, and who reports / supports.',
         copyTitle: 'Company roles',
         columns: [
-          { key: 'role', label: 'Role', type: 'text', placeholder: 'Co-CEO · COO · CFO · CMO · CSGO · member · advisor' },
+          { key: 'role', label: 'Role', type: 'text', placeholder: 'Co-CEO · COO · CFO · CMO · Strategy and Growth · member · advisor' },
           { key: 'person', label: 'Person', type: 'text', placeholder: 'name' },
           { key: 'ownership', label: 'What they own', type: 'textarea', placeholder: 'one sentence', wide: true },
           { key: 'reportsTo', label: 'Reports / supports', type: 'text', placeholder: 'who they pair with', wide: true },
@@ -61,7 +61,7 @@ export const companyStructureContinuity: TemplateStudio = {
         whyThisMatters:
           'A reviewer or next-cohort student should be able to read this once and know who to email about pricing, packaging, social, or research. If they cannot, the team becomes a bottleneck.',
         whatToGather: [
-          'Every C-Suite role + current student name (Co-CEOs, COO, CFO, CMO, CSGO).',
+          'Every C-Suite role + current student name (Co-CEOs, COO, CFO, CMO, Strategy and Growth).',
           'A one-line "owns this" scope per role.',
           'Advisors and instructor and what each helps with.'
         ],
@@ -109,7 +109,7 @@ export const companyStructureContinuity: TemplateStudio = {
           '1–2 decisions that require chief consultation across departments.'
         ],
         weakAnswerLooksLike: '"We talk things over and decide together." — no rights, no shortcuts.',
-        strongAnswerLooksLike: '"CFO decides /pricing changes under 20%; Co-CEOs approve above 20%; CMO sets pop-up signage but consults CSGO when buyer claims change."',
+        strongAnswerLooksLike: '"CFO decides /pricing changes under 20%; Co-CEOs approve above 20%; CMO sets pop-up signage but consults Strategy and Growth when buyer claims change."',
         expertPushback: ['What is the most expensive decision a chief can make alone?', 'Have any meetings happened recently that should have been a chief decision?'],
         commonMistakes: ['Vague verbs like "consult" with no trigger.', 'Routing every interesting decision to Co-CEOs.'],
         decisionSupported: 'Pace and clarity of operating decisions.',
@@ -745,7 +745,7 @@ export const companyStructureContinuity: TemplateStudio = {
       playbookChapter: 3,
       suggestedTaskTitle: 'Identify continuity risks and next-semester recommendations',
       definitionOfDone:
-        'CSGO captures real risks the team is watching; mitigations are written or explicitly missing.'
+        'Strategy and Growth captures real risks the team is watching; mitigations are written or explicitly missing.'
     },
     {
       id: 'continuity-next-cohort-guidance',
@@ -784,7 +784,7 @@ export const companyStructureContinuity: TemplateStudio = {
       ownerRole: 'csgo',
       requirementId: 'continuity-risks',
       definitionOfDone:
-        'CSGO captures 2–3 continuity risks with mitigations and flags any that are unmitigated.',
+        'Strategy and Growth captures 2–3 continuity risks with mitigations and flags any that are unmitigated.',
       dueOffsetDays: 5
     },
     {

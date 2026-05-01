@@ -213,7 +213,7 @@ export const businessModelCanvas: TemplateStudio = {
         'Do not present estimates as facts.'
       ],
       expertGuidance: {
-        expertRole: 'CSGO + CMO',
+        expertRole: 'Strategy and Growth + CMO',
         whyThisMatters:
           'Ch. 10 and Ch. 11 both read this table. The campaign chapter uses local context to pick channel and message; the Phoenix Nest pitch uses local context to explain who actually walks past the shelf.',
         whatToGather: [
@@ -804,7 +804,7 @@ export const businessModelCanvas: TemplateStudio = {
       ownerRole: 'csgo',
       requirementId: 'bmc-value-props-tied-to-products',
       definitionOfDone:
-        'CSGO ties value props to products, names TechTown and Phoenix Nest channels, and routes customer-facing language to CMO for review.',
+        'Strategy and Growth ties value props to products, names TechTown and Phoenix Nest channels, and routes customer-facing language to CMO for review.',
       dueOffsetDays: 4
     },
     {
@@ -822,7 +822,7 @@ export const businessModelCanvas: TemplateStudio = {
       ownerRole: 'csgo',
       requirementId: 'bmc-partners-and-resources-realistic',
       definitionOfDone:
-        'CSGO confirms activities, resources, and partners support the strategy; COO verifies the operational pieces are realistic.',
+        'Strategy and Growth confirms activities, resources, and partners support the strategy; COO verifies the operational pieces are realistic.',
       dueOffsetDays: 4
     },
     {

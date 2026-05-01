@@ -29,8 +29,8 @@ export const brandArchitecture: TemplateStudio = {
           'Cite Ch. 3 (roles + decision rights), the live org-chart, and Ch. 5 House Phoenix for the customer-facing contrast.',
         avoid: [
           'Collapsing Renni Inc. and House Phoenix into one company.',
-          'Old terminology (Bible, R&D, CDO).',
-          'Naming "Strategy and Growth" by an old research-team name.'
+          'Old terminology for the Playbook or for departments.',
+          'Naming Strategy and Growth by an outdated research-team name.'
         ]
       },
       studentPrompts: [
@@ -50,7 +50,7 @@ export const brandArchitecture: TemplateStudio = {
         whatToGather: [
           'One legal-style sentence: who Renni Inc. is, where it sits (Renaissance High School, Detroit), what it owns.',
           'Customer visibility rule: where Renni Inc. appears (e.g., a small parent-company endorsement on a hangtag) vs. where House Phoenix carries the front-of-product brand.',
-          'Governance: Co-CEOs, chiefs (CFO, COO, CMO, CSGO), instructor / admin advisor.'
+          'Governance: Co-CEOs, chiefs (CFO, COO, CMO, Strategy and Growth), instructor / admin advisor.'
         ],
         whereToFindIt: [
           'Chapter 3 — company structure & continuity (roles, decision rights).',
@@ -738,7 +738,7 @@ export const brandArchitecture: TemplateStudio = {
       ownerRole: 'csgo',
       requirementId: 'brand-arch-future-questions',
       definitionOfDone:
-        'CSGO captures at least two real customer questions or confusions and turns them into open questions.',
+        'Strategy and Growth captures at least two real customer questions or confusions and turns them into open questions.',
       dueOffsetDays: 5
     },
     {
@@ -774,7 +774,7 @@ export const brandArchitecture: TemplateStudio = {
       ownerRole: 'csgo',
       requirementId: 'values-tied-to-student-ownership',
       definitionOfDone:
-        'CSGO ties at least one value to a real customer or community decision.',
+        'Strategy and Growth ties at least one value to a real customer or community decision.',
       dueOffsetDays: 6
     },
     {

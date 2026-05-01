@@ -2327,7 +2327,7 @@ async function save() {
                 type="text"
                 :disabled="!editingEnabled"
                 class="mt-1 w-full rounded border border-neutral-300 p-2 text-sm disabled:bg-neutral-100"
-                placeholder="CMO, CSGO, Co-CEO, member"
+                placeholder="CMO, Strategy and Growth, Co-CEO, member"
                 @input="markDirty"
               />
             </label>

@@ -1046,7 +1046,7 @@ function crossChapterSignals(inputs: AdvisorInputs): AdvisorSignal[] {
           'Price/margin before carry recommendation; segment before campaign messaging.',
         processOrder: [
           'Confirm price + margin defensible (CFO).',
-          'Confirm segment + evidence on file (CSGO).',
+          'Confirm segment + evidence on file (Strategy and Growth).',
           'Confirm production / inventory readiness (COO).',
           'Lead with the buyer + story (CMO).'
         ],

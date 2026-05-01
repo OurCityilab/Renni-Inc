@@ -539,7 +539,7 @@ export const popUpCampaign: TemplateStudio = {
       playbookChapter: 10,
       suggestedTaskTitle: 'Draft customer segments and insights',
       definitionOfDone:
-        'CSGO drafts named customer groups with TechTown vs. Phoenix Nest emphasis.'
+        'Strategy and Growth drafts named customer groups with TechTown vs. Phoenix Nest emphasis.'
     },
     {
       id: 'insights-customer-needs',
@@ -591,7 +591,7 @@ export const popUpCampaign: TemplateStudio = {
       playbookChapter: 10,
       suggestedTaskTitle: 'Create feedback collection plan',
       definitionOfDone:
-        'CSGO writes the feedback plan and confirms with the COO at-booth ops.'
+        'Strategy and Growth writes the feedback plan and confirms with the COO at-booth ops.'
     },
     {
       id: 'insights-launch-implications',
@@ -670,7 +670,7 @@ export const popUpCampaign: TemplateStudio = {
       ownerRole: 'csgo',
       requirementId: 'insights-primary-customers',
       definitionOfDone:
-        'CSGO drafts customer groups, problems, desires, and labels evidence sources.',
+        'Strategy and Growth drafts customer groups, problems, desires, and labels evidence sources.',
       dueOffsetDays: 3
     },
     {

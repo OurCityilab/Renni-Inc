@@ -484,7 +484,7 @@ function departmentDisplayLabel(d: Department): string {
     case 'marketing':
       return 'Marketing · CMO'
     case 'strategy-growth':
-      return 'Strategy and Growth · CSGO'
+      return 'Strategy and Growth'
     case 'admin':
       return 'Admin / Instructor'
   }

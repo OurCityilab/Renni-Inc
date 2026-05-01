@@ -128,7 +128,7 @@ const departmentOptions: { id: Department | null; label: string }[] = [
   { id: 'operations', label: 'Operations · COO' },
   { id: 'finance', label: 'Finance · CFO' },
   { id: 'marketing', label: 'Marketing · CMO' },
-  { id: 'strategy-growth', label: 'Strategy and Growth · CSGO' },
+  { id: 'strategy-growth', label: 'Strategy and Growth' },
   { id: 'executive', label: 'Executive · Co-CEO' }
 ]
 

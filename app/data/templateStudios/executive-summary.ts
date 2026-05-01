@@ -30,7 +30,7 @@ export const executiveSummary: TemplateStudio = {
         avoid: [
           'Jargon a parent would not follow.',
           'Treating Renni Inc. and House Phoenix as the same company — Renni Inc. is the parent; House Phoenix is the flagship brand.',
-          'Naming old terminology (Bible, R&D, CDO, JRLA, or old company names).'
+          'Old terminology for the Playbook, outdated department names, old school / program references, or old company names.'
         ]
       },
       studentPrompts: [
@@ -284,7 +284,7 @@ export const executiveSummary: TemplateStudio = {
         whatToGather: [
           'Two or three highest-likelihood-or-impact risks (price acceptance, inventory miss, weather, vendor delay, time).',
           'For each risk: a one-line "why this matters" explanation.',
-          'For each risk: who owns mitigating it (Co-CEO, CFO, CMO, COO, CSGO).'
+          'For each risk: who owns mitigating it (Co-CEO, CFO, CMO, COO, Strategy and Growth).'
         ],
         whereToFindIt: [
           'C-Suite Advisor cockpit (/c-suite-advisor) — Stuck + Action today signals.',
@@ -294,7 +294,7 @@ export const executiveSummary: TemplateStudio = {
         weakAnswerLooksLike:
           '"Our biggest risk is running out of time." — vague, generic, no mitigation owner, no follow-on.',
         strongAnswerLooksLike:
-          'Two or three risks named with concrete handles: "Price acceptance is unproven at $100 (CFO + CSGO are running a preorder test before May 12). Inventory has not been counted twice (COO confirms by April 30). Weather contingency for May 27 (CMO drafts an indoor signage plan)."',
+          'Two or three risks named with concrete handles: "Price acceptance is unproven at $100 (CFO + Strategy and Growth are running a preorder test before May 12). Inventory has not been counted twice (COO confirms by April 30). Weather contingency for May 27 (CMO drafts an indoor signage plan)."',
         expertPushback: [
           'Which of these risks could actually kill the launch, vs. just complicate it?',
           'For each named risk, who owns the mitigation, and what is the next concrete step?',
@@ -347,7 +347,7 @@ export const executiveSummary: TemplateStudio = {
       },
       studentPrompts: [
         'List the 3–5 next actions before TechTown.',
-        'Name who owns each one (Co-CEO, CMO, CFO, COO, CSGO).',
+        'Name who owns each one (Co-CEO, CMO, CFO, COO, Strategy and Growth).',
         'Make sure the actions match what is actually on the timeline.'
       ],
       completionCriteria: [
@@ -360,7 +360,7 @@ export const executiveSummary: TemplateStudio = {
           'The next-steps list is what stakeholders actually scan for: "is this team executing?" Aspirational verbs ("explore", "consider") read as not-started; concrete verbs ("ship", "lock", "preorder") read as in-flight.',
         whatToGather: [
           '3–5 concrete actions before TechTown (May 27) or final presentation (May 12 / 15).',
-          'Owner for each action (Co-CEO, CMO, CFO, COO, CSGO).',
+          'Owner for each action (Co-CEO, CMO, CFO, COO, Strategy and Growth).',
           'Cross-check: do these actions appear on /timeline as actual tasks?'
         ],
         whereToFindIt: [
@@ -371,7 +371,7 @@ export const executiveSummary: TemplateStudio = {
         weakAnswerLooksLike:
           '"We will work on the Playbook, finalize pricing, and prepare for the pop-up." — vague verbs, no owner, no due date implied.',
         strongAnswerLooksLike:
-          '"CFO locks /pricing for all SKUs by April 30. CMO drafts pop-up signage by May 5. COO confirms inventory + bake list by May 5. CSGO runs a 10-person preorder test at $100 before May 12. Co-CEOs review the final Playbook bundle by May 12."',
+          '"CFO locks /pricing for all SKUs by April 30. CMO drafts pop-up signage by May 5. COO confirms inventory + bake list by May 5. Strategy and Growth runs a 10-person preorder test at $100 before May 12. Co-CEOs review the final Playbook bundle by May 12."',
         expertPushback: [
           'Are these actions on the timeline, or do they live only here?',
           'Which one is the team most likely to slip on, and what is the recovery plan?',

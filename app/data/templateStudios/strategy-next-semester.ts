@@ -204,7 +204,7 @@ export const strategyNextSemester: TemplateStudio = {
           { key: 'goal', label: 'Goal', type: 'text', placeholder: 'one short headline', wide: true },
           { key: 'metric', label: 'Metric', type: 'text', placeholder: 'gross revenue · units · segments validated' },
           { key: 'target', label: 'Target', type: 'text', placeholder: 'e.g. $X,XXX or 25%' },
-          { key: 'owner', label: 'Owner', type: 'text', placeholder: 'CFO · CMO · CSGO · COO' },
+          { key: 'owner', label: 'Owner', type: 'text', placeholder: 'CFO · CMO · Strategy and Growth · COO' },
           { key: 'baseline', label: 'Baseline (this cohort)', type: 'text', placeholder: 'the actual number this cohort hit', wide: true },
           { key: 'confidence', label: 'Confidence', type: 'select', options: ['Low', 'Medium', 'High'] }
         ],
@@ -236,7 +236,7 @@ export const strategyNextSemester: TemplateStudio = {
           'Owner department per goal.'
         ],
         weakAnswerLooksLike: '"Grow the brand and sell more." — no metric.',
-        strongAnswerLooksLike: '"Grow gross revenue 25% over this cohort\'s baseline ($X,XXX) — owner CFO. Validate Civic Premium Buyer segment at $100 with 20+ direct customer signals — owner CSGO."',
+        strongAnswerLooksLike: '"Grow gross revenue 25% over this cohort\'s baseline ($X,XXX) — owner CFO. Validate Civic Premium Buyer segment at $100 with 20+ direct customer signals — owner Strategy and Growth."',
         expertPushback: ['Are these targets defensible against this semester\'s data?', 'Are any goals so vague no one could fail at them?'],
         commonMistakes: ['Aspirational percentages without baseline.', 'Goals with no department owner.'],
         decisionSupported: 'How the next cohort spends time and prioritizes work.',
@@ -353,7 +353,7 @@ export const strategyNextSemester: TemplateStudio = {
       playbookChapter: 12,
       suggestedTaskTitle: 'Draft lessons and strategic priorities',
       definitionOfDone:
-        'CSGO drafts lessons and confirms each one is traceable to a real moment.'
+        'Strategy and Growth drafts lessons and confirms each one is traceable to a real moment.'
     },
     {
       id: 'strategy-customer-sales-insights',
@@ -365,7 +365,7 @@ export const strategyNextSemester: TemplateStudio = {
       playbookChapter: 12,
       suggestedTaskTitle: 'Add marketing/customer lessons',
       definitionOfDone:
-        'CMO and CSGO confirm each insight is grounded in evidence and points to a next-semester implication.'
+        'CMO and Strategy and Growth confirm each insight is grounded in evidence and points to a next-semester implication.'
     },
     {
       id: 'strategy-operational-lessons',
@@ -432,7 +432,7 @@ export const strategyNextSemester: TemplateStudio = {
       ownerRole: 'csgo',
       requirementId: 'strategy-lessons-from-launch',
       definitionOfDone:
-        'CSGO drafts the lessons section and the brand/product priorities.',
+        'Strategy and Growth drafts the lessons section and the brand/product priorities.',
       dueOffsetDays: 3
     },
     {
@@ -450,7 +450,7 @@ export const strategyNextSemester: TemplateStudio = {
       ownerRole: 'csgo',
       requirementId: 'strategy-next-semester-goals',
       definitionOfDone:
-        'CSGO drafts measurable next-semester goals; CFO confirms metric logic and targets are defensible.',
+        'Strategy and Growth drafts measurable next-semester goals; CFO confirms metric logic and targets are defensible.',
       dueOffsetDays: 4
     },
     {
@@ -459,7 +459,7 @@ export const strategyNextSemester: TemplateStudio = {
       ownerRole: 'csgo',
       requirementId: 'strategy-customer-sales-insights',
       definitionOfDone:
-        'CSGO writes customer and sales insights from evidence; CMO reviews customer-facing language and brand implications.',
+        'Strategy and Growth writes customer and sales insights from evidence; CMO reviews customer-facing language and brand implications.',
       dueOffsetDays: 4
     },
     {
@@ -468,7 +468,7 @@ export const strategyNextSemester: TemplateStudio = {
       ownerRole: 'csgo',
       requirementId: 'strategy-brand-product-priorities',
       definitionOfDone:
-        'CSGO recommends keep/change/retire calls for current products and priority directions for every brand.',
+        'Strategy and Growth recommends keep/change/retire calls for current products and priority directions for every brand.',
       dueOffsetDays: 5
     },
     {
@@ -477,7 +477,7 @@ export const strategyNextSemester: TemplateStudio = {
       ownerRole: 'csgo',
       requirementId: 'strategy-risks-open-questions',
       definitionOfDone:
-        'CSGO names the strategic risks and open questions, then routes them to Co-CEO for coherence review.',
+        'Strategy and Growth names the strategic risks and open questions, then routes them to Co-CEO for coherence review.',
       dueOffsetDays: 5
     },
     {

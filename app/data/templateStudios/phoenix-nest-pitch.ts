@@ -29,7 +29,7 @@ export const phoenixNestPitch: TemplateStudio = {
       },
       studentPrompts: [
         'One sentence: who made this, for whom, and why it exists.',
-        'Attribution: who led this cohort? Include Co-CEOs, CSGO, CMO.'
+        'Attribution: who led this cohort? Include Co-CEOs, Strategy and Growth, CMO.'
       ],
       completionCriteria: [
         'Identity sentence matches the brand story word-for-word where it matters.'
@@ -255,7 +255,7 @@ export const phoenixNestPitch: TemplateStudio = {
       ownerRole: 'csgo',
       requirementId: 'pitch-customer-quotes',
       definitionOfDone:
-        'CSGO collects or verifies at least three customer quotes, with CMO support for clean buyer-facing wording.',
+        'Strategy and Growth collects or verifies at least three customer quotes, with CMO support for clean buyer-facing wording.',
       dueOffsetDays: 1
     }
   ],

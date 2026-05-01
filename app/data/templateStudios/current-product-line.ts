@@ -367,7 +367,7 @@ export const currentProductLine: TemplateStudio = {
       ownerRole: 'csgo',
       requirementId: 'pricing-risks-named',
       definitionOfDone:
-        'CSGO links to customer feedback or demand notes that back the risks list.',
+        'Strategy and Growth links to customer feedback or demand notes that back the risks list.',
       dueOffsetDays: 5
     },
     {
