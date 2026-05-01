@@ -1,6 +1,6 @@
 <!--
   CustomerArchetypePicker — pure UI + clipboard.
-  Renders a card deck of 15 Renni Inc. customer archetypes,
+  Renders a card deck of Renni Inc. national customer archetypes,
   shows detail when selected, and lets the student copy the
   selection (with optional per-archetype custom notes) as
   markdown for Working Draft.
@@ -141,17 +141,18 @@ async function copyOutput(): Promise<void> {
         Builder · customer archetypes
       </p>
       <h3 class="text-base font-semibold text-sky-900">
-        Pick a starting customer archetype
+        Pick a national customer archetype
       </h3>
       <p class="text-xs text-sky-900">
-        Choose one or two archetypes that feel closest to a Renni
-        Inc. customer you're trying to reach. Each card shows a
-        profile, likely needs, objections, and what evidence to
-        collect. You'll customize what's actually true for Renni Inc.
-        in the next step.
+        Choose one or two national customer/lifestyle archetypes
+        that feel closest to the buyer you're trying to reach. Local
+        roles like Renaissance student, alumni, staff, TechTown visitor,
+        or Phoenix Nest buyer are application contexts, not the whole
+        customer segment.
       </p>
       <p class="text-[11px] italic text-sky-900">
-        Customer archetypes are starting hypotheses, not verified
+        Customer archetypes are PRIZM / ESRI-inspired starting
+        hypotheses, not actual PRIZM or ESRI segments and not verified
         facts. The team validates them with real evidence before
         committing.
       </p>
@@ -246,6 +247,18 @@ async function copyOutput(): Promise<void> {
           </p>
           <dl class="space-y-1">
             <div>
+              <dt class="font-semibold text-stone-700">Demographic fingerprint</dt>
+              <ul class="ml-4 list-disc space-y-0.5 text-stone-700">
+                <li v-for="(n, i) in archetype.demographicFingerprint" :key="i">{{ n }}</li>
+              </ul>
+            </div>
+            <div>
+              <dt class="font-semibold text-stone-700">Lifestyle fingerprint</dt>
+              <ul class="ml-4 list-disc space-y-0.5 text-stone-700">
+                <li v-for="(n, i) in archetype.lifestyleFingerprint" :key="i">{{ n }}</li>
+              </ul>
+            </div>
+            <div>
               <dt class="font-semibold text-stone-700">Likely needs</dt>
               <ul class="ml-4 list-disc space-y-0.5 text-stone-700">
                 <li v-for="(n, i) in archetype.likelyNeeds" :key="i">{{ n }}</li>
@@ -277,6 +290,14 @@ async function copyOutput(): Promise<void> {
                 <li v-for="(n, i) in archetype.whatNotToAssume" :key="i">{{ n }}</li>
               </ul>
             </div>
+            <div>
+              <dt class="font-semibold text-stone-700">Local applications</dt>
+              <ul class="ml-4 list-disc space-y-0.5 text-stone-700">
+                <li v-for="(n, i) in archetype.localApplications" :key="i">
+                  <span class="font-medium">{{ n.context }}:</span> {{ n.example }}
+                </li>
+              </ul>
+            </div>
           </dl>
         </div>
       </template>
@@ -294,12 +315,12 @@ async function copyOutput(): Promise<void> {
       >
         <label class="block text-[11px] text-stone-700">
           <span class="font-semibold text-stone-800">
-            How does the {{ archetype.label }} show up for Renni Inc.?
+            How does this national archetype show up locally for Renni Inc.?
           </span>
           <textarea
             v-model="customNotes[archetype.id]"
             rows="2"
-            placeholder="What's actually true for our customer? Specific behaviors, settings, or quotes you've heard."
+            placeholder="Name the local context: Renaissance, Detroit, TechTown, Phoenix Nest, or general. Add specific behaviors, settings, or quotes you've heard."
             class="mt-1 w-full rounded border border-stone-300 bg-white p-1 text-xs"
           />
         </label>

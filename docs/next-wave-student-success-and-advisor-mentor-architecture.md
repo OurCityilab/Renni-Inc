@@ -249,25 +249,28 @@ Recommendation: extend Customer Profile Builder with a `CustomerArchetypePicker`
 - Keep copy-to-Working-Draft handoff.
 - Do not expose raw numeric scores to students.
 
-### Initial Archetype Library
+### Corrected National Archetype Library
 
-| Archetype | Short profile | Example quote | Likely products | Likely channel | Evidence to collect | Risk of assumption |
-|---|---|---|---|---|---|---|
-| Renaissance student | Current student who wants identity and school connection. | “I want something that feels like us.” | T-shirts, beanies, sweatshirts. | School events, student word of mouth. | Student survey, pre-order interest, hallway feedback. | Assuming all students want the same style. |
-| Senior student | Student near graduation who wants memory, status, or legacy. | “I want something that marks senior year.” | Sweatshirts, premium tees, donations. | Senior events, class channels. | Senior feedback, event demand. | Overpricing without checking willingness to pay. |
-| Underclass student | Younger student looking for belonging and affordable gear. | “I want something I can wear all year.” | T-shirts, beanies. | School announcements, peer recommendation. | Grade-level interest, price sensitivity. | Assuming they know the brand story already. |
-| Alumni | Former student who wants connection to Renaissance. | “I still want to support the school.” | Sweatshirts, donations, gift items. | Alumni outreach, school network. | Alumni messages, purchase interest. | Assuming alumni prefer current student styles. |
-| Parent/family supporter | Adult buying to support a student or school mission. | “I want to support what students built.” | Sweatshirts, donations, baked goods. | Events, family communications. | Parent interest, donation intent. | Treating support as unlimited budget. |
-| Teacher/staff | Staff member buying for school pride and support. | “I want to back the students.” | T-shirts, baked goods, donations. | Staff announcements, in-school sales. | Staff feedback, repeat requests. | Assuming staff want the same designs as students. |
-| School-spirit buyer | Buyer motivated by Renaissance identity. | “I want gear that shows pride.” | Tees, sweatshirts, beanies. | Pop-up, school events. | Design preference votes. | Making designs too generic. |
-| Gift buyer | Buyer purchasing for someone else. | “I need something easy to give.” | Beanies, sweatshirts, baked goods. | Events, family outreach. | Gift use cases, size/color needs. | Forgetting packaging and easy sizing. |
-| Community supporter | Local supporter motivated by student business story. | “I want to support young entrepreneurs.” | Donations, sweatshirts, baked goods. | TechTown pop-up, community events. | Story response, donation behavior. | Assuming they understand House Phoenix without context. |
-| Pop-up impulse buyer | Event visitor deciding quickly. | “This looks good. How much is it?” | Baked goods, beanies, tees. | TechTown pop-up. | Table observations, quick sales notes. | Depending on long explanations. |
-| Phoenix Nest retail buyer | School-store decision maker evaluating carry fit. | “Will this sell and be easy to manage?” | Core SKUs with margin proof. | Phoenix Nest pitch. | Margin, inventory readiness, shelf fit. | Confusing retail buyer with end customer. |
-| Donation supporter | Person who contributes because of mission. | “I may not need a product, but I want to help.” | Donations. | Events, family/community outreach. | Donation notes, story feedback. | Treating donations like product sales. |
-| Brand/story buyer | Customer buying because the story feels meaningful. | “I like what this represents.” | Sweatshirts, tees, donations. | Social content, event storytelling. | Story resonance, comments, interviews. | Overloading the product with too much explanation. |
-| Budget-conscious student | Student with limited spending power. | “I like it, but I need it to be affordable.” | T-shirts, baked goods, lower-price items. | School events, peer sales. | Price feedback, affordability survey. | Assuming low price is the only value. |
-| Premium/support-the-mission buyer | Buyer willing to pay more for quality and mission. | “I’ll pay more if it feels worth it.” | Sweatshirts, premium tees, donations. | Story-driven pitch, community events. | Willingness-to-pay feedback. | Assuming premium always means higher price without proof. |
+The Customer Archetype Picker should use the same 10 Renni-original,
+PRIZM / ESRI-inspired national archetypes as the deterministic
+Customer Profile Builder classifier. Local school roles are useful
+applications, but they are not the core taxonomy. For example,
+"Renaissance student," "alumni," "teacher/staff," "TechTown visitor,"
+and "Phoenix Nest buyer" belong in local application notes, not in the
+primary archetype labels.
+
+| Archetype | National profile | Local application examples | Evidence to collect | Risk of assumption |
+|---|---|---|---|---|
+| Rising City Renters | Early-career city renters balancing identity and budget. | Current/recent student, TechTown walk-up buyer. | Price reaction, quick interview, table observation. | Assuming young/urban means high spending power. |
+| Value-Driven Family Households | Family household buying when value is concrete. | Parent/family supporter, family buyer. | Family price reaction, sizing/quality questions. | Treating support as unlimited budget. |
+| Settled Suburban Households | Established household preferring trusted convenience and quality. | Metro Detroit supporter, school-store end customer. | Adult buyer interview, fulfillment questions. | Assuming trust exists before quality proof. |
+| Established Affluent Households | Higher-discretionary household buying premium when quality and story are credible. | Premium retail buyer, Phoenix Nest quality-fit customer. | Willingness-to-pay interview, premium comp research. | Treating mission as a substitute for product quality. |
+| Practical Small-Town Households | Practical household outside dense city cores valuing durability and access. | Relative/community supporter outside the school network. | Durability/access questions, local price comps. | Assuming non-urban buyers do not care about design. |
+| Legacy-Stage Affluent Households | Later-stage household spending on gifting, legacy, and deliberate giving. | Alumni legacy buyer, adult gift buyer. | Alumni/adult interview, gift-use feedback. | Assuming all alumni share one motivation. |
+| Rural Fixed-Income Households | Rural or very small-town household with fixed/limited income and access constraints. | Use only with direct evidence of fixed-budget/access constraints. | Direct respondent evidence, total-cost objection. | Applying this archetype without evidence. |
+| Multigenerational Urban Households | Urban household with multiple generations influencing purchase decisions. | Student interest plus adult/guardian buyer approval. | Family buyer interview, cross-age design reaction. | Letting one family member stand in for the household. |
+| Digital-First Premium Buyers | Mobile/social-first buyer evaluating premium products through visuals and proof. | Detroit-style buyer, online campaign audience, Phoenix Nest visual proof. | Product photo reaction, mobile interest signal. | Confusing attention with conversion. |
+| Cause-First Supporters | Mission-first buyer/donor whose engagement starts with impact. | Teacher/staff, donor, community supporter, student-work advocate. | Supporter quote, donation/share behavior, story-response notes. | Treating mission support as product demand. |
 
 ## 8. Other Student-Success Improvements
 
@@ -372,16 +375,21 @@ Implement a CustomerArchetypePicker inside or alongside CustomerProfileBuilder.
 
 Do not add AI calls, Firestore writes, raw numeric score display, route changes, or approval/status changes.
 
-The picker should let students select and customize archetypes for Renni Inc.:
-Renaissance student, Senior student, Underclass student, Alumni, Parent/family supporter, Teacher/staff, School-spirit buyer, Gift buyer, Community supporter, Pop-up impulse buyer, Phoenix Nest retail buyer, Donation supporter, Brand/story buyer, Budget-conscious student, Premium/support-the-mission buyer.
+The picker should let students select and customize national, Renni-original, PRIZM / ESRI-inspired archetypes aligned to the deterministic Customer Profile Builder classifier:
+Rising City Renters, Value-Driven Family Households, Settled Suburban Households, Established Affluent Households, Practical Small-Town Households, Legacy-Stage Affluent Households, Rural Fixed-Income Households, Multigenerational Urban Households, Digital-First Premium Buyers, Cause-First Supporters.
+
+Do not use school-role labels as core archetypes. Renaissance student, senior student, underclass student, alumni, parent/family supporter, teacher/staff, TechTown visitor, and Phoenix Nest buyer should appear only as local application contexts where appropriate.
 
 For each archetype show:
 - short profile
 - example quote
+- demographic fingerprint
+- lifestyle fingerprint
 - likely products
 - likely channel
 - evidence to collect
 - risk of assumption
+- local applications
 
 The selected archetype should help seed builder choices and copy-to-Working-Draft output, but students must still edit in their own words and add evidence.
 
@@ -486,15 +494,22 @@ Return PASS / PASS WITH WARNINGS / FAIL with exact files/lines for any blocker.
 no automatic Working-Draft writes. Reuses the existing
 BuilderHandoffCallout posture.
 
+**Taxonomy corrected.** The first shipped picker used 15 school-heavy
+roles. That contradicted the Customer Profile Builder classifier
+direction. The picker now uses the canonical 10 national archetypes
+from `app/data/customerProfileArchetypes.ts`; school/local roles are
+application contexts only.
+
 ### Files added
-- `app/utils/customerArchetypes.ts` — 15 archetypes from Section 7
-  of this doc, plus helpers (`getCustomerArchetypeById`,
+- `app/utils/customerArchetypes.ts` — 10 classifier-aligned national
+  archetypes, plus helpers (`getCustomerArchetypeById`,
   `archetypesForSection`, `archetypeLibrarySummary`,
   `formatArchetypesAsMarkdown`).
 - `app/components/CustomerArchetypePicker.vue` — card-deck UI with
-  per-archetype detail panel, custom-note textareas, copy-as-
-  markdown, and a "Suggested" badge for archetypes whose
-  `bestForSections` matches the active section id.
+  per-archetype detail panel, demographic/lifestyle fingerprints,
+  local-application examples, custom-note textareas, copy-as-markdown,
+  and a "Suggested" badge for archetypes whose `bestForSections`
+  matches the active section id.
 
 ### Files updated
 - `app/components/CustomerProfileBuilder.vue` — picker mounts
@@ -504,13 +519,13 @@ BuilderHandoffCallout posture.
   unchanged.
 - `server/utils/executiveAdvisorContext.ts` — V2 context gains
   `customerArchetypeLibrary` (id + label + shortProfile +
-  bestForSections only — ~15 entries, ~1.5 KB stringified).
+  demographic/lifestyle one-liner + bestForSections only).
 - `server/utils/executiveAdvisorContextBudget.ts` — compact view
   always includes the archetype library (small by construction).
 - `server/utils/promptTemplates/coachModeShared.ts` — one
   posture line directs the model to recommend archetypes only
-  as starting hypotheses and to ask the team to validate with
-  evidence.
+  as national starting hypotheses, treat local roles as contexts,
+  and ask the team to validate with evidence.
 
 ### Where it appears today
 - **Ch. 4 BMC `customer-segments`** via `CustomerProfileBuilder`.

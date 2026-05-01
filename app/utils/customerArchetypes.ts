@@ -1,9 +1,9 @@
-// Customer Archetype Library — Renni Inc. starter hypotheses.
+// Customer Archetype Library — Renni Inc. national hypotheses.
 //
 // Pure data + pure helpers. No Firestore, no AI, no /api/* calls.
 // Drives the CustomerArchetypePicker so students can choose
-// likely customer types from a card deck instead of inventing
-// archetypes from a blank page.
+// nationally usable customer/lifestyle archetypes from a card deck
+// instead of inventing segments from a blank page.
 //
 // POSTURE (do not relax)
 // ----------------------
@@ -11,41 +11,44 @@
 //     UI surface that consumes this data must repeat the message
 //     so the team validates with real evidence before using an
 //     archetype as ground for decisions.
-//   - Profile / quote / needs / objections / channels copy is
-//     drawn from docs/next-wave-student-success-and-advisor-mentor-architecture.md.
-//     If the source-of-truth doc shifts, sync this file before
-//     the next deploy.
-//   - The library is intentionally small (15 archetypes) so the
-//     picker stays scannable on phone width.
+//   - This picker uses the same 10 Renni-original, PRIZM / ESRI-
+//     inspired archetype ids as the deterministic Customer Profile
+//     Builder classifier. It does not copy proprietary segment names
+//     or descriptions.
+//   - National archetype first. Local Renaissance / Detroit /
+//     TechTown / Phoenix Nest roles appear only as applications or
+//     contexts, never as the core archetype label.
+//   - The library is intentionally compact so the picker stays
+//     scannable on phone width and the Advisor context remains small.
 
-export type CustomerArchetypeId =
-  | 'renaissance-student'
-  | 'senior-student'
-  | 'underclass-student'
-  | 'alumni'
-  | 'parent-family-supporter'
-  | 'teacher-staff'
-  | 'school-spirit-buyer'
-  | 'gift-buyer'
-  | 'community-supporter'
-  | 'pop-up-impulse-buyer'
-  | 'phoenix-nest-retail-buyer'
-  | 'donation-supporter'
-  | 'brand-story-buyer'
-  | 'budget-conscious-student'
-  | 'premium-support-the-mission-buyer'
+import type { CustomerProfileArchetypeId } from '../types/sectionEngines'
+
+export type CustomerArchetypeId = CustomerProfileArchetypeId
+
+export type CustomerArchetypeApplicationContext =
+  | 'Renaissance'
+  | 'Detroit'
+  | 'TechTown'
+  | 'Phoenix Nest'
+  | 'General'
 
 export interface CustomerArchetype {
   id: CustomerArchetypeId
   label: string
   shortProfile: string
   exampleQuote: string
+  demographicFingerprint: string[]
+  lifestyleFingerprint: string[]
   likelyNeeds: string[]
   likelyObjections: string[]
   likelyProducts: string[]
   likelyChannels: string[]
   evidenceToCollect: string[]
   whatNotToAssume: string[]
+  localApplications: Array<{
+    context: CustomerArchetypeApplicationContext
+    example: string
+  }>
   /** Section ids this archetype is most useful for. The picker
    *  uses this to suggest relevant archetypes per section. */
   bestForSections: string[]
@@ -53,547 +56,658 @@ export interface CustomerArchetype {
 
 export const customerArchetypes: readonly CustomerArchetype[] = [
   {
-    id: 'renaissance-student',
-    label: 'Renaissance student',
+    id: 'rising-city-renters',
+    label: 'Rising City Renters',
     shortProfile:
-      'Current student who wants identity and school connection.',
-    exampleQuote: 'I want something that feels like us.',
+      'Early-career city renters building identity while watching discretionary spending.',
+    exampleQuote:
+      'I like products that feel current, local, and worth the money.',
+    demographicFingerprint: [
+      'Young adult or early-career household',
+      'Often renting with roommates, partner, or alone',
+      'Dense city or urban neighborhood',
+      'Tight to moderate discretionary spending'
+    ],
+    lifestyleFingerprint: [
+      'Discovers products through mobile, social, local pop-ups, and peers',
+      'Uses style to signal identity and belonging',
+      'Will compare price against everyday budget pressure'
+    ],
     likelyNeeds: [
-      'Visible school identity in everyday wear',
-      'Designs that signal pride to peers',
-      'Confidence the gear looks like Renaissance, not generic'
+      'Clear style reason to buy now',
+      'Entry price or obvious value at the price',
+      'Mobile-friendly story and product proof'
     ],
     likelyObjections: [
-      'Is this only for one type of student?',
-      'Will I actually wear this outside school?',
-      'Will my friends recognize the design?'
+      'Is this worth it compared with cheaper apparel?',
+      'Will I actually wear this outside one event?',
+      'Is the brand for people like me?'
     ],
-    likelyProducts: ['T-shirts', 'Beanies', 'Sweatshirts'],
-    likelyChannels: [
-      'School events',
-      'Student word of mouth',
-      'Hallway / cafeteria buzz'
-    ],
-    evidenceToCollect: [
-      'Student survey or hallway feedback on designs',
-      'Pre-order interest count',
-      'Photos of students wearing comparable gear'
-    ],
-    whatNotToAssume: [
-      'All students want the same style or fit',
-      'Identity gear sells itself — even peers need a story'
-    ],
-    bestForSections: [
-      'customer-segments',
-      'value-propositions',
-      'audience',
-      'target-customers',
-      'customer-problems-and-desires'
-    ]
-  },
-  {
-    id: 'senior-student',
-    label: 'Senior student',
-    shortProfile:
-      'Student near graduation who wants memory, status, or legacy.',
-    exampleQuote: 'I want something that marks senior year.',
-    likelyNeeds: [
-      'Sentimental keepsake gear they can wear after graduation',
-      'A "senior" feel — nicer fabric or more thoughtful design',
-      'Something they would wear at college or in a hometown setting'
-    ],
-    likelyObjections: [
-      'Is this priced too high for what I get?',
-      'Will I still wear this in a year?',
-      'Is the design too tied to underclass kids?'
-    ],
-    likelyProducts: ['Sweatshirts', 'Premium tees', 'Donations'],
-    likelyChannels: [
-      'Senior events',
-      'Class-of channels',
-      'Senior parent newsletters'
-    ],
-    evidenceToCollect: [
-      'Senior class feedback on premium options',
-      'Past senior-event demand patterns',
-      'Willingness-to-pay informal survey'
-    ],
-    whatNotToAssume: [
-      'Seniors will pay any price because they\'re leaving',
-      'A general design works just because it has the year on it'
-    ],
-    bestForSections: [
-      'customer-segments',
-      'value-propositions',
-      'audience',
-      'pricing-summary',
-      'target-customers'
-    ]
-  },
-  {
-    id: 'underclass-student',
-    label: 'Underclass student',
-    shortProfile:
-      'Younger student looking for belonging and affordable gear.',
-    exampleQuote: 'I want something I can wear all year.',
-    likelyNeeds: [
-      'Something that signals they belong here',
-      'Price low enough to fit allowance or family budget',
-      'Designs that look good in everyday school photos'
-    ],
-    likelyObjections: [
-      'Is this too expensive for my parents to say yes?',
-      'Will the older kids think this is for them?',
-      'Will I outgrow it before I get to wear it?'
-    ],
-    likelyProducts: ['T-shirts', 'Beanies'],
-    likelyChannels: [
-      'School announcements',
-      'Peer recommendation',
-      'Family communications'
-    ],
-    evidenceToCollect: [
-      'Grade-level interest snapshot',
-      'Price-sensitivity comments',
-      'Sample order forms returned'
-    ],
-    whatNotToAssume: [
-      'Underclass students already know the brand story',
-      'They have direct buying power — most decisions go through family'
-    ],
-    bestForSections: [
-      'customer-segments',
-      'audience',
-      'pricing-risks',
-      'target-customers'
-    ]
-  },
-  {
-    id: 'alumni',
-    label: 'Alumni',
-    shortProfile: 'Former student who wants connection to Renaissance.',
-    exampleQuote: 'I still want to support the school.',
-    likelyNeeds: [
-      'A way to stay connected to Renaissance after graduating',
-      'Gear that signals continued affiliation, not nostalgia overload',
-      'A path to support the school beyond a one-time donation'
-    ],
-    likelyObjections: [
-      'Is this just current-student gear with a new color?',
-      'Where do I even buy this if I\'m not on campus?',
-      'Will my donation actually reach students?'
-    ],
-    likelyProducts: ['Sweatshirts', 'Donations', 'Gift items'],
-    likelyChannels: [
-      'Alumni outreach',
-      'School network email lists',
-      'LinkedIn / class-year groups'
-    ],
-    evidenceToCollect: [
-      'Alumni replies to outreach',
-      'Donation interest signals',
-      'Purchase intent in informal alumni conversations'
-    ],
-    whatNotToAssume: [
-      'Alumni want exactly what current students want',
-      'All alumni have the same comfort with online ordering'
-    ],
-    bestForSections: [
-      'customer-segments',
-      'value-propositions',
-      'audience',
-      'target-customers',
-      'donation-scenarios'
-    ]
-  },
-  {
-    id: 'parent-family-supporter',
-    label: 'Parent / family supporter',
-    shortProfile:
-      'Adult buying to support a student or the school mission.',
-    exampleQuote: 'I want to support what students built.',
-    likelyNeeds: [
-      'A simple way to buy that respects their time',
-      'Confidence the product is real and shipped well',
-      'Something the student will actually wear or use'
-    ],
-    likelyObjections: [
-      'Is the sizing reliable?',
-      'Will my student be embarrassed by this?',
-      'Is this a fair price for what I\'m getting?'
-    ],
-    likelyProducts: ['Sweatshirts', 'Donations', 'Baked goods'],
-    likelyChannels: [
-      'School events',
-      'Family communications',
-      'Parent / family newsletters'
-    ],
-    evidenceToCollect: [
-      'Parent interest at events',
-      'Donation intent comments',
-      'Sizing / quality feedback from past purchases'
-    ],
-    whatNotToAssume: [
-      'Family budgets are unlimited or all-in for the school',
-      'Parents will accept any price tag because it supports students'
-    ],
-    bestForSections: [
-      'customer-segments',
-      'audience',
-      'donation-scenarios',
-      'target-customers'
-    ]
-  },
-  {
-    id: 'teacher-staff',
-    label: 'Teacher / staff',
-    shortProfile:
-      'School staff member buying for school pride and support.',
-    exampleQuote: 'I want to back the students.',
-    likelyNeeds: [
-      'A wearable way to back the team without speech-making',
-      'Designs that read professional in school settings',
-      'Easy in-school purchase'
-    ],
-    likelyObjections: [
-      'Is this only sized for students?',
-      'Will the design read OK on staff at parent night?',
-      'Can I order without having to chase students down?'
-    ],
-    likelyProducts: ['T-shirts', 'Baked goods', 'Donations'],
-    likelyChannels: [
-      'Staff announcements',
-      'In-school sales',
-      'Staff lounge flyer'
-    ],
-    evidenceToCollect: [
-      'Staff feedback on past sales',
-      'Repeat-purchase comments',
-      'Sizing / fit feedback'
-    ],
-    whatNotToAssume: [
-      'Staff want the same designs students want',
-      'Every staff member is comfortable wearing branded gear publicly'
-    ],
-    bestForSections: [
-      'customer-segments',
-      'audience',
-      'target-customers'
-    ]
-  },
-  {
-    id: 'school-spirit-buyer',
-    label: 'School-spirit buyer',
-    shortProfile: 'Buyer motivated by Renaissance identity.',
-    exampleQuote: 'I want gear that shows pride.',
-    likelyNeeds: [
-      'A clear Renaissance identity on the product',
-      'Pride-forward design that reads at distance',
-      'A reason to buy beyond the logo'
-    ],
-    likelyObjections: [
-      'Is this just a logo on a generic blank?',
-      'Does this look like every other school\'s gear?',
-      'Will the design hold up after a few washes?'
-    ],
-    likelyProducts: ['Tees', 'Sweatshirts', 'Beanies'],
-    likelyChannels: ['Pop-up', 'School events'],
-    evidenceToCollect: [
-      'Design preference votes',
-      'Past spirit-week sale data',
-      'Photos of comparable gear in use'
-    ],
-    whatNotToAssume: [
-      'School spirit converts on logo alone — story matters',
-      'Designs work everywhere — venue matters'
-    ],
-    bestForSections: [
-      'customer-segments',
-      'value-propositions',
-      'audience',
-      'target-customers'
-    ]
-  },
-  {
-    id: 'gift-buyer',
-    label: 'Gift buyer',
-    shortProfile: 'Buyer purchasing for someone else.',
-    exampleQuote: 'I need something easy to give.',
-    likelyNeeds: [
-      'A safe choice in size / color',
-      'Wrappable or display-ready packaging',
-      'Confidence the recipient will use or wear it'
-    ],
-    likelyObjections: [
-      'What size do they wear?',
-      'Is this gift-presentable without effort from me?',
-      'What if it doesn\'t fit?'
-    ],
-    likelyProducts: ['Beanies', 'Sweatshirts', 'Baked goods'],
-    likelyChannels: ['Events', 'Family outreach'],
-    evidenceToCollect: [
-      'Gift use cases the team has heard',
-      'Sizing / color preference signals'
-    ],
-    whatNotToAssume: [
-      'Gift buyers will pay for premium packaging without seeing it',
-      'Returns are available; they often are not'
-    ],
-    bestForSections: [
-      'customer-segments',
-      'audience',
-      'target-customers'
-    ]
-  },
-  {
-    id: 'community-supporter',
-    label: 'Community supporter',
-    shortProfile:
-      'Local supporter motivated by the student-business story.',
-    exampleQuote: 'I want to support young entrepreneurs.',
-    likelyNeeds: [
-      'A clear story about the student-run business',
-      'A path to support beyond a single purchase',
-      'Confidence the money goes back into the program'
-    ],
-    likelyObjections: [
-      'Where exactly does the money go?',
-      'Is this a school activity or a real company?',
-      'How is this different from a fundraiser?'
-    ],
-    likelyProducts: ['Donations', 'Sweatshirts', 'Baked goods'],
+    likelyProducts: ['T-shirts', 'Beanies', 'lower-price accessories'],
     likelyChannels: [
       'TechTown pop-up',
-      'Community events',
-      'Local business newsletters'
+      'Social proof',
+      'Peer recommendation',
+      'Short mobile content'
     ],
     evidenceToCollect: [
-      'Story-response notes from conversations',
-      'Donation behavior at past events',
-      'Comments and questions at the table'
+      'Quick interview with an early-career or college-age buyer',
+      'Price reaction at the table',
+      'Observation of which design gets picked up first'
     ],
     whatNotToAssume: [
-      'Supporters already know what House Phoenix is',
-      'Supporters\' interest is unconditional — story has to land'
+      'Urban or young automatically means high spending power',
+      'Social-media interest equals purchase intent',
+      'A student buyer role is the whole archetype'
+    ],
+    localApplications: [
+      {
+        context: 'Renaissance',
+        example:
+          'A current or recent student can be a Rising City Renter if the buying logic is style, identity, and budget tradeoff.'
+      },
+      {
+        context: 'TechTown',
+        example:
+          'A walk-up buyer may impulse-check a beanie or tee if the story and price are clear in under 30 seconds.'
+      }
     ],
     bestForSections: [
       'customer-segments',
       'value-propositions',
-      'donation-scenarios',
-      'target-customers'
-    ]
-  },
-  {
-    id: 'pop-up-impulse-buyer',
-    label: 'Pop-up impulse buyer',
-    shortProfile: 'Event visitor deciding quickly.',
-    exampleQuote: 'This looks good. How much is it?',
-    likelyNeeds: [
-      'A 10-second hook that lands at the table',
-      'A clear price they can decide on without doing math',
-      'Quick checkout — Square is the external POS'
-    ],
-    likelyObjections: [
-      'I do not have time for a long pitch',
-      'I am not sure I want to carry this around the rest of the day',
-      'Is the price worth it for an event purchase?'
-    ],
-    likelyProducts: ['Baked goods', 'Beanies', 'Tees'],
-    likelyChannels: ['TechTown pop-up'],
-    evidenceToCollect: [
-      'Table observations of fast-vs-slow buyers',
-      'Quick-sale notes after the event',
-      'Common questions overheard at the table'
-    ],
-    whatNotToAssume: [
-      'Long pitches will work mid-event',
-      'A complicated price will land in 10 seconds'
-    ],
-    bestForSections: [
-      'customer-segments',
-      'channels',
+      'pricing-risks',
       'target-customers',
       'messaging'
     ]
   },
   {
-    id: 'phoenix-nest-retail-buyer',
-    label: 'Phoenix Nest retail buyer',
+    id: 'value-driven-family-households',
+    label: 'Value-Driven Family Households',
     shortProfile:
-      'School-store decision maker evaluating carry fit.',
-    exampleQuote: 'Will this sell and be easy to manage?',
+      'Family household stretching a finite budget and buying when value is concrete.',
+    exampleQuote:
+      'I can support it if the price makes sense and the product will get used.',
+    demographicFingerprint: [
+      'Parent, guardian, or family household',
+      'One or more children or dependents at home',
+      'Urban, suburban, or second-city setting',
+      'Tight to value-conscious discretionary budget'
+    ],
+    lifestyleFingerprint: [
+      'Compares purchases against household needs',
+      'Responds to practical value and durability',
+      'May support student work when the use case is clear'
+    ],
     likelyNeeds: [
-      'Defensible margin and pricing logic',
-      'Clear inventory readiness story',
-      'A small set of SKUs that fit the shelf'
+      'Sizing, quality, and use case clarity',
+      'A price that feels fair for the household',
+      'A simple explanation of what the purchase supports'
     ],
     likelyObjections: [
-      'Will this actually sell in our store?',
-      'Will reorders / restocks be reliable?',
-      'Is the wholesale price viable for our model?'
+      'Will this fit or last?',
+      'Is this a fair use of family money?',
+      'Is this fundraiser-style support or a product worth buying?'
     ],
-    likelyProducts: ['Core SKUs with margin proof'],
-    likelyChannels: ['Phoenix Nest pitch'],
-    evidenceToCollect: [
-      'Margin and break-even tables',
-      'Inventory-readiness signals',
-      'Past shelf-fit comparables or photos'
-    ],
-    whatNotToAssume: [
-      'A retail buyer is the same as the end customer',
-      'Their decision criteria match a student\'s'
-    ],
-    bestForSections: [
-      'evidence',
-      'offer',
-      'ask',
-      'retail-recommendations'
-    ]
-  },
-  {
-    id: 'donation-supporter',
-    label: 'Donation supporter',
-    shortProfile: 'Person who contributes because of mission.',
-    exampleQuote: 'I may not need a product, but I want to help.',
-    likelyNeeds: [
-      'A no-friction way to give',
-      'Clarity on what the donation funds',
-      'A short story they can repeat to others'
-    ],
-    likelyObjections: [
-      'Is this a real donation or a sale in disguise?',
-      'How will I know my contribution mattered?',
-      'Will my employer match this?'
-    ],
-    likelyProducts: ['Donations'],
+    likelyProducts: ['T-shirts', 'Beanies', 'baked goods', 'donations'],
     likelyChannels: [
-      'Events',
-      'Family / community outreach',
-      'TechTown pop-up donation tile'
+      'Family communication',
+      'School events',
+      'In-person table pitch',
+      'Simple order-interest form'
     ],
     evidenceToCollect: [
-      'Donation notes from past events',
-      'Story-response feedback',
-      'Recurring donor signals'
+      'Family price reaction',
+      'Sizing and quality questions',
+      'Which product a family member would actually choose'
     ],
     whatNotToAssume: [
-      'Donations behave like product sales',
-      'Donations roll into product margin or break-even calculations'
+      'Support for students removes price sensitivity',
+      'Every parent or family buyer wants the same design',
+      'Household role is the same thing as the archetype'
     ],
-    bestForSections: [
-      'donation-scenarios',
-      'revenue-streams',
-      'customer-segments'
-    ]
-  },
-  {
-    id: 'brand-story-buyer',
-    label: 'Brand / story buyer',
-    shortProfile:
-      'Customer buying because the story feels meaningful.',
-    exampleQuote: 'I like what this represents.',
-    likelyNeeds: [
-      'A story that lands in 1–2 sentences',
-      'Visual cues that match the story',
-      'A reason this product exists, not just what it is'
-    ],
-    likelyObjections: [
-      'Is this story real or marketing?',
-      'Why does this exist if every school sells branded gear?',
-      'Will the story age well in a year?'
-    ],
-    likelyProducts: ['Sweatshirts', 'Tees', 'Donations'],
-    likelyChannels: ['Social content', 'Event storytelling'],
-    evidenceToCollect: [
-      'Story-resonance feedback',
-      'Comments on social posts',
-      'Interview snippets from supporters'
-    ],
-    whatNotToAssume: [
-      'Adding more story always helps — sometimes it overloads',
-      'Every customer cares equally about the story'
+    localApplications: [
+      {
+        context: 'Renaissance',
+        example:
+          'Parent/family supporter becomes a local application when the household is weighing school support against budget.'
+      },
+      {
+        context: 'General',
+        example:
+          'Any family buyer may fit if value, durability, and practical use drive the decision.'
+      }
     ],
     bestForSections: [
       'customer-segments',
       'value-propositions',
       'audience',
-      'voice',
-      'identity'
+      'pricing-summary',
+      'target-customers',
+      'donation-scenarios'
     ]
   },
   {
-    id: 'budget-conscious-student',
-    label: 'Budget-conscious student',
-    shortProfile: 'Student with limited spending power.',
-    exampleQuote: 'I like it, but I need it to be affordable.',
+    id: 'settled-suburban-households',
+    label: 'Settled Suburban Households',
+    shortProfile:
+      'Established household with stable routines, comfortable spending, and preference for trusted convenience.',
+    exampleQuote:
+      'If it is easy, good quality, and feels trustworthy, I will consider it.',
+    demographicFingerprint: [
+      'Midlife or established household',
+      'Often homeowner or long-term resident',
+      'Inner-ring, outer-suburban, or second-city setting',
+      'Moderate to comfortable discretionary spending'
+    ],
+    lifestyleFingerprint: [
+      'Values convenience and reliability',
+      'Researches or asks trusted people before buying',
+      'Responds to clear quality and a low-friction path'
+    ],
     likelyNeeds: [
-      'A real entry-level product they can afford',
-      'A clear "what does $X get me" choice',
-      'Confidence they\'re not getting cheaper-than-the-friend version'
+      'Clear product quality signals',
+      'Simple purchase and pickup process',
+      'Trust that the student-run operation can fulfill'
     ],
     likelyObjections: [
-      'Is the cheaper item just a worse version?',
-      'Will I regret saving the $5?',
-      'Will I miss out on the design everyone is wearing?'
+      'Will this be easy to buy and receive?',
+      'Is the product quality predictable?',
+      'Is the story strong enough to choose this over a familiar brand?'
     ],
-    likelyProducts: [
-      'T-shirts',
-      'Baked goods',
-      'Lower-price items'
+    likelyProducts: ['Sweatshirts', 'Beanies', 'giftable apparel'],
+    likelyChannels: [
+      'Family and community networks',
+      'Retail carry',
+      'School events',
+      'Trusted adult referral'
     ],
-    likelyChannels: ['School events', 'Peer sales'],
     evidenceToCollect: [
-      'Price-feedback signals at events',
-      'Affordability survey or short poll',
-      'Conversion delta vs. premium item'
+      'Adult buyer interview',
+      'Quality and fulfillment questions',
+      'Reaction to retail carry or pre-order process'
     ],
     whatNotToAssume: [
-      'Lowest price is the only thing they value',
-      'Cheaper products always sell more — design + brand still matter'
+      'Suburban household means automatic premium willingness',
+      'Trust exists before quality and fulfillment are proven',
+      'They will tolerate unclear logistics'
+    ],
+    localApplications: [
+      {
+        context: 'Phoenix Nest',
+        example:
+          'A school-store buyer may care about this end customer because they want reliable, giftable products with low support burden.'
+      },
+      {
+        context: 'Detroit',
+        example:
+          'A metro Detroit supporter may fit when quality, convenience, and trust drive the decision.'
+      }
     ],
     bestForSections: [
-      'pricing-summary',
-      'pricing-risks',
       'customer-segments',
+      'value-propositions',
+      'target-customers',
+      'offer',
+      'ask'
+    ]
+  },
+  {
+    id: 'established-affluent-households',
+    label: 'Established Affluent Households',
+    shortProfile:
+      'High-discretionary-spending household that pays premium prices when quality, design, and story are credible.',
+    exampleQuote:
+      'I will pay more if the product feels designed, made well, and meaningful.',
+    demographicFingerprint: [
+      'Established adult household',
+      'Comfortable to affluent discretionary spending',
+      'Urban, suburban, or destination retail context',
+      'Often professional, managerial, or entrepreneurial'
+    ],
+    lifestyleFingerprint: [
+      'Buys selectively rather than only cheaply',
+      'Responds to premium presentation and credible story',
+      'May compare against boutique, local-made, or premium apparel'
+    ],
+    likelyNeeds: [
+      'Quality proof that supports the price',
+      'A brand story that sounds mature and specific',
+      'Visual presentation that feels retail-ready'
+    ],
+    likelyObjections: [
+      'Is this actually premium or just priced high?',
+      'Does the finish match the story?',
+      'Would I choose this over a known premium brand?'
+    ],
+    likelyProducts: ['Sweatshirts', 'premium tees', 'retail-ready bundles'],
+    likelyChannels: [
+      'Phoenix Nest pitch',
+      'Community retail',
+      'Story-led event pitch',
+      'Gift recommendation'
+    ],
+    evidenceToCollect: [
+      'Willingness-to-pay interview',
+      'Comparable premium product research',
+      'Quality reaction to sample materials or photos'
+    ],
+    whatNotToAssume: [
+      'Higher income means automatic purchase',
+      'Mission can replace product quality',
+      'Premium pricing is credible without comparable evidence'
+    ],
+    localApplications: [
+      {
+        context: 'Phoenix Nest',
+        example:
+          'Useful when arguing that House Phoenix can sit beside higher-quality Detroit-made goods.'
+      },
+      {
+        context: 'TechTown',
+        example:
+          'A premium-oriented visitor may buy if material proof and story are visible at the table.'
+      }
+    ],
+    bestForSections: [
+      'customer-segments',
+      'value-propositions',
+      'pricing-summary',
+      'target-customers',
+      'evidence',
+      'ask'
+    ]
+  },
+  {
+    id: 'practical-small-town-households',
+    label: 'Practical Small-Town Households',
+    shortProfile:
+      'Practical household outside dense city cores that values durability, utility, and easy access.',
+    exampleQuote:
+      'I like local things, but it has to be useful and not complicated.',
+    demographicFingerprint: [
+      'Small-town, exurban, rural, or second-city household',
+      'Wide age range',
+      'Often homeowner or long-term resident',
+      'Moderate to value-conscious spending'
+    ],
+    lifestyleFingerprint: [
+      'Values products that last and work',
+      'Prefers straightforward purchase and pickup',
+      'May support local or school-based work when the offer is practical'
+    ],
+    likelyNeeds: [
+      'Plain product benefits',
+      'Durability and care details',
+      'Clear access path without complicated ordering'
+    ],
+    likelyObjections: [
+      'Is this practical enough for the price?',
+      'How do I get it if I am not near the event?',
+      'Will it hold up?'
+    ],
+    likelyProducts: ['Beanies', 'sweatshirts', 'durable basics'],
+    likelyChannels: [
+      'Community referral',
+      'Pop-up with clear pickup',
+      'Retail carry',
+      'Simple order-interest list'
+    ],
+    evidenceToCollect: [
+      'Questions about durability and access',
+      'Feedback from buyers outside the school building',
+      'Comparable local product prices'
+    ],
+    whatNotToAssume: [
+      'Non-urban means disconnected from the brand story',
+      'Practical buyers do not care about design',
+      'They will navigate a complex purchase path'
+    ],
+    localApplications: [
+      {
+        context: 'General',
+        example:
+          'A relative, community supporter, or local craft buyer may fit if practicality and access drive the decision.'
+      },
+      {
+        context: 'Detroit',
+        example:
+          'Metro-area buyers outside the immediate school network may still value Detroit-made proof and simple logistics.'
+      }
+    ],
+    bestForSections: [
+      'customer-segments',
+      'channels',
+      'customer-relationships',
+      'inventory-readiness',
       'target-customers'
     ]
   },
   {
-    id: 'premium-support-the-mission-buyer',
-    label: 'Premium / support-the-mission buyer',
+    id: 'legacy-stage-affluent-households',
+    label: 'Legacy-Stage Affluent Households',
     shortProfile:
-      'Buyer willing to pay more for quality and mission.',
-    exampleQuote: 'I\'ll pay more if it feels worth it.',
+      'Empty-nest or later-stage affluent household whose spending often shifts toward gifting, hosting, legacy, and deliberate giving.',
+    exampleQuote:
+      'I like buying things that have a story and can be gifted well.',
+    demographicFingerprint: [
+      'Later-stage adult household',
+      'Often empty-nest or near empty-nest',
+      'Comfortable to affluent discretionary spending',
+      'May have alumni, civic, or family legacy ties'
+    ],
+    lifestyleFingerprint: [
+      'Uses purchases as gifts, gestures, or legacy support',
+      'Responds to polished presentation and continuity story',
+      'May support youth, school, or civic ventures deliberately'
+    ],
     likelyNeeds: [
-      'Material / craftsmanship that matches the price',
-      'A story that justifies the premium',
-      'A choice that signals support, not just consumption'
+      'Gift-ready presentation',
+      'A clear legacy or continuity story',
+      'Confidence that the purchase supports a durable program'
     ],
     likelyObjections: [
-      'Is this actually higher quality, or just priced higher?',
-      'Is the mission story believable?',
-      'Where does the extra dollar actually go?'
+      'Is this meaningful enough to gift?',
+      'Will the program continue after this cohort?',
+      'Is the quality high enough for the price?'
     ],
-    likelyProducts: ['Sweatshirts', 'Premium tees', 'Donations'],
+    likelyProducts: ['Sweatshirts', 'gift bundles', 'donations'],
     likelyChannels: [
-      'Story-driven pitch',
-      'Community events',
-      'Phoenix Nest pitch'
+      'Alumni outreach',
+      'Family and civic networks',
+      'Phoenix Nest retail',
+      'Story-led events'
     ],
     evidenceToCollect: [
-      'Willingness-to-pay feedback',
-      'Story resonance at premium price point',
-      'Past comparable premium purchases'
+      'Alumni or adult supporter interview',
+      'Gift use-case feedback',
+      'Reaction to continuity and next-cohort story'
     ],
     whatNotToAssume: [
-      'Premium price alone signals premium quality',
-      'Mission story will land for every premium buyer'
+      'All alumni fit this archetype',
+      'Legacy motivation removes need for product quality',
+      'Gift buyers understand the student-company story without a pitch'
+    ],
+    localApplications: [
+      {
+        context: 'Renaissance',
+        example:
+          'Alumni may be a local application when legacy, continuity, and school connection drive the purchase.'
+      },
+      {
+        context: 'Phoenix Nest',
+        example:
+          'Retail carry can serve this buyer if the product is giftable and the story is shelf-ready.'
+      }
     ],
     bestForSections: [
-      'pricing-summary',
+      'customer-segments',
+      'value-propositions',
+      'audience',
+      'donation-scenarios',
+      'evidence',
+      'ask'
+    ]
+  },
+  {
+    id: 'rural-fixed-income-households',
+    label: 'Rural Fixed-Income Households',
+    shortProfile:
+      'Rural or very small-town household with limited or fixed income and high sensitivity to access, shipping, and value.',
+    exampleQuote:
+      'I need to know the total cost and whether this is really worth it.',
+    demographicFingerprint: [
+      'Rural, exurban, or very small-town context',
+      'Fixed or limited income',
+      'Older adult, disability, pension, low-wage, or mixed household possible',
+      'Tight discretionary spending'
+    ],
+    lifestyleFingerprint: [
+      'Plans purchases carefully',
+      'Avoids unclear fees, returns, or shipping friction',
+      'May support causes but needs transparent total cost'
+    ],
+    likelyNeeds: [
+      'Very clear total price',
+      'Low-risk product choice',
+      'Transparent reason to buy or support'
+    ],
+    likelyObjections: [
+      'Is this too expensive once all costs are included?',
+      'How would I receive or return it?',
+      'Is this the best use of limited money?'
+    ],
+    likelyProducts: ['Lower-price items', 'baked goods', 'small donations'],
+    likelyChannels: [
+      'Direct relationship',
+      'Community referral',
+      'Simple in-person purchase',
+      'No-friction interest capture'
+    ],
+    evidenceToCollect: [
+      'Actual buyer interview before using this archetype',
+      'Price and access objections',
+      'Whether a lower-price offer is needed'
+    ],
+    whatNotToAssume: [
+      'This archetype fits without direct evidence',
+      'Fixed income tells the whole story about values',
+      'Cause support cancels budget pressure'
+    ],
+    localApplications: [
+      {
+        context: 'General',
+        example:
+          'Use only when evidence shows fixed-budget and access constraints are central to the decision.'
+      },
+      {
+        context: 'Detroit',
+        example:
+          'Could apply to a community supporter only if the team has evidence about budget and access constraints.'
+      }
+    ],
+    bestForSections: [
+      'customer-segments',
+      'pricing-risks',
+      'channels',
+      'donation-scenarios'
+    ]
+  },
+  {
+    id: 'multigenerational-urban-households',
+    label: 'Multigenerational Urban Households',
+    shortProfile:
+      'Urban household where multiple generations share influence over purchases, budgets, and support decisions.',
+    exampleQuote:
+      'A few people in my family would have opinions before we buy.',
+    demographicFingerprint: [
+      'Urban or inner-ring household',
+      'Two or three generations involved',
+      'Shared household income or shared decision-making',
+      'Budget may range from tight to comfortable'
+    ],
+    lifestyleFingerprint: [
+      'Purchase decisions may be collective',
+      'Family pride, usefulness, and price all matter',
+      'Gift and support motivations can overlap'
+    ],
+    likelyNeeds: [
+      'A story that works for more than one age group',
+      'Sizing and product choices that fit family use',
+      'Clear explanation of who the product is for'
+    ],
+    likelyObjections: [
+      'Who in the household would actually use this?',
+      'Does the design appeal across ages?',
+      'Is this a student purchase, a parent purchase, or a family gift?'
+    ],
+    likelyProducts: ['Beanies', 'sweatshirts', 'giftable basics', 'donations'],
+    likelyChannels: [
+      'Family communication',
+      'School events',
+      'Community pop-up',
+      'Word of mouth'
+    ],
+    evidenceToCollect: [
+      'Family buyer interview',
+      'Who influences the purchase',
+      'Design and price reactions across age groups'
+    ],
+    whatNotToAssume: [
+      'One family member speaks for the whole household',
+      'Student interest means adult buyer approval',
+      'Family support is unlimited'
+    ],
+    localApplications: [
+      {
+        context: 'Renaissance',
+        example:
+          'A student may love the item, but a parent, guardian, or grandparent may be the buyer.'
+      },
+      {
+        context: 'TechTown',
+        example:
+          'A family group at the table may make a fast collective decision if use, price, and story are clear.'
+      }
+    ],
+    bestForSections: [
+      'customer-segments',
+      'value-propositions',
+      'audience',
+      'target-customers',
+      'messaging'
+    ]
+  },
+  {
+    id: 'digital-first-premium-buyers',
+    label: 'Digital-First Premium Buyers',
+    shortProfile:
+      'Younger or mid-career buyer with comfortable spending who discovers premium products through mobile and social channels.',
+    exampleQuote:
+      'If it looks sharp online and the story feels real, I will check it out.',
+    demographicFingerprint: [
+      'Young adult to mid-career adult',
+      'Comfortable to affluent discretionary spending',
+      'Urban, suburban, or digitally connected context',
+      'Often mobile-first in discovery and comparison'
+    ],
+    lifestyleFingerprint: [
+      'Evaluates brand through photos, short copy, and social proof',
+      'Pays for premium when quality and identity are visible',
+      'May respond to drops, scarcity, and polished visual systems'
+    ],
+    likelyNeeds: [
+      'Strong product photography or visual mockup',
+      'Clear premium cues',
+      'Easy-to-share story and proof'
+    ],
+    likelyObjections: [
+      'Does the product look premium enough online?',
+      'Is this just school merch?',
+      'Can I trust the quality without seeing it?'
+    ],
+    likelyProducts: ['Sweatshirts', 'premium tees', 'limited drops'],
+    likelyChannels: [
+      'Instagram-style visual content',
+      'Mobile-friendly campaign',
+      'Phoenix Nest retail proof',
+      'Event photos and short captions'
+    ],
+    evidenceToCollect: [
+      'Reaction to product photos or mockups',
+      'Click or interest signal from mobile content',
+      'Comparable premium streetwear or local-made references'
+    ],
+    whatNotToAssume: [
+      'Digital attention equals conversion',
+      'Premium visual style removes need for product proof',
+      'This buyer is necessarily a student'
+    ],
+    localApplications: [
+      {
+        context: 'Detroit',
+        example:
+          'A Detroit-style or local-made buyer may fit if discovery happens through visuals and premium cues.'
+      },
+      {
+        context: 'Phoenix Nest',
+        example:
+          'Retail pitch photos should show why the item belongs on a shelf, not only on a school table.'
+      }
+    ],
+    bestForSections: [
+      'customer-segments',
+      'audience',
+      'voice',
+      'identity',
+      'target-customers',
+      'messaging',
+      'ask'
+    ]
+  },
+  {
+    id: 'cause-first-supporters',
+    label: 'Cause-First Supporters',
+    shortProfile:
+      'Buyer or donor whose engagement starts with mission, community impact, or support for student work.',
+    exampleQuote:
+      'I want my purchase to support something bigger than the product.',
+    demographicFingerprint: [
+      'Can appear across age, income, and geography',
+      'Defined by motivation, not a demographic role',
+      'May be buyer, donor, advocate, or repeat supporter',
+      'Often overlaps with another archetype'
+    ],
+    lifestyleFingerprint: [
+      'Responds to impact story and transparency',
+      'Wants to know where money or attention goes',
+      'May buy, donate, share, or introduce the team to others'
+    ],
+    likelyNeeds: [
+      'Plain explanation of the mission and use of funds',
+      'Proof that students are leading real work',
+      'A clear next action: buy, donate, share, or introduce'
+    ],
+    likelyObjections: [
+      'Is this impact claim real?',
+      'Where does the money go?',
+      'Is this a one-time school project or a durable student company?'
+    ],
+    likelyProducts: ['Donations', 'mission-led apparel', 'gift bundles'],
+    likelyChannels: [
+      'Story-led event pitch',
+      'Community introductions',
+      'Family and alumni networks',
+      'Donation callout'
+    ],
+    evidenceToCollect: [
+      'Quotes about why someone supports the mission',
+      'Donation or sharing behavior',
+      'Questions supporters ask before giving'
+    ],
+    whatNotToAssume: [
+      'Mission support proves product demand',
+      'Cause motivation identifies income or lifestyle',
+      'Supporters do not need transparency'
+    ],
+    localApplications: [
+      {
+        context: 'Renaissance',
+        example:
+          'Teachers, staff, alumni, and families may be Cause-First Supporters when mission is the main reason they engage.'
+      },
+      {
+        context: 'TechTown',
+        example:
+          'A community visitor may buy or donate after hearing the student-company story.'
+      }
+    ],
+    bestForSections: [
+      'customer-segments',
       'value-propositions',
       'donation-scenarios',
-      'target-customers'
+      'audience',
+      'target-customers',
+      'messaging'
     ]
   }
 ] as const
@@ -632,11 +746,12 @@ export function archetypesForSection(
 }
 
 /** Compact archetype summary used by the Advisor V2 context. Every
- *  field is a short string so the embedded JSON stays small. */
+ *  field is short so the embedded JSON stays small. */
 export interface ArchetypeLibrarySummaryEntry {
   id: CustomerArchetypeId
   label: string
   shortProfile: string
+  demographicLifestyleSummary: string
   bestForSections: readonly string[]
 }
 
@@ -645,12 +760,18 @@ export function archetypeLibrarySummary(): ArchetypeLibrarySummaryEntry[] {
     id: a.id,
     label: a.label,
     shortProfile: a.shortProfile,
+    demographicLifestyleSummary: [
+      a.demographicFingerprint[0],
+      a.lifestyleFingerprint[0]
+    ]
+      .filter(Boolean)
+      .join(' | '),
     bestForSections: a.bestForSections
   }))
 }
 
 /** Builds a markdown block the picker can copy into Working Draft.
- *  Skips archetypes the chief / student didn't select. Custom
+ *  Skips archetypes the chief / student did not select. Custom
  *  notes are inlined per archetype when present. */
 export function formatArchetypesAsMarkdown(
   selectedIds: readonly CustomerArchetypeId[],
@@ -663,7 +784,11 @@ export function formatArchetypesAsMarkdown(
     .map((id) => getCustomerArchetypeById(id))
     .filter((a): a is CustomerArchetype => a !== null)
     .map((a) => buildArchetypeBlock(a, customNotes?.[a.id] ?? ''))
-  return ['## Customer archetypes (starting hypotheses)', ...blocks].join('\n\n')
+  return [
+    '## Customer archetypes (national starting hypotheses)',
+    '> These are Renni-original, PRIZM / ESRI-inspired learning archetypes. They are not actual PRIZM or ESRI segments. Local roles like students, alumni, staff, retail buyers, or TechTown visitors are application contexts, not the whole segment.',
+    ...blocks
+  ].join('\n\n')
 }
 
 function buildArchetypeBlock(
@@ -673,8 +798,14 @@ function buildArchetypeBlock(
   const lines: string[] = [`### ${a.label}`]
   lines.push(`- **Profile:** ${a.shortProfile}`)
   lines.push(`- **Example quote:** "${a.exampleQuote}"`)
+  if (a.demographicFingerprint.length) {
+    lines.push(`- **Demographic fingerprint:** ${a.demographicFingerprint.join('; ')}`)
+  }
+  if (a.lifestyleFingerprint.length) {
+    lines.push(`- **Lifestyle fingerprint:** ${a.lifestyleFingerprint.join('; ')}`)
+  }
   if (customNote.trim()) {
-    lines.push(`- **How this customer shows up for Renni Inc.:** ${customNote.trim()}`)
+    lines.push(`- **Local Renni Inc. application:** ${customNote.trim()}`)
   }
   if (a.likelyNeeds.length) {
     lines.push(`- **Likely needs:** ${a.likelyNeeds.join('; ')}`)
@@ -693,6 +824,13 @@ function buildArchetypeBlock(
   }
   if (a.whatNotToAssume.length) {
     lines.push(`- **What not to assume:** ${a.whatNotToAssume.join('; ')}`)
+  }
+  if (a.localApplications.length) {
+    lines.push(
+      `- **Local applications:** ${a.localApplications
+        .map((x) => `${x.context}: ${x.example}`)
+        .join('; ')}`
+    )
   }
   return lines.join('\n')
 }

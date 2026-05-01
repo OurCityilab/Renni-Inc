@@ -133,9 +133,10 @@ export interface CompactAdvisorContext {
    *  for management advice. */
   taskCoverage: CompactTaskCoverageContext
   /** Compact customer-archetype library — small enough to include
-   *  on every request. The Advisor uses these as STARTING
+   *  on every request. The Advisor uses these as national STARTING
    *  HYPOTHESES the team must validate with evidence, never as
-   *  facts. */
+   *  facts. Local school roles are application contexts, not the
+   *  whole segment. */
   customerArchetypeLibrary: ArchetypeLibrarySummaryEntry[]
   /** Explicit unknowns from the source context. */
   unknowns: string[]

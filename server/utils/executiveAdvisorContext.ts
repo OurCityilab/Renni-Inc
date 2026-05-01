@@ -120,9 +120,10 @@ export interface ExecutiveAdvisorContextV2 {
    *  + top-N chief focus, capped). */
   taskCoverage: CompactTaskCoverageContext
   /** Compact customer-archetype library — id + label + one-line
-   *  profile + bestForSections only. The Advisor recommends
-   *  archetypes as STARTING HYPOTHESES, never as verified facts.
-   *  ~15 entries × 4 short fields ≈ 1.5 KB stringified. */
+   *  profile + demographic/lifestyle one-liner + bestForSections
+   *  only. The Advisor recommends national archetypes as STARTING
+   *  HYPOTHESES, never as verified facts. Local school roles are
+   *  application contexts, not the whole segment. */
   customerArchetypeLibrary: ArchetypeLibrarySummaryEntry[]
   /** Explicit unknowns the Advisor should surface to the chief.
    *  Populated by the context builder when a derivation could not
