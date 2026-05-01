@@ -28,6 +28,8 @@ import {
   FINAL_WEEK_TASK_TEMPLATES,
   type FinalWeekTaskTemplate
 } from '~/utils/finalWeekTaskTemplates'
+import { getTemplateStudio } from '~/data/templateStudios'
+import { resolveSectionIdForRequirement } from '~/utils/requirementToSection'
 
 export type TaskCoveragePriority = 'P0' | 'P1' | 'P2'
 
@@ -268,6 +270,35 @@ function matchTasksForEntry(
     ...sectionTokens
   ]
 
+  // Pass 0: deterministic structured match via task.requirementId.
+  // When a task is linked to a requirement on the same deliverable
+  // AND that requirement resolves to this entry's sectionId (either
+  // via explicit `sectionId` pin on the requirement or the
+  // requirement→section heuristic), the match is unambiguous and
+  // wins over every weaker pass below — chiefs intentionally linked
+  // the task to a requirement, so the matcher should trust that.
+  const studio = getTemplateStudio(entry.deliverableId)
+  let pass0Hits = 0
+  if (studio) {
+    for (const t of tasks) {
+      if (!t.requirementId) continue
+      if (t.deliverableId && t.deliverableId !== entry.deliverableId) continue
+      const requirement = studio.requirements.find(
+        (r) => r.id === t.requirementId
+      )
+      if (!requirement) continue
+      const resolvedSectionId = resolveSectionIdForRequirement(
+        studio,
+        t.requirementId,
+        requirement.label
+      )
+      if (resolvedSectionId === entry.sectionId) {
+        matched.add(t.id)
+        pass0Hits++
+      }
+    }
+  }
+
   // Pass 1: deliverableId match + token overlap. STRONGEST.
   let pass1Hits = 0
   for (const t of tasks) {
@@ -318,11 +349,15 @@ function matchTasksForEntry(
     ? (tasks.find((t) => t.id === firstId)?.title ?? null)
     : null
 
-  // Pick the strongest pass that contributed. Pass 1 wins, then 2, then 3.
+  // Pick the strongest pass that contributed. Pass 0 (requirementId
+  // link) wins, then 1, then 2, then 3.
   let confidence: CoverageMatchConfidence
   let reason: string
   let note = ''
-  if (pass1Hits > 0) {
+  if (pass0Hits > 0) {
+    confidence = 'high'
+    reason = 'High confidence: task is linked to this requirement.'
+  } else if (pass1Hits > 0) {
     confidence = 'high'
     reason = 'High confidence: matched a task on this deliverable that names this section.'
   } else if (pass2Hits > 0) {

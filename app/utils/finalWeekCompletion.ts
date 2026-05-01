@@ -165,6 +165,22 @@ export const FINAL_WEEK_LANES: readonly FinalWeekLane[] = [
         firstAction: 'Open the Customer Builder above the writing surface and compose one segment.'
       },
       {
+        id: 'ch-04:customer-archetype-local-application',
+        laneId: 'bmc',
+        deliverableId: 'ch-04-business-model-canvas',
+        sectionId: 'customer-archetype-local-application',
+        title: 'Local archetype application',
+        artifact: 'Local buyer-context table — one row per national archetype the team uses.',
+        priority: 'P1',
+        owner: 'Chief Strategy and Growth Officer',
+        reviewer: 'CMO support · Co-CEOs',
+        dueLabel: 'Final week — early',
+        dependency: 'Customer Segments',
+        doneWhen:
+          'Each selected national archetype is mapped to a local context, product fit, message, proof, risk, and next validation step. Ch. 10 audience/touchpoints and Ch. 11 Phoenix Nest buyer fit pull from this table.',
+        firstAction: 'Open the Ch. 4 local archetype application table.'
+      },
+      {
         id: 'ch-04:value-propositions',
         laneId: 'bmc',
         deliverableId: 'ch-04-business-model-canvas',

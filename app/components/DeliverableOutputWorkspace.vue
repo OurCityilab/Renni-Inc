@@ -65,6 +65,7 @@ import StrategyMemoBuilder from '~/components/StrategyMemoBuilder.vue'
 import CorporateStructureBuilder from '~/components/CorporateStructureBuilder.vue'
 import SectionDependencyHint from '~/components/SectionDependencyHint.vue'
 import { getSectionDependencyHints } from '~/utils/sectionDependencyHints'
+import CrossChapterReferencePanel from '~/components/CrossChapterReferencePanel.vue'
 import { productNameOptions } from '~/utils/productCatalog'
 import MarketFitBuilder from '~/components/MarketFitBuilder.vue'
 import MarketFitReferencePanel, {
@@ -2487,6 +2488,40 @@ function shouldOpenDefend(s: TemplateStudioSection): boolean {
              or completion criteria. The component renders nothing
              when the section has no entry. -->
         <SectionDependencyHint :hints="getSectionDependencyHints(s.id)" />
+
+        <!-- CrossChapterReferencePanel — small read-only callout that
+             reminds students working in Ch. 10 audience / touchpoints
+             and Ch. 11 offer to pull from the Ch. 4 local archetype
+             application table. Pure navigation hint; never
+             auto-imports rows, never overwrites, never gates submit. -->
+        <CrossChapterReferencePanel
+          v-if="(s.id === 'audience' || s.id === 'touchpoints') && deliverable.id === 'ch-10-marketing-and-campaign-playbook'"
+          title="Ch. 4 local archetype application"
+          description="Pull from Ch. 4. Your local archetype application explains who this buyer is for Renni, where we reach them, what product fits, what proof we need, and what risk to watch."
+          to="/deliverables/ch-04-business-model-canvas/sections/customer-archetype-local-application"
+          link-text="Open the Ch. 4 local archetype application"
+          :pull-forward="[
+            'Local context (Renaissance student / parent / alumni / TechTown visitor / Phoenix Nest buyer / donor)',
+            'Product fit (beanie · sweatshirt · t-shirt · baked good · donation)',
+            'Message or hook in the buyer\'s language',
+            'Proof / evidence needed before this buyer trusts us',
+            'Risk or objection that could make the assumption wrong'
+          ]"
+        />
+        <CrossChapterReferencePanel
+          v-if="s.id === 'offer' && deliverable.id === 'ch-11-phoenix-nest-retail-carry-pitch'"
+          title="Ch. 4 local archetype application"
+          description="Pull from Ch. 4. The shelf-fit story per SKU should name the local context (Phoenix Nest buyer, donor / supporter, alumni, etc.) tied back to the canonical national archetype."
+          to="/deliverables/ch-04-business-model-canvas/sections/customer-archetype-local-application"
+          link-text="Open the Ch. 4 local archetype application"
+          :pull-forward="[
+            'Local context the buyer plays (Phoenix Nest buyer / donor / alumni / parent)',
+            'Product fit per SKU (beanie · sweatshirt · t-shirt · baked good · donation)',
+            'Message or hook the buyer would repeat',
+            'Proof the buyer needs to feel the SKU is ready',
+            'Risk or objection the offer must answer'
+          ]"
+        />
 
         <!-- ChipPickQuickStart — lightweight chip-pick scaffolding.
              Renders ONLY for sections that opt in via
