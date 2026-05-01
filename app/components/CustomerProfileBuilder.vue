@@ -103,8 +103,16 @@
          Local-state, copy-only. Never overwrites existing builder
          selections; classifier output below remains the authoritative
          deterministic profile. Students who want to skip the picker
-         can scroll past it. -->
-    <details class="mb-4 rounded border border-sky-200 bg-sky-50/40 p-2">
+         can scroll past it.
+
+         Suppressed via `hideArchetypePicker` when the parent workspace
+         already mounts the page-level CustomerArchetypePicker
+         (Ch. 4 customer-segments) so students never see two
+         archetype entry points side-by-side. -->
+    <details
+      v-if="!props.hideArchetypePicker"
+      class="mb-4 rounded border border-sky-200 bg-sky-50/40 p-2"
+    >
       <summary class="cursor-pointer text-xs font-semibold text-sky-900">
         Optional starting point — pick a customer archetype
       </summary>
@@ -626,6 +634,16 @@ import type {
   CustomerProfilePrimitiveSelections,
   PrimitiveAxisConfig
 } from '~/types/sectionEngines'
+
+// When the parent workspace already mounts the page-level
+// CustomerArchetypePicker (Ch. 4 customer-segments now does), the
+// CPB-internal collapsible picker is suppressed so students see one
+// clear archetype entry point. Default false preserves any other
+// CPB host that doesn't render the page-level picker.
+const props = withDefaults(
+  defineProps<{ hideArchetypePicker?: boolean }>(),
+  { hideArchetypePicker: false }
+)
 
 const authStore = useAuthStore()
 // Teacher Debug visibility: chief OR admin/instructor (=

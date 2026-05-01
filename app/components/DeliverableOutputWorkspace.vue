@@ -2561,7 +2561,12 @@ function shouldOpenDefend(s: TemplateStudioSection): boolean {
             Use this first if you are stuck. Then paste or adapt your
             result into the draft.
           </p>
-          <CustomerProfileBuilder />
+          <!-- The page-level CustomerArchetypePicker mounted just
+               above already gives students an archetype entry
+               point. Hide the CPB-internal collapsible picker so
+               students see one clear path on Ch. 4
+               customer-segments. -->
+          <CustomerProfileBuilder :hide-archetype-picker="true" />
         </div>
 
         <!-- Key Activities Builder (V1 pilot, BMC Ch. 4 only).

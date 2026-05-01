@@ -599,6 +599,12 @@ export const popUpCampaign: TemplateStudio = {
       requiredForApproval: true,
       department: 'marketing',
       playbookChapter: 10,
+      // Explicit pin: the token-overlap heuristic in
+      // utils/requirementToSection.ts cannot reach `touchpoints`
+      // from "campaign-calendar" (no shared token). Pinning so any
+      // touchpoint/channel/calendar task lands students directly in
+      // the new structured touchpoints table.
+      sectionId: 'touchpoints',
       suggestedTaskTitle: 'Build the 2-week touchpoint calendar',
       definitionOfDone:
         'Calendar linked from the deliverable; each row has a named owner.'
@@ -647,7 +653,12 @@ export const popUpCampaign: TemplateStudio = {
       title: 'Connect channels and touchpoints',
       department: 'marketing',
       ownerRole: 'cmo',
-      requirementId: 'campaign-audience-map',
+      // Routes the student straight into the structured Ch. 10
+      // touchpoints table (channel · date · owner · audience ·
+      // message · proof · dependency · done signal). Previously
+      // pointed at campaign-audience-map which deep-linked to the
+      // audience section instead.
+      requirementId: 'campaign-calendar',
       dependency: 'insights-to-messaging',
       definitionOfDone:
         'TechTown touchpoints mapped with leading angles assigned per touchpoint.',

@@ -670,14 +670,16 @@ export const FINAL_WEEK_LANES: readonly FinalWeekLane[] = [
         deliverableId: 'ch-10-marketing-and-campaign-playbook',
         sectionId: 'touchpoints',
         title: 'Channel touchpoints',
-        artifact: 'A channel × touchpoint table.',
+        artifact: 'A structured channel × touchpoint table.',
         priority: 'P1',
         owner: 'CMO',
         reviewer: 'Co-CEOs',
         dueLabel: 'Final week — mid',
         dependency: 'Campaign audience',
-        doneWhen: 'Each channel has a planned touchpoint and a planned timing.',
-        firstAction: 'Open Working Draft and list 3–5 channels with one planned touchpoint each.'
+        doneWhen:
+          'Each row in the touchpoints table has channel, date, owner, audience, message, proof, dependency, and done signal.',
+        firstAction:
+          'Open the Ch. 10 touchpoints table. Add channel, date, owner, audience, message, proof, dependency, and done signal. Use the table before writing final Playbook language.'
       },
       {
         id: 'ch-10:measurement',
