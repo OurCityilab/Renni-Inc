@@ -52,6 +52,7 @@ import PlaybookWritingScaffold from '~/components/PlaybookWritingScaffold.vue'
 import HelpMeUnderstand from '~/components/HelpMeUnderstand.vue'
 import ChipPickQuickStart from '~/components/ChipPickQuickStart.vue'
 import CustomerProfileBuilder from '~/components/CustomerProfileBuilder.vue'
+import CustomerArchetypePicker from '~/components/CustomerArchetypePicker.vue'
 import KeyActivitiesBuilder from '~/components/KeyActivitiesBuilder.vue'
 import FinanceTableBuilder from '~/components/FinanceTableBuilder.vue'
 import OperationsChecklistBuilder from '~/components/OperationsChecklistBuilder.vue'
@@ -2518,6 +2519,25 @@ function shouldOpenDefend(s: TemplateStudioSection): boolean {
             :current-draft-text="drafts[s.id]?.draftText ?? ''"
             :editing-enabled="editingEnabled && !isLockedByOther(s)"
             @apply="(payload) => handleQuickStartApply(s, payload)"
+          />
+        </div>
+
+        <!-- Customer Archetype Picker — always available on Ch. 4
+             customer-segments regardless of the Customer Profile
+             Builder beta flag. P0 student-readiness: students need a
+             reliable card-deck starting point for the customer
+             segment work. Local state, copy-only; never overwrites
+             Working Draft. The picker is collapsible inside the
+             component, so it stays calm next to the chip-pick
+             QuickStart above. -->
+        <div
+          v-if="s.id === 'customer-segments'"
+          :id="`cap-${s.id}`"
+          class="space-y-1"
+        >
+          <CustomerArchetypePicker
+            :section-id="s.id"
+            :compact="true"
           />
         </div>
 

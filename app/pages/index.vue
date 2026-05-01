@@ -220,14 +220,13 @@ async function copyMemberHelpMessage(): Promise<void> {
       </p>
     </header>
 
-    <!-- Final Week Completion Mode — declarative P0 / P1 / P2 lane
-         map for the launch-week dashboard. Shipped above My Next
-         Actions so a checked-out senior finds what to finish first
-         in under 10 seconds. Visible to every audience: members
-         use it as a deterministic floor; chiefs and Co-CEOs use
-         it to direct teams. Pure presentational — no Firestore
-         writes, no AI, no auto-task creation. -->
-    <FinalWeekCompletionPanel />
+    <!-- Start here today — member-first viewport. P0 student-readiness:
+         the top 1–3 next-action cards must be visible before any
+         secondary panel for a regular member. We render My Next
+         Actions FIRST for members so a student logging in sees what
+         to do without scrolling. Chiefs / Co-CEOs / COO / admin keep
+         the cockpit ordering (FinalWeek panel first) below. -->
+    <FinalWeekCompletionPanel v-if="audience !== 'member'" />
 
     <!-- My next actions — member-only, up to 3 recipe-driven cards.
          Replaces the prior single "Do this next" card. Each card
@@ -243,6 +242,9 @@ async function copyMemberHelpMessage(): Promise<void> {
       class="space-y-3"
     >
       <header>
+        <p class="text-xs font-semibold uppercase tracking-wide text-phoenix-700">
+          Start here today
+        </p>
         <h2 class="text-sm font-semibold uppercase tracking-wide text-neutral-700">
           My next actions
         </h2>
@@ -282,6 +284,12 @@ async function copyMemberHelpMessage(): Promise<void> {
         you yet. Pick one and ask your chief if you can take it on.
       </p>
     </section>
+
+    <!-- Final Week Completion Mode — member view, mounted below My
+         Next Actions so the top viewport stays focused on the 1–3
+         immediate cards. Still visible to members so they have the
+         lane map for launch week, just not above the action cards. -->
+    <FinalWeekCompletionPanel v-if="audience === 'member'" />
 
     <!-- Launch Morning Priorities — five role-grouped cards that route
          each student group straight to the launch-critical section

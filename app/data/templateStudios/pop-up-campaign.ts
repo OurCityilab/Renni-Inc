@@ -323,17 +323,38 @@ export const popUpCampaign: TemplateStudio = {
       id: 'touchpoints',
       title: 'What touchpoints?',
       lesson:
-        'A touchpoint is every moment someone could see us before they show up. Signage, posts, classroom mentions, peer DMs.',
+        'A touchpoint is every moment someone could see us before they show up. Signage, posts, classroom mentions, peer DMs. Map them as a real calendar so the team can see overlap, gaps, and who owns each one.',
       example:
         'Week-before flyer in hallway → two IG reels → day-before text to 20 friends → day-of table signage.',
+      universalTable: {
+        enabled: true,
+        kind: 'campaign-touchpoints',
+        title: 'Campaign Touchpoint Calendar',
+        intro:
+          'One row per planned touchpoint. Channel, date, owner, audience, message angle, proof / asset link, dependency, and the done signal that says "this shipped."',
+        copyTitle: 'Campaign touchpoints',
+        columns: [
+          { key: 'channel', label: 'Channel', type: 'text', placeholder: 'IG reel · hallway flyer · group text · table sign' },
+          { key: 'date', label: 'Date', type: 'text', placeholder: 'YYYY-MM-DD or week-of' },
+          { key: 'owner', label: 'Owner', type: 'text', placeholder: 'role / name' },
+          { key: 'audience', label: 'Audience', type: 'text', placeholder: 'which named group from above', wide: true },
+          { key: 'message', label: 'Message angle', type: 'textarea', placeholder: 'one-line what we say · brand voice', wide: true },
+          { key: 'proof', label: 'Proof / asset', type: 'textarea', placeholder: 'link · file name · drafted by · approved by', wide: true },
+          { key: 'dependency', label: 'Dependency', type: 'text', placeholder: 'what must be ready first', wide: true },
+          { key: 'doneSignal', label: 'Done signal', type: 'textarea', placeholder: 'what proves this touchpoint shipped', wide: true }
+        ],
+        starterRowCount: 4
+      },
       studentPrompts: [
         'Map a 2-week timeline of every touchpoint you plan.',
-        'Which touchpoints reach first-time customers vs repeat supporters?'
+        'Which touchpoints reach first-time customers vs repeat supporters?',
+        'Which touchpoints are the priority — drop or delegate the rest first.'
       ],
       requiredInputs: ['2-week touchpoint calendar'],
       completionCriteria: [
         'Calendar has at least three distinct touchpoint types.',
-        'Each touchpoint has a named owner.'
+        'Each touchpoint has a named owner.',
+        'Each row has a date, audience, message angle, and done signal.'
       ]
     },
     {

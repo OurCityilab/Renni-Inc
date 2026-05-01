@@ -398,7 +398,7 @@ export function pickRecipe(
       doThis:
         'Describe how Renni Inc. treats customers — at the table, online, and after the sale — so a one-time buyer becomes a repeat buyer.',
       howToDoIt: [
-        'Name the relationship style for each segment (personal pitch, fast checkout, after-sale follow-up).',
+        'Name the relationship style for each segment (personal pitch, quick at-table interaction, after-sale follow-up). Renni Command Center does not run any sale system — Square remains the external partner.',
         'Describe how a buyer at TechTown is treated, AND how a buyer through Phoenix Nest carry would be treated.',
         'Name the after-sale moment — thank-you note, social tag, second-purchase offer.',
         'Tie the relationship to brand voice, not generic "customer service" copy.',
@@ -815,7 +815,7 @@ export function pickRecipe(
         'Build the inventory list — every item Renni Inc. needs to bring, the quantity, the location, and whether it is packed.',
       howToDoIt: [
         'Open the Inventory Checklist builder.',
-        'List every item — products, packaging, signage, payment device, baked-goods supplies.',
+        'List every item — products, packaging, signage, the Square card reader (external partner — Renni Command Center is not a sale system), baked-goods supplies.',
         'For each item, enter quantity, location, the owner who brings it, any issue, and packed?',
         'Mark issues honestly (missing, damaged, behind on production).',
         'Copy the table into Working Draft and edit it in your own words.',

@@ -79,29 +79,45 @@ export const phoenixNestPitch: TemplateStudio = {
       id: 'offer',
       title: 'What would retail carry look like?',
       lesson:
-        'Buyers need a concrete offer: what SKUs, what quantities, what margin, what timing. Vague pitches die in the meeting.',
+        'Buyers need a concrete offer per SKU — not a paragraph. One row per product the team is proposing for the shelf, with the brand fit, the price/margin math, the readiness behind it, the evidence the team can defend, the risk, the exact ask, the owner, and the done signal that says "this offer is ready to take into the meeting."',
+      retailPitch: {
+        enabled: true,
+        kind: 'offer',
+        title: 'Phoenix Nest Carry Offer Card',
+        intro:
+          'One card per SKU the team is proposing for carry. Buyer (named Phoenix Nest contact), product / SKU, shelf fit (brand-fit story — why this belongs on the buyer\'s shelf), price/margin (retail · wholesale · cost · margin %), readiness (inventory + production we can defend), proof (sell-through · customer quote · comparable), risk, exact ask (one yes/no the buyer can act on), and the next step / done signal.',
+        copyTitle: 'Phoenix Nest carry offer',
+        includeBuyer: true,
+        includeProductSku: true,
+        includeShelfFit: true,
+        includePriceMargin: true,
+        includeProof: true,
+        includeReadiness: true,
+        includeAsk: true,
+        includeRisk: true,
+        includeNextStep: true
+      },
       studentPrompts: [
         'Which 1-3 SKUs would we offer for carry? Why those?',
-        'What wholesale margin are we proposing?',
-        'What reorder cadence makes sense (one-time, seasonal, monthly)?'
+        'For each SKU, what wholesale price + margin are we proposing?',
+        'What reorder cadence makes sense (one-time, seasonal, monthly) — and what is the done signal that proves the offer is ready to walk into the meeting?',
+        'Who on the team owns each SKU\'s offer card before pitch day?'
       ],
       completionCriteria: [
-        'Specific SKUs, wholesale price, and suggested reorder cadence are written.'
+        'Each carry SKU has its own offer card.',
+        'Every card names the buyer, the product, the price/margin math, the readiness, the evidence, the risk, and the exact ask.',
+        'Each card has a named owner and a done signal so the team knows the offer is pitch-ready.'
       ],
       sourceGuidance: [
         'Reference the Chapter 7 demand estimate and Chapter 8 revenue scenario used to support each carry quantity.',
         'Use a clearly labeled demand assumption, not a guess.',
-        'Do not present estimates as facts.'
+        'Do not present estimates as facts.',
+        'Phoenix Nest reads both retail and carry buyers — the shelf-fit field should compare segments and name the strongest evidence (a defended pitch, not a single guess).'
       ],
       marketBuilder: {
         enabled: true,
         guidance:
           'For each SKU, log carry-volume scenarios at the wholesale price. Reorder cadence should reconcile with the conservative scenario.'
-      },
-      marketFit: {
-        enabled: true,
-        guidance:
-          'Phoenix Nest will read both who buys at retail and who buys at carry. Compare segments and name the strongest evidence; the buyer wants a defended pitch, not a single guess.'
       }
     },
     {

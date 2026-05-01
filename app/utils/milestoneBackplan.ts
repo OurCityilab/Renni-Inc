@@ -99,10 +99,10 @@ const TEMPLATE: ReadonlyArray<Omit<BackplanMilestone, 'suggestedDate'>> = [
     owner: 'COO',
     dependency: 'product-specs',
     definitionOfDone:
-      'Ch. 9 Operations Readiness draft covers vendor sourcing, production timeline, inventory plan, booth ops, payment plan, and at-event checklist.',
+      'Ch. 9 Operations Readiness draft covers vendor sourcing, production timeline, inventory plan, booth ops, the cash/card-handling plan (Square is the external partner), and at-event checklist.',
     relatedChapters: [9],
     whyItMatters:
-      'A brilliant brand at TechTown still fails if the booth has no change, no cash card reader plan, or no setup checklist.'
+      'A brilliant brand at TechTown still fails if the booth has no change, no Square (external) card-reader plan, or no setup checklist.'
   },
   {
     id: 'phoenix-nest-pitch',

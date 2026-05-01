@@ -14,6 +14,7 @@ import { taskStatusLabel } from '~/utils/taskStatus'
 import { rolesForDepartment } from '~/utils/cSuiteAdvisor'
 import RoleAdvisorCard from '~/components/RoleAdvisorCard.vue'
 import { getTemplateStudio } from '~/data/templateStudios'
+import { deepLinkForTask } from '~/utils/requirementToSection'
 
 // Local goal-status label map. Goals are simpler (4 values, single
 // surface) so an inline map is preferred over another shared util.
@@ -172,6 +173,14 @@ function deliverableLinkLabel(t: Task) {
   if (t.playbookChapter != null) return `Ch ${t.playbookChapter} · open deliverable`
   return 'Open deliverable'
 }
+
+// Same deep-link helper Home + Tasks use. When the task carries a
+// requirementId we can resolve to a section, the link lands the
+// student directly in the section workspace (where they actually
+// write); otherwise it falls back to the chapter overview.
+function taskHref(t: Task): string {
+  return deepLinkForTask(t) ?? (t.deliverableId ? `/deliverables/${t.deliverableId}` : '/tasks')
+}
 </script>
 
 <template>
@@ -308,9 +317,9 @@ function deliverableLinkLabel(t: Task) {
                 </p>
                 <NuxtLink
                   v-if="t.deliverableId"
-                  :to="`/deliverables/${t.deliverableId}`"
+                  :to="taskHref(t)"
                   class="text-xs text-phoenix-700 hover:underline"
-                >↳ {{ deliverableLinkLabel(t) }}</NuxtLink>
+                >↳ {{ t.requirementId ? 'start writing' : deliverableLinkLabel(t) }}</NuxtLink>
               </div>
               <span
                 class="shrink-0 rounded-full border px-2 py-0.5 text-xs"

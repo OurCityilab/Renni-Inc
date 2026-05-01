@@ -243,8 +243,8 @@ export const businessModelCanvas: TemplateStudio = {
         starterRowCount: 2
       },
       studentPrompts: [
-        'How are customers treated at the TechTown table — fast checkout, personal pitch, both?',
-        'What happens after a sale? Receipts, follow-up, none?',
+        'How are customers treated at the TechTown table — quick at-table interaction, personal pitch, both? (Square is the external partner; Renni Command Center is not a sale system.)',
+        'What happens after a buy? Thank-you, social tag, follow-up, none?',
         'How do donors and product buyers experience the brand differently?'
       ],
       completionCriteria: [
@@ -256,12 +256,12 @@ export const businessModelCanvas: TemplateStudio = {
         whyThisMatters:
           'How a customer is treated at the table is the brand. Pop-up customer experience is also the rehearsal for the Phoenix Nest carry pitch — buyers ask "how do customers experience your product?" before they buy.',
         whatToGather: [
-          'Pop-up table experience: greeting, story, checkout, follow-up.',
-          'Post-sale: receipt, follow-up email, social tag, none.',
+          'Pop-up table experience: greeting, story, the at-table interaction, follow-up.',
+          'Post-buy: thank-you, follow-up note, social tag, none.',
           'Donor experience vs product-buyer experience.'
         ],
         weakAnswerLooksLike: '"We will be friendly." — no experience.',
-        strongAnswerLooksLike: 'A short script (greeting + 1-line story + offer + thank-you) plus a post-sale rule (receipt by Square, no email follow-up this cohort).',
+        strongAnswerLooksLike: 'A short script (greeting + 1-line story + offer + thank-you) plus a post-buy rule (Square handles transactions externally; no email follow-up this cohort).',
         expertPushback: ['Have you rehearsed the table experience?', 'Are donors thanked differently from buyers?'],
         commonMistakes: ['Skipping post-sale entirely.', 'Treating donors and buyers identically when they have different reasons.'],
         decisionSupported: 'Pop-up day customer flow + Phoenix Nest "how customers experience us" answer.',
@@ -406,7 +406,7 @@ export const businessModelCanvas: TemplateStudio = {
       },
       studentPrompts: [
         'List people resources (chiefs, members, advisors).',
-        'List physical resources (booth, signage, Square POS, oven, kitchen).',
+        'List physical resources (booth, signage, Square card reader as the external partner, oven, kitchen).',
         'List intellectual resources (brand book, designs, customer feedback).'
       ],
       completionCriteria: [
@@ -419,7 +419,7 @@ export const businessModelCanvas: TemplateStudio = {
           'Resources are the inputs the team needs to ship. If the activity list says "bake 200 cookies" but the resource list does not name the kitchen, the plan is incomplete.',
         whatToGather: [
           'People (chiefs, members, advisors).',
-          'Physical (booth, signage, Square POS, oven, kitchen access).',
+          'Physical (booth, signage, Square card reader as the external partner, oven, kitchen access).',
           'Intellectual (brand book, designs, customer feedback log).',
           'Map: which activity needs which resource.'
         ],
