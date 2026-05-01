@@ -102,7 +102,7 @@ async function returnRevision() {
 </script>
 
 <template>
-  <section class="card space-y-3">
+  <section id="approval-actions" class="card space-y-3">
     <header class="flex items-center justify-between">
       <h2 class="text-sm font-semibold">Actions</h2>
       <StatusChip :status="deliverable.status" />
@@ -161,14 +161,14 @@ async function returnRevision() {
     <!-- Approver path: approve / return -->
     <div v-if="(isApprover || isOverride) && status === 'in_review'" class="space-y-3 border-t border-neutral-200 pt-3">
       <p class="text-sm text-neutral-700">
-        Review against the rubric, then approve or return for revision with a clear reason.
+        Review against the rubric, then approve for Playbook or request revision with a clear reason.
       </p>
       <div class="flex flex-wrap gap-2">
         <button class="btn-primary" :disabled="submitting" @click="approveOpen = !approveOpen">
-          Approve
+          Approve for Playbook
         </button>
         <button class="btn-secondary" :disabled="submitting" @click="returnOpen = !returnOpen">
-          Return for revision
+          Request revision
         </button>
       </div>
 
@@ -183,7 +183,7 @@ async function returnRevision() {
         <div class="mt-2 flex justify-end gap-2">
           <button class="btn-secondary" @click="approveOpen = false">Cancel</button>
           <button class="btn-primary" :disabled="submitting" @click="approve">
-            Confirm approval
+            Confirm Playbook approval
           </button>
         </div>
       </div>

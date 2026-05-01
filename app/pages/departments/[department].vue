@@ -141,6 +141,10 @@ const counts = computed(() => ({
   needsRevision: deptDeliverables.value.filter((x) => x.status === 'needs_revision').length
 }))
 
+const inReviewDeliverables = computed<Deliverable[]>(() =>
+  deptDeliverables.value.filter((d) => d.status === 'in_review')
+)
+
 const canAssign = computed(() => {
   if (auth.isAdmin || auth.isCoCEO) return true
   // COO and department chief for this dept may assign work here.
@@ -181,6 +185,28 @@ function deliverableLinkLabel(t: Task) {
 function taskHref(t: Task): string {
   return deepLinkForTask(t) ?? (t.deliverableId ? `/deliverables/${t.deliverableId}` : '/tasks')
 }
+
+function reviewHref(d: Deliverable): string {
+  return `/deliverables/${d.id}#approval-actions`
+}
+
+function firstReviewSectionHref(d: Deliverable): string | null {
+  const studio = getTemplateStudio(d.id)
+  if (!studio) return null
+  const output = outputsByDeliverableId.value[d.id]
+  const firstReadySection = studio.sections.find((section) => {
+    const persisted = output?.sections?.[section.id]
+    return Boolean(
+      (persisted?.finalText ?? '').trim() ||
+        (persisted?.draftText ?? '').trim() ||
+        persisted?.builderState?.universalTable?.rows?.length ||
+        persisted?.builderState?.retailPitch?.rows?.length
+    )
+  })
+  return firstReadySection
+    ? `/deliverables/${d.id}/sections/${firstReadySection.id}`
+    : null
+}
 </script>
 
 <template>
@@ -198,9 +224,14 @@ function taskHref(t: Task): string {
     </div>
 
     <template v-else>
-      <div class="grid gap-3 sm:grid-cols-4">
+      <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
         <KpiCard label="Deliverables" :value="counts.total" />
         <KpiCard label="Approved" :value="counts.approved" tone="good" />
+        <KpiCard
+          label="Ready for review"
+          :value="counts.inReview"
+          :tone="counts.inReview > 0 ? 'warn' : 'default'"
+        />
         <KpiCard
           label="Needs revision"
           :value="counts.needsRevision"
@@ -212,6 +243,60 @@ function taskHref(t: Task): string {
           :tone="blockedTasks.length > 0 ? 'warn' : 'default'"
         />
       </div>
+
+      <section
+        v-if="inReviewDeliverables.length"
+        class="card border-sky-200 bg-sky-50/50"
+      >
+        <header class="flex flex-wrap items-start justify-between gap-2">
+          <div>
+            <h2 class="text-sm font-semibold text-sky-950">
+              Ready for chief review
+            </h2>
+            <p class="text-xs text-sky-900">
+              These sections were submitted. Open the review surface, check the
+              rubric, then approve for Playbook or request revision.
+            </p>
+          </div>
+          <span class="rounded-full border border-sky-300 bg-white px-2 py-0.5 text-xs text-sky-800">
+            {{ inReviewDeliverables.length }} in review
+          </span>
+        </header>
+        <ul class="mt-3 space-y-2">
+          <li
+            v-for="d in inReviewDeliverables"
+            :key="d.id"
+            class="rounded-md border border-sky-200 bg-white p-3 text-sm"
+          >
+            <div class="flex flex-wrap items-start justify-between gap-3">
+              <div class="min-w-0">
+                <p class="font-medium text-neutral-900">
+                  Ch {{ d.chapter }} · {{ d.title }}
+                </p>
+                <p class="text-xs text-neutral-600">
+                  Owner {{ d.ownerEmail }} · Approver {{ d.approverEmail }}
+                  <span v-if="d.submittedForReviewAt"> · submitted {{ d.submittedForReviewAt.slice(0, 10) }}</span>
+                </p>
+              </div>
+              <div class="flex shrink-0 flex-wrap gap-2">
+                <NuxtLink
+                  v-if="firstReviewSectionHref(d)"
+                  :to="firstReviewSectionHref(d)!"
+                  class="rounded border border-sky-300 bg-sky-50 px-2 py-1 text-xs font-medium text-sky-900 hover:bg-sky-100"
+                >
+                  Review section
+                </NuxtLink>
+                <NuxtLink
+                  :to="reviewHref(d)"
+                  class="rounded border border-emerald-300 bg-emerald-50 px-2 py-1 text-xs font-medium text-emerald-900 hover:bg-emerald-100"
+                >
+                  Approve for Playbook
+                </NuxtLink>
+              </div>
+            </div>
+          </li>
+        </ul>
+      </section>
 
       <!-- C-Suite Advisor V1.2 — daily moves for this department's
            chief. Read-only; never creates tasks or edits dates. -->

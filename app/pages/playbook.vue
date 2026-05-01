@@ -318,6 +318,18 @@ function toggle(ch: number) {
   expanded.value[ch] = !expanded.value[ch]
 }
 
+function studioForDeliverable(d: Deliverable): TemplateStudio | null {
+  return getTemplateStudio(d.id)
+}
+
+function outputForDeliverable(d: Deliverable): DeliverableOutput | null {
+  return outputs.get(d.id) ?? null
+}
+
+function outputStillLoading(d: Deliverable): boolean {
+  return Boolean(studioForDeliverable(d)) && !outputs.has(d.id)
+}
+
 const statusTone: Record<ChapterStatus, string> = {
   not_started: 'border-neutral-300 text-neutral-600',
   in_progress: 'border-amber-300 bg-amber-50 text-amber-800',
@@ -483,6 +495,16 @@ const statusLabel: Record<ChapterStatus, string> = {
             :key="d.id"
           >
             <DeliverableRow :deliverable="d" show-owner />
+            <div
+              v-if="d.status === 'approved' && studioForDeliverable(d)"
+              class="mt-2 rounded-md border border-emerald-200 bg-emerald-50/30 p-2"
+            >
+              <DeliverablePlaybookPreview
+                :studio="studioForDeliverable(d)!"
+                :output="outputForDeliverable(d)"
+                :loading="outputStillLoading(d)"
+              />
+            </div>
           </li>
         </ul>
       </li>

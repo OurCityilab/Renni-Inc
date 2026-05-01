@@ -6,7 +6,8 @@
   POSTURE (do not relax)
   ----------------------
     - Pure UI + clipboard. Local component state only. No Firestore
-      writes, no AI calls, no save handler.
+      imports, no direct writes, no AI calls. The parent workspace may
+      persist card state through the existing section Save button.
     - Helps the team prepare a Phoenix Nest retail carry pitch as
       a pitch (buyer · SKU · shelf fit · price/margin · proof ·
       readiness · ask · risk · next step). Frames Phoenix Nest as
@@ -26,6 +27,10 @@ import type {
 const props = defineProps<{
   config: RetailPitchBuilderConfig
   productOptions?: string[]
+  initialCards?: Array<Record<string, string>>
+}>()
+const emit = defineEmits<{
+  'update:cards': [cards: Array<Record<string, string>>]
 }>()
 
 const config = computed<RetailPitchBuilderConfig>(() => props.config)
@@ -47,6 +52,9 @@ function emptyCard(): Card {
 }
 
 function seedCards(): Card[] {
+  if (props.initialCards && props.initialCards.length) {
+    return props.initialCards.map((c) => ({ ...emptyCard(), ...c }))
+  }
   if (config.value.starterCards && config.value.starterCards.length) {
     return config.value.starterCards.map((c) => ({ ...emptyCard(), ...c }))
   }
@@ -55,6 +63,14 @@ function seedCards(): Card[] {
 
 const cards = reactive<Card[]>(seedCards())
 const copyButtonLabel = ref<string>('Copy pitch notes')
+
+function snapshotCards(): Array<Record<string, string>> {
+  return cards.map((c) => ({ ...c }) as Record<string, string>)
+}
+
+function emitCards(): void {
+  emit('update:cards', snapshotCards())
+}
 
 interface FieldDef {
   key: keyof Card
@@ -94,13 +110,16 @@ function fieldValue(card: Card, key: keyof Card): string {
 
 function addCard(): void {
   cards.push(emptyCard())
+  emitCards()
 }
 function removeCard(idx: number): void {
   cards.splice(idx, 1)
   if (cards.length === 0) addCard()
+  else emitCards()
 }
 function clearAll(): void {
   cards.splice(0, cards.length, emptyCard())
+  emitCards()
 }
 
 function cardIsBlank(card: Card): boolean {
@@ -168,7 +187,8 @@ async function copyOutput(): Promise<void> {
 
     <p class="rounded border border-amber-200 bg-white p-2 text-[11px] italic text-neutral-700">
       This builder helps you prepare a retail carry pitch. It does
-      not submit, approve, or save the final section for you.
+      not submit, approve, or save the final section for you. The
+      section Save button keeps these cards for next time.
     </p>
 
     <datalist v-if="hasProductOptions" :id="datalistId">
@@ -208,7 +228,7 @@ async function copyOutput(): Promise<void> {
               :placeholder="f.placeholder"
               :list="f.productAutocomplete && hasProductOptions ? datalistId : undefined"
               class="mt-1 w-full rounded border border-stone-300 bg-white p-1 text-xs"
-              @input="(e) => { (card as Record<string, string>)[f.key as string] = (e.target as HTMLInputElement).value }"
+              @input="(e) => { (card as Record<string, string>)[f.key as string] = (e.target as HTMLInputElement).value; emitCards() }"
             />
             <textarea
               v-else
@@ -216,7 +236,7 @@ async function copyOutput(): Promise<void> {
               :placeholder="f.placeholder"
               rows="2"
               class="mt-1 w-full rounded border border-stone-300 bg-white p-1 text-xs"
-              @input="(e) => { (card as Record<string, string>)[f.key as string] = (e.target as HTMLTextAreaElement).value }"
+              @input="(e) => { (card as Record<string, string>)[f.key as string] = (e.target as HTMLTextAreaElement).value; emitCards() }"
             />
           </label>
         </div>

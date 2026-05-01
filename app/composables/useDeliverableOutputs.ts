@@ -19,6 +19,7 @@ import type {
   BrandFitBuilder,
   DeliverableEvidenceLink,
   DeliverableOutput,
+  DeliverableOutputBuilderState,
   DeliverableOutputSection,
   DeliverableOutputSectionStatus,
   EvidenceConfidence,
@@ -79,6 +80,7 @@ export interface SectionSavePayload {
   draftText: string
   finalText: string
   status: DeliverableOutputSectionStatus
+  builderState?: DeliverableOutputBuilderState
 }
 
 // New evidence link input — caller supplies label/url/type/optional
@@ -353,6 +355,7 @@ export function useDeliverableOutputs() {
       [`sections.${sectionId}.draftText`]: payload.draftText,
       [`sections.${sectionId}.finalText`]: payload.finalText,
       [`sections.${sectionId}.status`]: payload.status,
+      [`sections.${sectionId}.builderState`]: payload.builderState ?? {},
       [`sections.${sectionId}.updatedAt`]: now,
       [`sections.${sectionId}.updatedByUid`]: actor.uid,
       [`sections.${sectionId}.updatedByEmail`]: actor.email,

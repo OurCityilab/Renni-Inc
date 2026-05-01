@@ -17,6 +17,7 @@ import type {
   Deliverable,
   DeliverableEvidenceLink,
   DeliverableOutput,
+  DeliverableOutputBuilderState,
   DeliverableOutputSection,
   DeliverableOutputSectionStatus,
   EvidenceConfidence,
@@ -370,6 +371,7 @@ interface LocalDraft {
   draftText: string
   finalText: string
   status: DeliverableOutputSectionStatus
+  builderState: DeliverableOutputBuilderState
 }
 const drafts = ref<Record<string, LocalDraft>>({})
 const dirty = ref<Record<string, boolean>>({})
@@ -411,8 +413,65 @@ function deriveStatus(d: LocalDraft): DeliverableOutputSectionStatus {
   const filled =
     d.sourceNotes.trim() !== '' ||
     d.draftText.trim() !== '' ||
-    d.finalText.trim() !== ''
+    d.finalText.trim() !== '' ||
+    rowsHaveContent(d.builderState.universalTable?.rows ?? []) ||
+    rowsHaveContent(d.builderState.retailPitch?.rows ?? [])
   return filled ? 'in_progress' : 'empty'
+}
+
+type PersistedBuilderKey = 'universalTable' | 'retailPitch'
+type BuilderRows = Array<Record<string, string>>
+
+function cloneRows(rows: BuilderRows | undefined): BuilderRows {
+  return (rows ?? []).map((row) => ({ ...row }))
+}
+
+function cloneBuilderState(
+  state: DeliverableOutputBuilderState | undefined
+): DeliverableOutputBuilderState {
+  return {
+    ...(state?.universalTable
+      ? { universalTable: { ...state.universalTable, rows: cloneRows(state.universalTable.rows) } }
+      : {}),
+    ...(state?.retailPitch
+      ? { retailPitch: { ...state.retailPitch, rows: cloneRows(state.retailPitch.rows) } }
+      : {})
+  }
+}
+
+function builderRowsFor(
+  s: TemplateStudioSection,
+  key: PersistedBuilderKey
+): BuilderRows {
+  const draftRows = drafts.value[s.id]?.builderState?.[key]?.rows
+  if (draftRows && draftRows.length) return cloneRows(draftRows)
+  return cloneRows(persistedSection(s)?.builderState?.[key]?.rows)
+}
+
+function rowsHaveContent(rows: BuilderRows): boolean {
+  return rows.some((row) =>
+    Object.values(row).some((value) => String(value ?? '').trim().length > 0)
+  )
+}
+
+function updateBuilderRows(
+  s: TemplateStudioSection,
+  key: PersistedBuilderKey,
+  rows: BuilderRows
+): void {
+  ensureDraft(s)
+  const d = drafts.value[s.id]
+  if (!d) return
+  d.builderState = {
+    ...d.builderState,
+    [key]: {
+      rows: cloneRows(rows),
+      updatedAt: new Date().toISOString(),
+      updatedByUid: auth.user?.uid ?? null,
+      updatedByEmail: auth.profile?.email || auth.user?.email || null
+    }
+  }
+  markDirty(s)
 }
 
 function ensureDraft(s: TemplateStudioSection) {
@@ -422,7 +481,8 @@ function ensureDraft(s: TemplateStudioSection) {
       sourceNotes: persisted?.sourceNotes ?? '',
       draftText: persisted?.draftText ?? '',
       finalText: persisted?.finalText ?? '',
-      status: persisted?.status ?? 'empty'
+      status: persisted?.status ?? 'empty',
+      builderState: cloneBuilderState(persisted?.builderState)
     }
     dirty.value[s.id] = false
   }
@@ -443,7 +503,8 @@ watch(
           sourceNotes: persisted.sourceNotes ?? '',
           draftText: persisted.draftText ?? '',
           finalText: persisted.finalText ?? '',
-          status: persisted.status ?? 'empty'
+          status: persisted.status ?? 'empty',
+          builderState: cloneBuilderState(persisted.builderState)
         }
         dirty.value[s.id] = false
       } else if (!dirty.value[s.id]) {
@@ -451,7 +512,8 @@ watch(
           sourceNotes: persisted.sourceNotes ?? '',
           draftText: persisted.draftText ?? '',
           finalText: persisted.finalText ?? '',
-          status: persisted.status ?? 'empty'
+          status: persisted.status ?? 'empty',
+          builderState: cloneBuilderState(persisted.builderState)
         }
       }
     }
@@ -483,12 +545,22 @@ function hasChanges(s: TemplateStudioSection): boolean {
   if (!dirty.value[s.id]) return false
   const d = drafts.value[s.id]
   const persisted = persistedSection(s)
-  if (!persisted) return Boolean(d.sourceNotes || d.draftText || d.finalText)
+  if (!persisted) {
+    return Boolean(
+      d.sourceNotes ||
+        d.draftText ||
+        d.finalText ||
+        rowsHaveContent(d.builderState.universalTable?.rows ?? []) ||
+        rowsHaveContent(d.builderState.retailPitch?.rows ?? [])
+    )
+  }
   return (
     d.sourceNotes !== (persisted.sourceNotes ?? '') ||
     d.draftText !== (persisted.draftText ?? '') ||
     d.finalText !== (persisted.finalText ?? '') ||
-    d.status !== (persisted.status ?? 'empty')
+    d.status !== (persisted.status ?? 'empty') ||
+    JSON.stringify(d.builderState) !==
+      JSON.stringify(cloneBuilderState(persisted.builderState))
   )
 }
 
@@ -511,7 +583,8 @@ async function save(s: TemplateStudioSection) {
       sourceNotes: d.sourceNotes,
       draftText: d.draftText,
       finalText: d.finalText,
-      status: deriveStatus(d)
+      status: deriveStatus(d),
+      builderState: d.builderState
     }
     await outputs.saveSection(props.deliverable.id, s.id, payload, {
       uid: auth.user.uid,
@@ -2707,6 +2780,8 @@ function shouldOpenDefend(s: TemplateStudioSection): boolean {
           <UniversalSectionTableBuilder
             :config="s.universalTable!"
             :product-options="productNameList"
+            :initial-rows="builderRowsFor(s, 'universalTable')"
+            @update:rows="(rows) => updateBuilderRows(s, 'universalTable', rows)"
           />
         </div>
 
@@ -2753,6 +2828,8 @@ function shouldOpenDefend(s: TemplateStudioSection): boolean {
           <RetailPitchBuilder
             :config="s.retailPitch!"
             :product-options="productNameList"
+            :initial-cards="builderRowsFor(s, 'retailPitch')"
+            @update:cards="(cards) => updateBuilderRows(s, 'retailPitch', cards)"
           />
         </div>
 
@@ -3041,7 +3118,7 @@ function shouldOpenDefend(s: TemplateStudioSection): boolean {
 
             <div class="flex flex-wrap items-center justify-between gap-2">
               <span class="text-[11px] text-neutral-500">
-                Saving stores Think, Draft, and Final Playbook text together.
+                Saving stores Think, Draft, Final Playbook text, and saved builder rows together.
               </span>
               <button
                 v-if="editingEnabled"
@@ -4114,6 +4191,10 @@ function shouldOpenDefend(s: TemplateStudioSection): boolean {
           <p v-else class="mt-1 text-xs italic text-neutral-500">
             Final text not added yet.
           </p>
+          <SavedBuilderStatePreview
+            :section="s"
+            :builder-state="persistedSection(s)?.builderState"
+          />
           <ul
             v-if="(persistedSection(s)?.evidenceLinks?.length ?? 0) > 0"
             class="mt-2 space-y-0.5 text-xs"

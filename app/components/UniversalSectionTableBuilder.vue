@@ -6,8 +6,9 @@
   POSTURE (do not relax)
   ----------------------
     - Pure UI + clipboard. Local component state only. No Firestore
-      writes, no AI calls, no /api/* requests, no automatic
-      Working-Draft writes, no save handler.
+      imports, no direct writes, no AI calls, no /api/* requests, no
+      automatic Working-Draft writes. The parent workspace may persist
+      row state through the existing section Save button.
     - The builder helps the student build the answer. It does NOT
       submit, approve, or save the final section — that's still
       the existing Working Draft + Save flow.
@@ -31,6 +32,10 @@ type Row = Record<string, string>
 const props = defineProps<{
   config: UniversalTableBuilderConfig
   productOptions?: string[]
+  initialRows?: Row[]
+}>()
+const emit = defineEmits<{
+  'update:rows': [rows: Row[]]
 }>()
 
 const config = computed<UniversalTableBuilderConfig>(() => props.config)
@@ -48,6 +53,9 @@ function emptyRow(): Row {
 }
 
 function seedRows(): Row[] {
+  if (props.initialRows && props.initialRows.length) {
+    return props.initialRows.map((r) => ({ ...emptyRow(), ...r }))
+  }
   if (config.value.starterRows && config.value.starterRows.length) {
     return config.value.starterRows.map((r) => ({ ...emptyRow(), ...r }))
   }
@@ -58,19 +66,30 @@ function seedRows(): Row[] {
 const rows = reactive<Row[]>(seedRows())
 const copyButtonLabel = ref<string>('Copy table')
 
+function snapshotRows(): Row[] {
+  return rows.map((r) => ({ ...r }))
+}
+
+function emitRows(): void {
+  emit('update:rows', snapshotRows())
+}
+
 function addRow(): void {
   rows.push(emptyRow())
+  emitRows()
 }
 
 function removeRow(idx: number): void {
   rows.splice(idx, 1)
   if (rows.length === 0) addRow()
+  else emitRows()
 }
 
 function clearAll(): void {
   rows.splice(0, rows.length)
   const n = Math.max(1, config.value.starterRowCount ?? 3)
   for (let i = 0; i < n; i++) addRow()
+  emitRows()
 }
 
 function rowIsBlank(row: Row): boolean {
@@ -155,7 +174,8 @@ async function copyTable(): Promise<void> {
       class="rounded border border-sky-200 bg-white p-2 text-[11px] italic text-neutral-700"
     >
       This table helps you build the answer. It does not submit,
-      approve, or save the final section for you.
+      approve, or save the final section for you. The section Save
+      button keeps these rows for next time.
     </p>
 
     <!-- Shared product-name datalist (rendered once when enabled). -->
@@ -200,6 +220,7 @@ async function copyTable(): Promise<void> {
                 :placeholder="col.placeholder"
                 :list="shouldAttachDatalist(col) ? datalistId : undefined"
                 class="mt-1 w-full rounded border border-stone-300 bg-white p-1 text-xs"
+                @input="emitRows"
               />
             </template>
             <template v-else-if="col.type === 'number'">
@@ -209,12 +230,14 @@ async function copyTable(): Promise<void> {
                 inputmode="decimal"
                 :placeholder="col.placeholder"
                 class="mt-1 w-full rounded border border-stone-300 bg-white p-1 text-xs"
+                @input="emitRows"
               />
             </template>
             <template v-else-if="col.type === 'select'">
               <select
                 v-model="row[col.key]"
                 class="mt-1 w-full rounded border border-stone-300 bg-white p-1 text-xs"
+                @change="emitRows"
               >
                 <option
                   v-for="opt in col.options ?? []"
@@ -231,6 +254,7 @@ async function copyTable(): Promise<void> {
                 :placeholder="col.placeholder"
                 rows="2"
                 class="mt-1 w-full rounded border border-stone-300 bg-white p-1 text-xs"
+                @input="emitRows"
               />
             </template>
           </label>

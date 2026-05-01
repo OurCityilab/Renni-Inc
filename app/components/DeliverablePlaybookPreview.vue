@@ -114,6 +114,11 @@ function pricingCompsWithUrls(s: TemplateStudioSection) {
           to turn notes and builder work into a clean final version.
         </p>
 
+        <SavedBuilderStatePreview
+          :section="s"
+          :builder-state="persistedSection(s)?.builderState"
+        />
+
         <ul
           v-if="(persistedSection(s)?.evidenceLinks?.length ?? 0) > 0"
           class="mt-2 space-y-0.5 text-xs"

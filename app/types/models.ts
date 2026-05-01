@@ -1047,10 +1047,28 @@ export interface DeliverableOutputSection {
   // else; never required, never migrates, never affects submit gate
   // or Playbook readiness, never writes to pricingScenarios.
   pricingStrategy?: PricingStrategyBuilder
+  // Optional saved state for reusable classroom builders that started
+  // as local-state copy helpers. Additive only: this never replaces
+  // source notes, Working Draft, final Playbook text, evidence, or any
+  // primary builder state. Save writes through the existing section
+  // save path so rows persist across refresh/session without autosave.
+  builderState?: DeliverableOutputBuilderState
   status?: DeliverableOutputSectionStatus
   updatedAt?: IsoTimestamp | null
   updatedByUid?: string | null
   updatedByEmail?: string | null
+}
+
+export interface SavedBuilderRows {
+  rows: Array<Record<string, string>>
+  updatedAt?: IsoTimestamp | null
+  updatedByUid?: string | null
+  updatedByEmail?: string | null
+}
+
+export interface DeliverableOutputBuilderState {
+  universalTable?: SavedBuilderRows
+  retailPitch?: SavedBuilderRows
 }
 
 // Soft Section Locking sprint. One lock per (deliverable, section).
