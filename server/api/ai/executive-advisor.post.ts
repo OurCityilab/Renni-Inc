@@ -347,10 +347,12 @@ export default defineEventHandler(async (event) => {
 
   // 2. Feature flag + provider key gate. Both must be present or
   //    we short-circuit with a generic ai_disabled.
+  // The flag is declared as a boolean in nuxt.config.ts (built from
+  // `process.env.NUXT_EXECUTIVE_ADVISOR_ENABLED === 'true'`), so the
+  // value reaching the runtime config is always boolean. The
+  // previous `=== 'true'` fallback was dead code and tripped vue-tsc.
   const config = useRuntimeConfig()
-  const enabled =
-    config.executiveAdvisorEnabled === true ||
-    config.executiveAdvisorEnabled === 'true'
+  const enabled = config.executiveAdvisorEnabled === true
   const apiKey = (config.aiCritiqueApiKey as string | undefined) || ''
   if (!enabled || !apiKey) {
     disabled('Executive Advisor is unavailable.')

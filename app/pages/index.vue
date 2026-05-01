@@ -842,10 +842,9 @@ async function copyMemberHelpMessage(): Promise<void> {
       </NuxtLink>
       <!-- Workbench is a planner / chief operator surface; the page
            itself self-redirects regular members to /tasks for status
-           updates. Hide the card for members so nav and Home agree
-           on which surfaces a member should see. -->
+           updates. The outer grid is already gated on
+           audience !== 'member', so the inner card is unconditional. -->
       <NuxtLink
-        v-if="audience !== 'member'"
         to="/workbench"
         class="card group block hover:border-phoenix-300"
       >

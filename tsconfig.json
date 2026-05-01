@@ -5,6 +5,14 @@
     "app/**/*.ts",
     "app/**/*.vue",
     "server/**/*.ts",
-    "types/**/*.ts"
+    "types/**/*.ts",
+    // Include Nuxt-generated type declarations so vue-tsc / nuxi
+    // typecheck can resolve auto-imported globals (computed, ref,
+    // useNuxtApp, navigateTo, definePageMeta, defineNuxtPlugin,
+    // useRuntimeConfig, etc.). The narrower include above
+    // overrides the extended config's `include`, so these have
+    // to be re-listed here explicitly.
+    ".nuxt/nuxt.d.ts",
+    ".nuxt/types/**/*.d.ts"
   ]
 }

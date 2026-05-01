@@ -2,7 +2,16 @@ import fs from 'node:fs'
 import path from 'node:path'
 import Papa from 'papaparse'
 
-export function readCsv<T extends Record<string, string>>(relativePath: string): T[] {
+// Reads a CSV file into typed rows. `T` is intentionally
+// unconstrained beyond `object`: TypeScript does not promote
+// concrete interface fields (e.g. `email: string`) to a
+// `Record<string, string>` index signature, so any constraint
+// stricter than `object` rejected the seed-script Row interfaces
+// even though every cell is in fact a string. Papa.parse runs
+// with `dynamicTyping: false`, so every present value is a string;
+// missing columns come back as `undefined`. The helper does not
+// enforce that at the type level.
+export function readCsv<T extends object>(relativePath: string): T[] {
   const filePath = path.resolve(process.cwd(), relativePath)
   if (!fs.existsSync(filePath)) {
     throw new Error(`[csv] file not found: ${filePath}`)
