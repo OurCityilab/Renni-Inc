@@ -3,6 +3,7 @@
 // — so this is additive, never a blocker.
 
 import type { TemplateStudio } from '~/types/templateStudio'
+import type { Deliverable } from '~/types/models'
 import { brandArchitecture } from './brand-architecture'
 import { businessModelCanvas } from './business-model-canvas'
 import { companyStructureContinuity } from './company-structure-continuity'
@@ -35,6 +36,18 @@ export const templateStudios: Record<string, TemplateStudio> = {
 
 export function getTemplateStudio(deliverableId: string): TemplateStudio | null {
   return templateStudios[deliverableId] ?? null
+}
+
+export function templateStudioKeyForDeliverable(
+  deliverable: Pick<Deliverable, 'id' | 'studioId'>
+): string {
+  return deliverable.studioId || deliverable.id
+}
+
+export function getTemplateStudioForDeliverable(
+  deliverable: Pick<Deliverable, 'id' | 'studioId'>
+): TemplateStudio | null {
+  return getTemplateStudio(templateStudioKeyForDeliverable(deliverable))
 }
 
 export function findTemplateRequirement(requirementId: string): {

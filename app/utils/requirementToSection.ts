@@ -124,6 +124,7 @@ export function resolveSectionIdForRequirement(
 export interface TaskLikeForDeepLink {
   deliverableId?: string | null
   requirementId?: string | null
+  sectionId?: string | null
 }
 
 // Returns the best deep link for the task. Order:
@@ -135,6 +136,9 @@ export interface TaskLikeForDeepLink {
 //      should treat this as "no deep link available").
 export function deepLinkForTask(task: TaskLikeForDeepLink): string | null {
   if (!task.deliverableId) return null
+  if (task.sectionId) {
+    return `/deliverables/${task.deliverableId}/sections/${task.sectionId}`
+  }
   if (task.requirementId) {
     const studio = getTemplateStudio(task.deliverableId)
     if (studio) {

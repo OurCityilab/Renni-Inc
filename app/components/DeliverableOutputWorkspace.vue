@@ -162,14 +162,21 @@ function originalSectionIndex(sectionId: string): number {
 const CH7_DELIVERABLE_ID = 'ch-07-current-product-line-and-pricing'
 const CH8_DELIVERABLE_ID = 'ch-08-finance-and-revenue-model'
 const CH11_DELIVERABLE_ID = 'ch-11-phoenix-nest-retail-carry-pitch'
+const studioKey = computed(() => props.deliverable.studioId || props.deliverable.id)
+const ch4LocalArchetypeReferencePath = computed(() => {
+  const deliverableId = props.deliverable.id.startsWith('qa-')
+    ? 'qa-ch-04-business-model-canvas'
+    : 'ch-04-business-model-canvas'
+  return `/deliverables/${deliverableId}/sections/customer-archetype-local-application`
+})
 const isChapter7 = computed(
-  () => props.deliverable.id === CH7_DELIVERABLE_ID
+  () => studioKey.value === CH7_DELIVERABLE_ID
 )
 const isChapter8 = computed(
-  () => props.deliverable.id === CH8_DELIVERABLE_ID
+  () => studioKey.value === CH8_DELIVERABLE_ID
 )
 const isChapter11 = computed(
-  () => props.deliverable.id === CH11_DELIVERABLE_ID
+  () => studioKey.value === CH11_DELIVERABLE_ID
 )
 // AI Critique V1 is gated to the three market-evidence chapters. The
 // section-level marketBuilder flag still has to be set; this computed
@@ -188,7 +195,7 @@ const MARKET_FIT_CHAPTER_IDS = new Set([
   CH11_DELIVERABLE_ID
 ])
 const isMarketFitChapter = computed(() =>
-  MARKET_FIT_CHAPTER_IDS.has(props.deliverable.id)
+  MARKET_FIT_CHAPTER_IDS.has(studioKey.value)
 )
 // The watcher returns loading=false / data=null when the id is an
 // empty string, so each cross-chapter listener stays a no-op on every
@@ -2588,10 +2595,10 @@ function shouldOpenDefend(s: TemplateStudioSection): boolean {
              application table. Pure navigation hint; never
              auto-imports rows, never overwrites, never gates submit. -->
         <CrossChapterReferencePanel
-          v-if="(s.id === 'audience' || s.id === 'touchpoints') && deliverable.id === 'ch-10-marketing-and-campaign-playbook'"
+          v-if="(s.id === 'audience' || s.id === 'touchpoints') && studioKey === 'ch-10-marketing-and-campaign-playbook'"
           title="Ch. 4 local archetype application"
           description="Pull from Ch. 4. Your local archetype application explains who this buyer is for Renni, where we reach them, what product fits, what proof we need, and what risk to watch."
-          to="/deliverables/ch-04-business-model-canvas/sections/customer-archetype-local-application"
+          :to="ch4LocalArchetypeReferencePath"
           link-text="Open the Ch. 4 local archetype application"
           :pull-forward="[
             'Local context (Renaissance student / parent / alumni / TechTown visitor / Phoenix Nest buyer / donor)',
@@ -2602,10 +2609,10 @@ function shouldOpenDefend(s: TemplateStudioSection): boolean {
           ]"
         />
         <CrossChapterReferencePanel
-          v-if="s.id === 'offer' && deliverable.id === 'ch-11-phoenix-nest-retail-carry-pitch'"
+          v-if="s.id === 'offer' && studioKey === 'ch-11-phoenix-nest-retail-carry-pitch'"
           title="Ch. 4 local archetype application"
           description="Pull from Ch. 4. The shelf-fit story per SKU should name the local context (Phoenix Nest buyer, donor / supporter, alumni, etc.) tied back to the canonical national archetype."
-          to="/deliverables/ch-04-business-model-canvas/sections/customer-archetype-local-application"
+          :to="ch4LocalArchetypeReferencePath"
           link-text="Open the Ch. 4 local archetype application"
           :pull-forward="[
             'Local context the buyer plays (Phoenix Nest buyer / donor / alumni / parent)',

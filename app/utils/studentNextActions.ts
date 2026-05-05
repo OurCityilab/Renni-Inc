@@ -25,6 +25,7 @@ import type {
 } from '~/types/models'
 import {
   getTemplateStudio,
+  getTemplateStudioForDeliverable,
   templateStudios
 } from '~/data/templateStudios'
 import type {
@@ -236,9 +237,11 @@ function buildCardForTask(
   deliverable: Deliverable | null,
   isDepartmentFallback: boolean
 ): NextActionCardModel {
-  const studio: TemplateStudio | null = task.deliverableId
-    ? (getTemplateStudio(task.deliverableId) ?? null)
-    : null
+  const studio: TemplateStudio | null = deliverable
+    ? getTemplateStudioForDeliverable(deliverable)
+    : task.deliverableId
+      ? (getTemplateStudio(task.deliverableId) ?? null)
+      : null
   const section: TemplateStudioSection | null = resolveSectionForTask(
     studio,
     task
@@ -253,7 +256,8 @@ function buildCardForTask(
   const baseHref =
     deepLinkForTask({
       deliverableId: task.deliverableId ?? null,
-      requirementId: task.requirementId ?? null
+      requirementId: task.requirementId ?? null,
+      sectionId: task.sectionId ?? null
     }) ?? '/tasks'
   const buttonHref =
     baseHref === '/tasks'

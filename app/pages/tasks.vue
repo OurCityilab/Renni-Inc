@@ -10,7 +10,10 @@ import {
   deepLinkForTask,
   resolveSectionIdForRequirement
 } from '~/utils/requirementToSection'
-import { getTemplateStudio } from '~/data/templateStudios'
+import {
+  getTemplateStudio,
+  getTemplateStudioForDeliverable
+} from '~/data/templateStudios'
 import {
   getTaskMismatchWarnings,
   isHighRigorChapter,
@@ -78,6 +81,14 @@ const deliverableLabelById = computed(() => {
   return m
 })
 
+const deliverableById = computed(() => {
+  const m = new Map<string, (typeof allDeliverables.value)[number]>()
+  for (const d of allDeliverables.value) {
+    m.set(d.id, d)
+  }
+  return m
+})
+
 // --- Independent Student Mode: per-row mismatch warnings -------------
 // Surface non-blocking warnings when a task is marked done while the
 // linked section has no saved content, or when a task is in_progress
@@ -97,7 +108,10 @@ const { data: outputsByDeliverableId } = outputs.watchManyOutputs(watchedDeliver
 
 function resolvedSectionForTask(t: Task): DeliverableOutputSection | null {
   if (!t.deliverableId || !t.requirementId) return null
-  const studio = getTemplateStudio(t.deliverableId)
+  const deliverable = deliverableById.value.get(t.deliverableId)
+  const studio = deliverable
+    ? getTemplateStudioForDeliverable(deliverable)
+    : getTemplateStudio(t.deliverableId)
   if (!studio) return null
   const explicit = studio.requirements.find((r) => r.id === t.requirementId)
   const sectionId = resolveSectionIdForRequirement(

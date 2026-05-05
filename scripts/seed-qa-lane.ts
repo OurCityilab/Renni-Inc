@@ -87,7 +87,7 @@ const DEFAULT_PAIRS: Record<number, Pair> = {
   5: { owner: '08sydbradley@gmail.com', approver: 'arimalloy10@gmail.com' },   // marketing member / CMO
   9: { owner: 'tseay@ltu.edu', approver: 'sharaecottingham1@gmail.com' },       // ops member / COO
   8: { owner: 'nghtlooker30k@gmail.com', approver: 'hardydestiny04@gmail.com' }, // finance member / CFO
-  12: { owner: 'alorythomas569@gmail.com', approver: 'pcunegin1@gmail.com' }  // CSGO / Co-CEO
+  12: { owner: 'alorythomas569@gmail.com', approver: 'pcunegin1@gmail.com' }  // Strategy and Growth / Co-CEO
 }
 
 function norm(e: string | null | undefined): string | null {

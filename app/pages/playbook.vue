@@ -3,7 +3,7 @@ import { computed, onMounted, onScopeDispose, reactive, ref, watch } from 'vue'
 import { doc, onSnapshot, type Unsubscribe } from 'firebase/firestore'
 import { useDeliverables } from '~/composables/useDeliverables'
 import { useTasks } from '~/composables/useTasks'
-import { getTemplateStudio } from '~/data/templateStudios'
+import { getTemplateStudioForDeliverable } from '~/data/templateStudios'
 import {
   computeOutputReadiness,
   type OutputReadinessSummary
@@ -167,7 +167,7 @@ const studioBackedDeliverables = computed<
     studio: TemplateStudio
   }[] = []
   for (const d of all.value) {
-    const studio = getTemplateStudio(d.id)
+    const studio = getTemplateStudioForDeliverable(d)
     if (!studio) continue
     const chapter = Number(d.chapter)
     if (!chapter) continue
@@ -319,7 +319,7 @@ function toggle(ch: number) {
 }
 
 function studioForDeliverable(d: Deliverable): TemplateStudio | null {
-  return getTemplateStudio(d.id)
+  return getTemplateStudioForDeliverable(d)
 }
 
 function outputForDeliverable(d: Deliverable): DeliverableOutput | null {

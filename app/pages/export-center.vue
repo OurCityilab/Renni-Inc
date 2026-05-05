@@ -18,7 +18,8 @@ import { computed, ref } from 'vue'
 import { useDeliverables } from '~/composables/useDeliverables'
 import { useTasks } from '~/composables/useTasks'
 import { useDeliverableOutputs } from '~/composables/useDeliverableOutputs'
-import { getTemplateStudio } from '~/data/templateStudios'
+import { getTemplateStudioForDeliverable } from '~/data/templateStudios'
+import type { Deliverable } from '~/types/models'
 import {
   aggregateAdvisorSignals
 } from '~/utils/cSuiteAdvisor'
@@ -44,7 +45,7 @@ const { data: deliverableList, loading: deliverablesLoading } =
 const { data: taskList, loading: tasksLoading } = tasks.watchAll()
 const studioBackedIds = computed<string[]>(() =>
   deliverableList.value
-    .filter((d) => Boolean(getTemplateStudio(d.id)))
+    .filter((d) => Boolean(getTemplateStudioForDeliverable(d)))
     .map((d) => d.id)
 )
 const { data: outputsByDeliverableId, loading: outputsLoading } =
@@ -61,7 +62,7 @@ const inputs = computed(() => ({
   deliverables: deliverableList.value,
   tasks: taskList.value,
   outputs: outputsByDeliverableId.value,
-  studioResolver: (d: { id: string }) => getTemplateStudio(d.id)
+  studioResolver: (d: Deliverable) => getTemplateStudioForDeliverable(d)
 }))
 
 const presentationOutline = computed(() =>
@@ -82,7 +83,7 @@ const advisorActionPlan = computed(() =>
 // Per-chapter Playbook export selector. Defaults to the first
 // studio-backed deliverable.
 const studioBackedDeliverables = computed(() =>
-  deliverableList.value.filter((d) => Boolean(getTemplateStudio(d.id)))
+  deliverableList.value.filter((d) => Boolean(getTemplateStudioForDeliverable(d)))
 )
 const selectedDeliverableId = ref<string>('')
 const selectedDeliverable = computed(() => {
@@ -99,7 +100,7 @@ const playbookChapterMd = computed(() => {
   if (!d) return ''
   return buildPlaybookChapterMd(
     d,
-    getTemplateStudio(d.id),
+    getTemplateStudioForDeliverable(d),
     outputsByDeliverableId.value[d.id] ?? null
   )
 })
@@ -356,7 +357,7 @@ function download(filename: string, content: string, mime: string) {
             class="mt-0.5 w-full rounded border border-neutral-300 p-1.5 text-sm sm:w-80"
           >
             <option v-for="d in studioBackedDeliverables" :key="d.id" :value="d.id">
-              {{ getTemplateStudio(d.id)?.title || d.title }}
+              {{ getTemplateStudioForDeliverable(d)?.title || d.title }}
             </option>
           </select>
         </label>
@@ -466,7 +467,7 @@ function download(filename: string, content: string, mime: string) {
             class="mt-0.5 w-full rounded border border-neutral-300 p-1.5 text-sm sm:w-80"
           >
             <option v-for="d in studioBackedDeliverables" :key="d.id" :value="d.id">
-              {{ getTemplateStudio(d.id)?.title || d.title }}
+              {{ getTemplateStudioForDeliverable(d)?.title || d.title }}
             </option>
           </select>
         </label>

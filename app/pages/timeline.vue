@@ -15,7 +15,7 @@ import {
   type TaskStatus
 } from '~/types/models'
 import { taskStatusLabel } from '~/utils/taskStatus'
-import { getTemplateStudio } from '~/data/templateStudios'
+import { getTemplateStudioForDeliverable } from '~/data/templateStudios'
 import {
   buildPresentationReadiness,
   PROCESS_ORDER
@@ -43,7 +43,7 @@ const { data: rosterEntries } = roster.watchAll()
 // studio-backed deliverables; reused by the readiness summary.
 const studioBackedIds = computed<string[]>(() =>
   allDeliverables.value
-    .filter((d) => Boolean(getTemplateStudio(d.id)))
+    .filter((d) => Boolean(getTemplateStudioForDeliverable(d)))
     .map((d) => d.id)
 )
 const { data: outputsByDeliverableId } = outputs.watchManyOutputs(studioBackedIds)
@@ -53,7 +53,7 @@ const presentationReadiness = computed(() =>
     deliverables: allDeliverables.value,
     tasks: allTasks.value,
     outputs: outputsByDeliverableId.value,
-    studioResolver: (d) => getTemplateStudio(d.id)
+    studioResolver: (d) => getTemplateStudioForDeliverable(d)
   })
 )
 const backplanSummary = computed(() => presentationReadiness.value.summary)

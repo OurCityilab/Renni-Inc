@@ -22,7 +22,7 @@ import { useRoute, onBeforeRouteLeave } from 'vue-router'
 import { useAuthStore } from '~/stores/auth'
 import { useDeliverables } from '~/composables/useDeliverables'
 import { useTasks } from '~/composables/useTasks'
-import { getTemplateStudio } from '~/data/templateStudios'
+import { getTemplateStudioForDeliverable } from '~/data/templateStudios'
 import DeliverableSectionWorkspace from '~/components/DeliverableSectionWorkspace.vue'
 import SectionGuidanceStrip from '~/components/SectionGuidanceStrip.vue'
 import SectionGuidanceCards from '~/components/SectionGuidanceCards.vue'
@@ -47,7 +47,7 @@ const sectionId = computed(() => String(route.params.sectionId))
 
 const { data: deliverable, loading } = deliverables.watchOne(deliverableId)
 const studio = computed(() =>
-  deliverable.value ? getTemplateStudio(deliverable.value.id) : null
+  deliverable.value ? getTemplateStudioForDeliverable(deliverable.value) : null
 )
 
 const validSection = computed(() => {

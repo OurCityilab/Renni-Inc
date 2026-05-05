@@ -4,7 +4,11 @@ import { useAuthStore } from '~/stores/auth'
 import { useDeliverables } from '~/composables/useDeliverables'
 import { useTasks } from '~/composables/useTasks'
 import type { Deliverable, Department, Task } from '~/types/models'
-import { templateStudios, getTemplateStudio } from '~/data/templateStudios'
+import {
+  templateStudios,
+  getTemplateStudio,
+  getTemplateStudioForDeliverable
+} from '~/data/templateStudios'
 import { taskStatusLabel } from '~/utils/taskStatus'
 import { computeHomeSignals, type HomeAudience } from '~/utils/homeSignals'
 import { deepLinkForTask } from '~/utils/requirementToSection'
@@ -126,7 +130,10 @@ function taskHref(t: Task): string {
 // card omits the why-it-matters line.
 function taskWhyItMatters(t: Task | null): string | null {
   if (!t || !t.deliverableId) return null
-  const studio = getTemplateStudio(t.deliverableId)
+  const deliverable = allDeliverables.value.find((d) => d.id === t.deliverableId)
+  const studio = deliverable
+    ? getTemplateStudioForDeliverable(deliverable)
+    : getTemplateStudio(t.deliverableId)
   if (!studio) return null
   switch (studio.connectedOutcome) {
     case 'TechTown pop-up':
@@ -619,12 +626,30 @@ async function copyMemberHelpMessage(): Promise<void> {
           Nothing in your review queue.
         </p>
         <div v-else class="space-y-2">
-          <DeliverableRow
+          <div
             v-for="d in needsMyApproval"
             :key="d.id"
-            :deliverable="d"
-            show-owner
-          />
+            class="rounded-xl border border-sky-200 bg-sky-50/40 p-2"
+          >
+            <DeliverableRow
+              :deliverable="d"
+              show-owner
+            />
+            <div class="mt-2 flex flex-wrap gap-2 text-xs">
+              <NuxtLink
+                :to="`/deliverables/${d.id}`"
+                class="rounded border border-sky-300 bg-white px-2 py-1 font-medium text-sky-900 hover:bg-sky-100"
+              >
+                Review work
+              </NuxtLink>
+              <NuxtLink
+                :to="`/deliverables/${d.id}#approval-actions`"
+                class="rounded border border-emerald-300 bg-white px-2 py-1 font-medium text-emerald-900 hover:bg-emerald-100"
+              >
+                Approve for Playbook / request revision
+              </NuxtLink>
+            </div>
+          </div>
         </div>
       </div>
     </div>

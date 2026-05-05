@@ -33,9 +33,8 @@ interface IdentityPlan {
 
 // Role assignments are fixed intentionally:
 // - member: ordinary student (non-chief)
-// - csgo:   chief of Strategy and Growth (matches current 'Strategy and
-//           Growth replaces R&D' product truth; does not overlap a
-//           high-traffic chief slot in the real roster)
+// - csgo:   internal role key for the Strategy and Growth chief; does not
+//           overlap a high-traffic chief slot in the real roster
 // - coceo:  Co-CEO (executive)
 // None of these grant admin, so the QA workflow is a clean non-admin test.
 const PLAN: IdentityPlan[] = [

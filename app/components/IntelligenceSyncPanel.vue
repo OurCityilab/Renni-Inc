@@ -17,7 +17,7 @@ import type {
   DeliverableOutput,
   Task
 } from '~/types/models'
-import { getTemplateStudio } from '~/data/templateStudios'
+import { getTemplateStudioForDeliverable } from '~/data/templateStudios'
 import {
   generateIntelligenceSyncIssues,
   SYNC_SEVERITY_CHIP_CLASS,
@@ -49,7 +49,7 @@ const effectiveSignals = computed<AggregatedAdvisorSignal[]>(() => {
     deliverables: props.deliverables,
     tasks: props.tasks,
     outputs: props.outputs,
-    studioResolver: (d) => getTemplateStudio(d.id)
+    studioResolver: (d) => getTemplateStudioForDeliverable(d)
   })
 })
 
@@ -58,7 +58,7 @@ const issues = computed<IntelligenceSyncIssue[]>(() =>
     deliverables: props.deliverables,
     tasks: props.tasks,
     outputs: props.outputs,
-    studioResolver: (d) => getTemplateStudio(d.id),
+    studioResolver: (d) => getTemplateStudioForDeliverable(d),
     advisorSignals: effectiveSignals.value
   })
 )

@@ -503,6 +503,20 @@ function deliverableLink(deliverableId: string): string {
             <p class="mt-0.5 text-neutral-700">
               {{ d.ownerLabel }}<span v-if="d.dueDate"> · due {{ d.dueDate }}</span>
             </p>
+            <div class="mt-2 flex flex-wrap gap-2">
+              <NuxtLink
+                :to="d.link"
+                class="rounded border border-sky-300 bg-white px-2 py-1 font-medium text-sky-900 hover:bg-sky-100"
+              >
+                Review work
+              </NuxtLink>
+              <NuxtLink
+                :to="`${d.link}#approval-actions`"
+                class="rounded border border-emerald-300 bg-white px-2 py-1 font-medium text-emerald-900 hover:bg-emerald-100"
+              >
+                Approve for Playbook / request revision
+              </NuxtLink>
+            </div>
           </li>
         </ul>
       </div>

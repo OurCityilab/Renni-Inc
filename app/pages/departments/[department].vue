@@ -13,7 +13,7 @@ import type { Deliverable, Department, RosterEntry, Task } from '~/types/models'
 import { taskStatusLabel } from '~/utils/taskStatus'
 import { rolesForDepartment } from '~/utils/cSuiteAdvisor'
 import RoleAdvisorCard from '~/components/RoleAdvisorCard.vue'
-import { getTemplateStudio } from '~/data/templateStudios'
+import { getTemplateStudioForDeliverable } from '~/data/templateStudios'
 import { deepLinkForTask } from '~/utils/requirementToSection'
 
 // Local goal-status label map. Goals are simpler (4 values, single
@@ -53,7 +53,7 @@ const { data: allGoals, loading: goalsLoading } = goals.watchList()
 // collection; reuses watchManyOutputs read-only fan-out.
 const studioBackedIds = computed<string[]>(() =>
   allDeliverables.value
-    .filter((d) => Boolean(getTemplateStudio(d.id)))
+    .filter((d) => Boolean(getTemplateStudioForDeliverable(d)))
     .map((d) => d.id)
 )
 const { data: outputsByDeliverableId, loading: outputsLoading } =
@@ -191,7 +191,7 @@ function reviewHref(d: Deliverable): string {
 }
 
 function firstReviewSectionHref(d: Deliverable): string | null {
-  const studio = getTemplateStudio(d.id)
+  const studio = getTemplateStudioForDeliverable(d)
   if (!studio) return null
   const output = outputsByDeliverableId.value[d.id]
   const firstReadySection = studio.sections.find((section) => {

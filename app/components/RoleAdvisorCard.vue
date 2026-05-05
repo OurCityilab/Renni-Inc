@@ -20,7 +20,7 @@ import type {
   DeliverableOutput,
   Task
 } from '~/types/models'
-import { getTemplateStudio } from '~/data/templateStudios'
+import { getTemplateStudioForDeliverable } from '~/data/templateStudios'
 import {
   aggregateAdvisorSignals,
   filterAggregatedByRoles,
@@ -53,7 +53,7 @@ const aggregated = computed(() =>
     deliverables: props.deliverables,
     tasks: props.tasks,
     outputs: props.outputs,
-    studioResolver: (d) => getTemplateStudio(d.id)
+    studioResolver: (d) => getTemplateStudioForDeliverable(d)
   })
 )
 
@@ -126,7 +126,7 @@ const topMoves = computed(() =>
 
 // Helper used in the chapter title chip.
 function chapterTitle(d: Deliverable): string {
-  const studio = getTemplateStudio(d.id)
+  const studio = getTemplateStudioForDeliverable(d)
   return studio?.title || d.title
 }
 </script>

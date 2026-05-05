@@ -5,7 +5,7 @@ import { useAuthStore } from '~/stores/auth'
 import { useDeliverables } from '~/composables/useDeliverables'
 import { useTasks } from '~/composables/useTasks'
 import { useTemplatePreview } from '~/composables/useTemplatePreview'
-import { getTemplateStudio } from '~/data/templateStudios'
+import { getTemplateStudioForDeliverable } from '~/data/templateStudios'
 import type { DeliverableEvent } from '~/types/models'
 import { taskStatusLabel } from '~/utils/taskStatus'
 import { computeRequirementCoverage } from '~/utils/requirementCoverage'
@@ -84,7 +84,7 @@ const canEditOutput = computed(() => {
 // of) the plain markdown preview that's below. Deliverables without a
 // studio fall back to just the preview — this is purely additive.
 const studio = computed(() =>
-  deliverable.value ? getTemplateStudio(deliverable.value.id) : null
+  deliverable.value ? getTemplateStudioForDeliverable(deliverable.value) : null
 )
 
 // Task progress rollup for this deliverable. Approval status stays a

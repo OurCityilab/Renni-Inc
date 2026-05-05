@@ -151,6 +151,11 @@ export interface DeliverableEvent {
 
 export interface Deliverable {
   id: string
+  // Optional Template Studio source id. Canonical deliverables omit this
+  // because their document id is already the studio id. QA/smoke
+  // deliverables can set this to a canonical chapter id while keeping
+  // their own deliverableOutputs/{id} document.
+  studioId?: string | null
   title: string
   chapter: number
   department: Department
@@ -207,6 +212,10 @@ export interface Task {
   // Optional link to a Template Studio requirement on the parent
   // deliverable. Legacy tasks have no requirementId and render fine.
   requirementId?: string | null
+  // Optional direct section workspace target. QA smoke tasks and any
+  // future manually-seeded section tasks can use this when the section
+  // is known and should not depend on requirement matching heuristics.
+  sectionId?: string | null
   createdAt: IsoTimestamp
   updatedAt: IsoTimestamp
 }

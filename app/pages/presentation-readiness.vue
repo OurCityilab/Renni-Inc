@@ -14,7 +14,7 @@ import { computed } from 'vue'
 import { useDeliverables } from '~/composables/useDeliverables'
 import { useTasks } from '~/composables/useTasks'
 import { useDeliverableOutputs } from '~/composables/useDeliverableOutputs'
-import { getTemplateStudio } from '~/data/templateStudios'
+import { getTemplateStudioForDeliverable } from '~/data/templateStudios'
 import { buildPresentationReadiness } from '~/utils/presentationReadiness'
 import {
   DISPLAY_LABEL_CHIP_CLASS,
@@ -33,7 +33,7 @@ const { data: taskList, loading: tasksLoading } = tasks.watchAll()
 
 const studioBackedIds = computed<string[]>(() =>
   deliverableList.value
-    .filter((d) => Boolean(getTemplateStudio(d.id)))
+    .filter((d) => Boolean(getTemplateStudioForDeliverable(d)))
     .map((d) => d.id)
 )
 const { data: outputsByDeliverableId, loading: outputsLoading } =
@@ -51,7 +51,7 @@ const readiness = computed(() =>
     deliverables: deliverableList.value,
     tasks: taskList.value,
     outputs: outputsByDeliverableId.value,
-    studioResolver: (d) => getTemplateStudio(d.id)
+    studioResolver: (d) => getTemplateStudioForDeliverable(d)
   })
 )
 

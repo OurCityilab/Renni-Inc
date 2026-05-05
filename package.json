@@ -21,6 +21,7 @@
     "seed:bmc": "tsx scripts/seed-bmc.ts",
     "seed:qa": "tsx scripts/seed-qa-lane.ts",
     "seed:qa-identities": "tsx scripts/seed-qa-identities.ts",
+    "seed:qa-smoke-lane": "tsx scripts/seed-qa-smoke-lane.ts",
     "cleanup:qa-identities": "tsx scripts/cleanup-qa-identities.ts",
     "cleanup:bible-goal": "tsx scripts/cleanup-bible-goal.ts",
     "audit:studio-alignment": "tsx scripts/audit-studio-alignment.ts",

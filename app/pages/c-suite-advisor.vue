@@ -15,7 +15,7 @@ import { computed } from 'vue'
 import { useDeliverables } from '~/composables/useDeliverables'
 import { useTasks } from '~/composables/useTasks'
 import { useDeliverableOutputs } from '~/composables/useDeliverableOutputs'
-import { getTemplateStudio } from '~/data/templateStudios'
+import { getTemplateStudioForDeliverable } from '~/data/templateStudios'
 import CSuiteAdvisorHub from '~/components/CSuiteAdvisorHub.vue'
 import IntelligenceSyncPanel from '~/components/IntelligenceSyncPanel.vue'
 
@@ -35,7 +35,7 @@ const { data: taskList, loading: tasksLoading } = tasks.watchAll()
 // count down.
 const studioBackedIds = computed<string[]>(() =>
   deliverableList.value
-    .filter((d) => Boolean(getTemplateStudio(d.id)))
+    .filter((d) => Boolean(getTemplateStudioForDeliverable(d)))
     .map((d) => d.id)
 )
 const { data: outputsByDeliverableId, loading: outputsLoading } =

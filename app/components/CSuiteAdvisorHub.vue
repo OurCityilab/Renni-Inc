@@ -41,7 +41,7 @@ import type {
   AdvisorRole,
   AdvisorSignalSeverity
 } from '~/types/advisor'
-import { getTemplateStudio } from '~/data/templateStudios'
+import { getTemplateStudioForDeliverable } from '~/data/templateStudios'
 import { PROJECT_MILESTONES } from '~/data/projectMilestones'
 import {
   buildMilestoneBackplan,
@@ -72,7 +72,7 @@ const allAggregated = computed<AggregatedSignal[]>(() =>
     deliverables: props.deliverables,
     tasks: props.tasks,
     outputs: props.outputs,
-    studioResolver: (d) => getTemplateStudio(d.id)
+    studioResolver: (d) => getTemplateStudioForDeliverable(d)
   })
 )
 // Suppress unused-warning on computeRequirementCoverage (kept
@@ -280,7 +280,7 @@ const taskCoverageMatrix = computed<TaskCoverageRow[]>(() => {
   const today = todayIso()
   const out: TaskCoverageRow[] = []
   for (const d of props.deliverables) {
-    const studio = getTemplateStudio(d.id)
+    const studio = getTemplateStudioForDeliverable(d)
     if (!studio) continue
     const tasksForD = props.tasks.filter((t) => t.deliverableId === d.id)
     const reqCoverage = computeRequirementCoverage(
