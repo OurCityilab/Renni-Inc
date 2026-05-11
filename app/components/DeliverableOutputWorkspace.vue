@@ -3066,7 +3066,7 @@ function shouldOpenDefend(s: TemplateStudioSection): boolean {
                   ]"
                   :disabled="isLockedByOther(s)"
                   @click="setSectionStatus(s, 'ready')"
-                >Ready for review</button>
+                >Mark section ready</button>
                 <button
                   type="button"
                   :class="[
@@ -3080,6 +3080,11 @@ function shouldOpenDefend(s: TemplateStudioSection): boolean {
                   @click="toggleStuckPanel(s)"
                 >I'm stuck</button>
               </div>
+              <p class="text-[11px] italic text-neutral-500">
+                Marking a section ready is a progress signal only. Approval
+                happens at the deliverable level after the full deliverable
+                is submitted for review on the Deliverables page.
+              </p>
               <!-- Stuck panel guidance. Section-level "stuck" is not
                    a Firestore field today; the source of truth for a
                    stuck student is the linked task's blocked state.

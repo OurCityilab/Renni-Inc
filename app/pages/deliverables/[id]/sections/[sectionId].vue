@@ -30,6 +30,7 @@ import SectionRecipePanel from '~/components/SectionRecipePanel.vue'
 import TaskCreateForm from '~/components/TaskCreateForm.vue'
 import { effectiveWhyThisMatters } from '~/utils/sectionGuidance'
 import { canAssignSectionTasks } from '~/utils/permissions'
+import { canApproveDeliverable } from '~/utils/approvalPermissions'
 import type { Task } from '~/types/models'
 
 // Leader gate. Used to keep the existing SectionGuidanceStrip /
@@ -110,6 +111,21 @@ const canAssignSection = computed<boolean>(() =>
 const viewerIsLeader = computed<boolean>(
   () => auth.isChief || auth.isAdmin
 )
+
+// Reviewer banner trigger: parent is in_review and the current viewer is
+// authorized to approve. Routes the reviewer back to the deliverable
+// page where ApprovalActions lives — section pages never approve.
+const canApproveParent = computed<boolean>(() => {
+  if (!deliverable.value || !auth.profile) return false
+  return canApproveDeliverable(
+    {
+      uid: auth.profile.uid,
+      role: auth.profile.role,
+      department: auth.profile.department
+    },
+    deliverable.value
+  )
+})
 
 // Toggle for the inline TaskCreateForm panel.
 const assigningOpen = ref(false)
@@ -278,15 +294,42 @@ onBeforeRouteLeave(() => {
         :section-index="sectionIndex"
       />
 
-      <!-- Chapter context + back-link + chief-only assign affordance.
+      <!-- Section scope reminder. The Deliverables page is where the
+           full deliverable gets submitted for review and approved;
+           section pages only build one section at a time. -->
+      <div class="rounded-md border border-neutral-200 bg-neutral-50 p-2 text-xs text-neutral-700">
+        You are editing one section of this deliverable. Use the
+        Deliverables page to submit the full deliverable for review or to
+        approve it.
+      </div>
+
+      <!-- Reviewer redirect. When the parent is in_review and the
+           viewer can approve, the section page is the wrong surface —
+           approval / request-revision is on the deliverable page. -->
+      <div
+        v-if="canApproveParent && deliverable.status === 'in_review'"
+        class="rounded-md border border-sky-200 bg-sky-50 p-2 text-xs text-sky-900"
+      >
+        This deliverable is ready for review.
+        <NuxtLink
+          :to="`/deliverables/${deliverable.id}#approval-actions`"
+          class="font-medium underline"
+        >Open the Deliverables page to approve or request revision.</NuxtLink>
+      </div>
+
+      <!-- Chapter context + back-links + chief-only assign affordance.
            Kept as a separate compact row so the strip above stays
            dominated by the next action. -->
       <div class="flex flex-wrap items-center gap-2 text-xs">
         <p class="mr-1 text-neutral-500">{{ studio.title }}</p>
         <NuxtLink
+          to="/deliverables"
+          class="rounded border border-neutral-300 bg-neutral-50 px-2 py-0.5 text-neutral-700 hover:bg-neutral-100"
+        >← Back to Deliverables</NuxtLink>
+        <NuxtLink
           :to="`/deliverables/${deliverable.id}`"
           class="rounded border border-neutral-300 bg-neutral-50 px-2 py-0.5 text-neutral-700 hover:bg-neutral-100"
-        >← Chapter overview</NuxtLink>
+        >Chapter overview</NuxtLink>
         <!-- Section Task Assignment sprint: chiefs / Co-CEOs /
              admins can spawn a task tied to this exact section.
              Hidden for regular members so the section workspace
