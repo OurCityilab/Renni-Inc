@@ -2,6 +2,10 @@
 import { ref } from 'vue'
 import { useAuthStore } from '~/stores/auth'
 import { useDeliverables } from '~/composables/useDeliverables'
+import {
+  canApproveDeliverable,
+  canReturnDeliverable
+} from '~/utils/approvalPermissions'
 import type { Deliverable, Role } from '~/types/models'
 
 // Gate props (all optional, all derived upstream) let the deliverable
@@ -39,6 +43,35 @@ const approvalNotes = ref('')
 const isOwner = computed(() => auth.user?.uid === props.deliverable.ownerUid)
 const isApprover = computed(() => auth.user?.uid === props.deliverable.approverUid)
 const isOverride = computed(() => auth.isAdmin || auth.isCoCEO)
+
+// Permission view derived from the central helper so the UI gate
+// matches the Firestore rule branches: admin, coceo, exact approver,
+// or a department chief whose department matches the deliverable's
+// department. Anything else falls through to read-only guidance.
+const canApprove = computed(() =>
+  canApproveDeliverable(
+    auth.profile
+      ? {
+          uid: auth.profile.uid,
+          role: auth.profile.role,
+          department: auth.profile.department
+        }
+      : null,
+    props.deliverable
+  )
+)
+const canReturn = computed(() =>
+  canReturnDeliverable(
+    auth.profile
+      ? {
+          uid: auth.profile.uid,
+          role: auth.profile.role,
+          department: auth.profile.department
+        }
+      : null,
+    props.deliverable
+  )
+)
 
 const status = computed(() => props.deliverable.status)
 
@@ -159,7 +192,7 @@ async function returnRevision() {
     </div>
 
     <!-- Approver path: approve / return -->
-    <div v-if="(isApprover || isOverride) && status === 'in_review'" class="space-y-3 border-t border-neutral-200 pt-3">
+    <div v-if="canApprove && status === 'in_review'" class="space-y-3 border-t border-neutral-200 pt-3">
       <p class="text-sm text-neutral-700">
         Review against the rubric, then approve for Playbook or request revision with a clear reason.
       </p>
@@ -167,7 +200,7 @@ async function returnRevision() {
         <button class="btn-primary" :disabled="submitting" @click="approveOpen = !approveOpen">
           Approve for Playbook
         </button>
-        <button class="btn-secondary" :disabled="submitting" @click="returnOpen = !returnOpen">
+        <button class="btn-secondary" :disabled="submitting || !canReturn" @click="returnOpen = !returnOpen">
           Request revision
         </button>
       </div>
@@ -205,20 +238,44 @@ async function returnRevision() {
       </div>
     </div>
 
+    <!-- Read-only guidance: deliverable not yet in review -->
+    <div
+      v-else-if="!isOwner && status === 'draft'"
+      class="text-sm text-neutral-600"
+    >
+      This deliverable is still being drafted. It will appear here for review once the owner submits it.
+    </div>
+
+    <!-- Read-only guidance: needs revision, viewer is not the owner -->
+    <div
+      v-else-if="!isOwner && status === 'needs_revision'"
+      class="text-sm text-neutral-600"
+    >
+      Sent back for revision. The owner is updating it before re-submitting.
+    </div>
+
+    <!-- Read-only guidance: in review but viewer cannot approve -->
+    <div
+      v-else-if="!isOwner && status === 'in_review' && !canApprove"
+      class="text-sm text-neutral-600"
+    >
+      Submitted for review. You can read along, but only the assigned approver, the department chief, Co-CEO, or instructor can approve.
+    </div>
+
+    <!-- Read-only guidance: already approved -->
+    <div
+      v-else-if="!isOwner && status === 'approved'"
+      class="text-sm text-emerald-700"
+    >
+      Approved for the Playbook.
+    </div>
+
     <!-- Override view for admin / co-ceo when nothing else matches -->
     <div
       v-else-if="isOverride && !isApprover && status !== 'in_review'"
       class="text-sm text-neutral-700"
     >
       You have override permissions but there's nothing to decide right now.
-    </div>
-
-    <!-- Read-only viewers -->
-    <div
-      v-else-if="!isOwner && !isApprover && !isOverride"
-      class="text-sm text-neutral-600"
-    >
-      You can see this deliverable but aren't the owner or approver.
     </div>
 
     <p v-if="error" class="text-sm text-rose-600">{{ error }}</p>

@@ -38,6 +38,16 @@ service cloud.firestore {
       return isSignedIn()
         && userDoc().role in ['coceo', 'coo', 'cfo', 'cmo', 'csgo', 'admin'];
     }
+    // Department-chief approval helper: the user's CURRENT role is in the
+    // chief department set (excluding admin/coceo, which are global) AND
+    // the deliverable's department matches the user's department.
+    // Mirrors app/utils/approvalPermissions.ts so the UI gate and the
+    // backend gate stay in lockstep.
+    function isDepartmentChiefForDeliverable() {
+      return isSignedIn()
+        && userDoc().role in ['coo', 'cfo', 'cmo', 'csgo']
+        && resource.data.department == userDoc().department;
+    }
     function deliverableDoc(id) {
       return get(/databases/$(database)/documents/deliverables/$(id)).data;
     }
@@ -92,10 +102,15 @@ service cloud.firestore {
                 'statusHistory', 'updatedAt']
              )
         )
-        // Approver (or admin/coceo override): return in_review → needs_revision.
-        // Must supply a non-empty returnedReason so the owner knows what to fix.
+        // Approver (or admin/coceo override, or matching-department chief):
+        // return in_review → needs_revision. Must supply a non-empty
+        // returnedReason so the owner knows what to fix.
         || (
-          (resource.data.approverUid == request.auth.uid || isAdminOrCoCEO())
+          (
+            resource.data.approverUid == request.auth.uid
+            || isAdminOrCoCEO()
+            || isDepartmentChiefForDeliverable()
+          )
           && resource.data.status == 'in_review'
           && request.resource.data.status == 'needs_revision'
           && request.resource.data.returnedReason is string
@@ -104,10 +119,15 @@ service cloud.firestore {
                ['status', 'returnedReason', 'statusHistory', 'updatedAt']
              )
         )
-        // Approver (or admin/coceo override): approve in_review → approved.
-        // Required audit fields must be populated by the client.
+        // Approver (or admin/coceo override, or matching-department chief):
+        // approve in_review → approved. Required audit fields must be
+        // populated by the client.
         || (
-          (resource.data.approverUid == request.auth.uid || isAdminOrCoCEO())
+          (
+            resource.data.approverUid == request.auth.uid
+            || isAdminOrCoCEO()
+            || isDepartmentChiefForDeliverable()
+          )
           && resource.data.status == 'in_review'
           && request.resource.data.status == 'approved'
           && request.resource.data.approvedAt is string
