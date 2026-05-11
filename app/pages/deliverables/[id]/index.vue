@@ -3,23 +3,33 @@ import { computed, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { useAuthStore } from '~/stores/auth'
 import { useDeliverables } from '~/composables/useDeliverables'
+import { useDeliverableOutputs } from '~/composables/useDeliverableOutputs'
 import { useTasks } from '~/composables/useTasks'
 import { useTemplatePreview } from '~/composables/useTemplatePreview'
 import { getTemplateStudioForDeliverable } from '~/data/templateStudios'
 import type { DeliverableEvent } from '~/types/models'
 import { taskStatusLabel } from '~/utils/taskStatus'
 import { computeRequirementCoverage } from '~/utils/requirementCoverage'
+import {
+  buildDeliverableMarkdown,
+  deliverableFilename
+} from '~/utils/playbookExport'
 
 const route = useRoute()
 const auth = useAuthStore()
 const deliverables = useDeliverables()
 const tasks = useTasks()
+const outputs = useDeliverableOutputs()
 
 const id = computed(() => String(route.params.id))
 // Pass the computed ref (not id.value) so the helpers rebind when the
 // route param changes without remounting this component.
 const { data: deliverable, loading } = deliverables.watchOne(id)
 const { data: relatedTasks, loading: relatedTasksLoading } = tasks.watchByDeliverable(id)
+// Watch the deliverable's output doc so the Markdown export reflects
+// the live saved state, including draft / source-note fallback when
+// final text is missing. Subscription is owned by the composable.
+const { data: deliverableOutput } = outputs.watchOutput(id)
 
 const notesDraft = ref('')
 const savingNotes = ref(false)
@@ -199,6 +209,62 @@ const latestApprovedAt = computed<string | null>(() => {
   return null
 })
 
+// --- Export current deliverable (Markdown, client-side, read-only) ---
+const exportCopyState = ref<'idle' | 'copied' | 'failed'>('idle')
+function buildDeliverableExportMd(): string {
+  if (!deliverable.value) return ''
+  return buildDeliverableMarkdown(
+    {
+      deliverable: deliverable.value,
+      studio: studio.value,
+      output: deliverableOutput.value
+    },
+    {
+      mode: 'export',
+      exportedAt: new Date().toISOString()
+    }
+  )
+}
+async function copyDeliverableMarkdown() {
+  const md = buildDeliverableExportMd()
+  if (!md) return
+  if (typeof navigator === 'undefined' || !navigator.clipboard) {
+    exportCopyState.value = 'failed'
+    setTimeout(() => {
+      exportCopyState.value = 'idle'
+    }, 2500)
+    return
+  }
+  try {
+    await navigator.clipboard.writeText(md)
+    exportCopyState.value = 'copied'
+  } catch {
+    exportCopyState.value = 'failed'
+  }
+  setTimeout(() => {
+    exportCopyState.value = 'idle'
+  }, 2500)
+}
+function downloadDeliverableMarkdown() {
+  if (typeof window === 'undefined' || !deliverable.value) return
+  const md = buildDeliverableExportMd()
+  if (!md) return
+  const filename = deliverableFilename({
+    deliverable: deliverable.value,
+    studio: studio.value,
+    output: deliverableOutput.value
+  })
+  const blob = new Blob([md], { type: 'text/markdown' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = filename
+  document.body.appendChild(a)
+  a.click()
+  document.body.removeChild(a)
+  URL.revokeObjectURL(url)
+}
+
 async function saveNotes() {
   if (!deliverable.value) return
   savingNotes.value = true
@@ -276,11 +342,37 @@ async function saveNotes() {
                the chapter hub below. Helps reviewers jump to the
                current saved state before approving. Pure display:
                never approves anything, never replaces the editor. -->
-          <a
+          <div
             v-if="studio"
-            href="#playbook-preview"
-            class="block text-xs text-phoenix-700 hover:underline"
-          >Preview current Playbook text ↓</a>
+            class="flex flex-wrap items-center gap-2 text-xs"
+          >
+            <a
+              href="#playbook-preview"
+              class="text-phoenix-700 hover:underline"
+            >Preview current Playbook text ↓</a>
+            <span class="text-neutral-300">·</span>
+            <button
+              type="button"
+              class="rounded border border-phoenix-300 bg-white px-2 py-0.5 text-phoenix-800 hover:bg-phoenix-50"
+              @click="copyDeliverableMarkdown()"
+            >
+              {{
+                exportCopyState === 'copied'
+                  ? 'Copied ✓'
+                  : exportCopyState === 'failed'
+                    ? 'Copy failed — try Download'
+                    : 'Copy current deliverable (.md)'
+              }}
+            </button>
+            <button
+              type="button"
+              class="rounded border border-phoenix-300 bg-white px-2 py-0.5 text-phoenix-800 hover:bg-phoenix-50"
+              @click="downloadDeliverableMarkdown()"
+            >Download .md</button>
+            <span class="text-[11px] italic text-neutral-500">
+              Current saved state. Fallback may appear where final text is missing.
+            </span>
+          </div>
 
           <!-- Review notes: prominent when the deliverable is in a review state. -->
           <section

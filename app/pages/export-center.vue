@@ -34,6 +34,12 @@ import {
   buildPricingSummaryCsv,
   type DesignOutputType
 } from '~/utils/exportCenter'
+import {
+  buildFullPlaybookMarkdown,
+  fullPlaybookFilename,
+  chapterFilename,
+  deliverableFilename
+} from '~/utils/playbookExport'
 import IntelligenceSyncPanel from '~/components/IntelligenceSyncPanel.vue'
 
 const deliverables = useDeliverables()
@@ -102,6 +108,55 @@ const playbookChapterMd = computed(() => {
     d,
     getTemplateStudioForDeliverable(d),
     outputsByDeliverableId.value[d.id] ?? null
+  )
+})
+
+// Full current Playbook export. Groups every studio-backed deliverable
+// by chapter and builds one combined Markdown document via the shared
+// helper. Mode='export' so the fallback chain (finalText → draftText →
+// sourceNotes → missing) is applied uniformly; incomplete chapters
+// remain included with explicit fallback labels.
+const fullPlaybookExportedAt = ref<string>('')
+function captureExportTimestamp(): string {
+  const now = new Date()
+  fullPlaybookExportedAt.value = now.toISOString()
+  return fullPlaybookExportedAt.value
+}
+const fullPlaybookGroupedChapters = computed(() => {
+  const grouped = new Map<
+    number,
+    { chapter: number; title: string; deliverables: typeof studioBackedDeliverables.value }
+  >()
+  for (const d of studioBackedDeliverables.value) {
+    const chapter = Number(d.chapter)
+    if (!chapter) continue
+    const studio = getTemplateStudioForDeliverable(d)
+    const title = studio?.title || d.title
+    const arr = grouped.get(chapter)
+    if (arr) {
+      arr.deliverables.push(d)
+    } else {
+      grouped.set(chapter, { chapter, title, deliverables: [d] })
+    }
+  }
+  return Array.from(grouped.values()).sort((a, b) => a.chapter - b.chapter)
+})
+const fullPlaybookMd = computed(() => {
+  const chapters = fullPlaybookGroupedChapters.value.map((ch) => ({
+    chapter: ch.chapter,
+    title: ch.title,
+    deliverables: ch.deliverables.map((d) => ({
+      deliverable: d,
+      studio: getTemplateStudioForDeliverable(d),
+      output: outputsByDeliverableId.value[d.id] ?? null
+    }))
+  }))
+  return buildFullPlaybookMarkdown(
+    { chapters },
+    {
+      mode: 'export',
+      exportedAt: fullPlaybookExportedAt.value || null
+    }
   )
 })
 
@@ -338,6 +393,48 @@ function download(filename: string, content: string, mime: string) {
       />
     </section>
 
+    <!-- 4b. Full current Playbook export -->
+    <section class="card space-y-2 border-phoenix-200 bg-phoenix-50/30">
+      <header class="flex flex-wrap items-baseline justify-between gap-2">
+        <div>
+          <p class="text-xs font-semibold uppercase tracking-wide text-phoenix-700">
+            Full current Playbook export
+          </p>
+          <p class="text-xs text-neutral-700">
+            One Markdown document covering every studio-backed chapter,
+            including chapters that aren't finished yet.
+          </p>
+          <p class="text-[11px] italic text-neutral-500">
+            This export reflects the current saved state. Draft and source-note
+            fallback may appear where final Playbook text is missing.
+            Approval and readiness are not changed.
+          </p>
+        </div>
+        <div class="flex gap-2 text-xs">
+          <button
+            type="button"
+            class="rounded border border-phoenix-300 bg-white px-2 py-1 text-phoenix-800 hover:bg-phoenix-50"
+            @click="captureExportTimestamp(); copy('full-playbook', fullPlaybookMd)"
+          >{{ copiedKey === 'full-playbook' ? 'Copied ✓' : 'Copy markdown' }}</button>
+          <button
+            type="button"
+            class="rounded border border-phoenix-300 bg-white px-2 py-1 text-phoenix-800 hover:bg-phoenix-50"
+            @click="download(
+              fullPlaybookFilename(captureExportTimestamp(), 'export'),
+              fullPlaybookMd,
+              'text/markdown'
+            )"
+          >Download .md</button>
+        </div>
+      </header>
+      <textarea
+        readonly
+        rows="10"
+        class="w-full rounded border border-neutral-300 bg-neutral-50 p-2 font-mono text-[11px] leading-snug"
+        :value="fullPlaybookMd"
+      />
+    </section>
+
     <!-- 5. Playbook chapter export -->
     <section class="card space-y-2">
       <header class="space-y-0.5">
@@ -372,7 +469,15 @@ function download(filename: string, content: string, mime: string) {
             type="button"
             class="rounded border border-phoenix-300 bg-white px-2 py-1 text-phoenix-800 hover:bg-phoenix-50"
             :disabled="!selectedDeliverable"
-            @click="download(`renni-${selectedDeliverable?.id || 'chapter'}.md`, playbookChapterMd, 'text/markdown')"
+            @click="selectedDeliverable && download(
+              chapterFilename({
+                chapter: selectedDeliverable.chapter,
+                title: getTemplateStudioForDeliverable(selectedDeliverable)?.title || selectedDeliverable.title,
+                deliverables: []
+              }),
+              playbookChapterMd,
+              'text/markdown'
+            )"
           >Download .md</button>
         </div>
       </div>

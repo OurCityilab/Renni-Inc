@@ -40,6 +40,7 @@ import {
   type AggregatedAdvisorSignal
 } from '~/utils/cSuiteAdvisor'
 import { getTemplateStudio } from '~/data/templateStudios'
+import { buildDeliverableMarkdown } from '~/utils/playbookExport'
 
 // ---------- low-level CSV helper ----------
 
@@ -498,45 +499,15 @@ export function buildPlaybookChapterMd(
   studio: TemplateStudio | null,
   output: DeliverableOutput | null
 ): string {
-  const lines: string[] = []
-  lines.push(`# ${studio?.title || deliverable.title}`)
-  lines.push('')
-  lines.push(
-    `Chapter ${deliverable.chapter} · status ${deliverable.status}. Snapshot from Renni Command Center.`
+  // Delegates to the shared playbookExport builder so the chapter
+  // markdown uses the same fallback chain (finalText → draftText →
+  // sourceNotes → missing) and the same source labels the in-app
+  // Playbook preview shows. Pure: never mutates output, never copies
+  // draftText into finalText, never changes approval/readiness.
+  return buildDeliverableMarkdown(
+    { deliverable, studio, output },
+    { mode: 'export' }
   )
-  if (!studio) {
-    lines.push('')
-    lines.push('_(This deliverable is not studio-backed.)_')
-    return lines.join('\n')
-  }
-  for (const section of studio.sections) {
-    const persisted = output?.sections?.[section.id]
-    lines.push('')
-    lines.push(`## ${section.title}`)
-    lines.push('')
-    if (persisted?.finalText?.trim()) {
-      lines.push(persisted.finalText.trim())
-    } else {
-      lines.push('_(final Playbook text not yet written for this section)_')
-    }
-    if (persisted?.evidenceLinks?.length) {
-      lines.push('')
-      lines.push('### Evidence links')
-      lines.push(
-        persisted.evidenceLinks
-          .map((l) => `- [${l.label}](${l.url}) (${l.type})`)
-          .join('\n')
-      )
-    }
-    if (persisted?.structuredEvidence?.length) {
-      lines.push('')
-      lines.push('### Structured evidence')
-      for (const e of persisted.structuredEvidence) {
-        lines.push(`- **${e.claim}** — ${e.evidence} (source: ${e.source})`)
-      }
-    }
-  }
-  return lines.join('\n')
 }
 
 // ---------- 6. Claude Design brief (Markdown) ----------

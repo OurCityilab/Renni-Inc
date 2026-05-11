@@ -9,6 +9,13 @@ import {
   type OutputReadinessSummary
 } from '~/utils/outputReadiness'
 import type { PreviewMode } from '~/utils/playbookPreview'
+import {
+  buildChapterMarkdown,
+  buildFullPlaybookMarkdown,
+  chapterFilename,
+  fullPlaybookFilename,
+  type ChapterExportInput
+} from '~/utils/playbookExport'
 import type { Deliverable, DeliverableOutput, Task } from '~/types/models'
 import type { TemplateStudio } from '~/types/templateStudio'
 
@@ -337,6 +344,94 @@ function setPreviewMode(c: ChapterRollup, mode: PreviewMode) {
   }
 }
 
+// --- Export current Playbook state (read-only, client-side) ---
+// Reuses the shared playbookExport builders so chapter / full Playbook
+// downloads use the same fallback chain (finalText → draftText →
+// sourceNotes → missing) as the preview component. Pure: never writes
+// to Firestore, never copies draftText into finalText, never changes
+// approval or output readiness.
+function buildChapterExportInput(c: ChapterRollup): ChapterExportInput {
+  return {
+    chapter: c.chapter,
+    title: c.title,
+    deliverables: c.deliverables
+      .filter((d) => Boolean(studioForDeliverable(d)))
+      .map((d) => ({
+        deliverable: d,
+        studio: studioForDeliverable(d),
+        output: outputForDeliverable(d)
+      }))
+  }
+}
+function buildFullPlaybookInput() {
+  return {
+    chapters: chapters.value
+      .map(buildChapterExportInput)
+      .filter((ch) => ch.deliverables.length > 0)
+  }
+}
+const copyState = ref<{ key: string; ok: boolean } | null>(null)
+async function copyMarkdown(key: string, content: string) {
+  if (typeof navigator === 'undefined' || !navigator.clipboard) {
+    copyState.value = { key, ok: false }
+    setTimeout(() => {
+      if (copyState.value?.key === key) copyState.value = null
+    }, 2500)
+    return
+  }
+  try {
+    await navigator.clipboard.writeText(content)
+    copyState.value = { key, ok: true }
+  } catch {
+    copyState.value = { key, ok: false }
+  }
+  setTimeout(() => {
+    if (copyState.value?.key === key) copyState.value = null
+  }, 2500)
+}
+function downloadMarkdown(filename: string, content: string) {
+  if (typeof window === 'undefined') return
+  const blob = new Blob([content], { type: 'text/markdown' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = filename
+  document.body.appendChild(a)
+  a.click()
+  document.body.removeChild(a)
+  URL.revokeObjectURL(url)
+}
+async function exportChapterCopy(c: ChapterRollup) {
+  const md = buildChapterMarkdown(buildChapterExportInput(c), {
+    mode: 'export',
+    exportedAt: new Date().toISOString()
+  })
+  await copyMarkdown(`chapter-${c.chapter}`, md)
+}
+function exportChapterDownload(c: ChapterRollup) {
+  const input = buildChapterExportInput(c)
+  const md = buildChapterMarkdown(input, {
+    mode: 'export',
+    exportedAt: new Date().toISOString()
+  })
+  downloadMarkdown(chapterFilename(input), md)
+}
+async function exportFullPlaybookCopy() {
+  const md = buildFullPlaybookMarkdown(buildFullPlaybookInput(), {
+    mode: 'export',
+    exportedAt: new Date().toISOString()
+  })
+  await copyMarkdown('full-playbook', md)
+}
+function exportFullPlaybookDownload() {
+  const exportedAt = new Date().toISOString()
+  const md = buildFullPlaybookMarkdown(buildFullPlaybookInput(), {
+    mode: 'export',
+    exportedAt
+  })
+  downloadMarkdown(fullPlaybookFilename(exportedAt, 'export'), md)
+}
+
 function studioForDeliverable(d: Deliverable): TemplateStudio | null {
   return getTemplateStudioForDeliverable(d)
 }
@@ -368,13 +463,43 @@ const statusLabel: Record<ChapterStatus, string> = {
 
 <template>
   <section class="space-y-5">
-    <header>
-      <p class="text-sm text-neutral-500">Renni Inc. Brand &amp; Operations Playbook</p>
-      <h1 class="text-2xl font-semibold">Playbook Chapter Status</h1>
-      <p class="text-sm text-neutral-600">
-        The Playbook shows final chapter progress and how each deliverable and its
-        tasks are rolling up. Each chapter's status reflects owners, reviewers, and approvals.
-      </p>
+    <header class="space-y-2">
+      <div>
+        <p class="text-sm text-neutral-500">Renni Inc. Brand &amp; Operations Playbook</p>
+        <h1 class="text-2xl font-semibold">Playbook Chapter Status</h1>
+        <p class="text-sm text-neutral-600">
+          The Playbook shows final chapter progress and how each deliverable and its
+          tasks are rolling up. Each chapter's status reflects owners, reviewers, and approvals.
+        </p>
+      </div>
+      <!-- Full current Playbook export. Read-only, client-side Markdown
+           only. Fallback chain (finalText → draftText → sourceNotes →
+           missing) is applied by the shared normalizer; approval and
+           output readiness are not changed. -->
+      <div class="flex flex-wrap items-center gap-2 text-xs">
+        <button
+          type="button"
+          class="rounded border border-phoenix-300 bg-white px-2 py-1 text-phoenix-800 hover:bg-phoenix-50 disabled:opacity-50"
+          :disabled="loading"
+          @click="exportFullPlaybookCopy()"
+        >
+          {{ copyState?.key === 'full-playbook' && copyState.ok
+            ? 'Copied ✓'
+            : copyState?.key === 'full-playbook' && !copyState.ok
+              ? "Copy failed — select the textarea on /export-center"
+              : 'Copy current Playbook (.md)' }}
+        </button>
+        <button
+          type="button"
+          class="rounded border border-phoenix-300 bg-white px-2 py-1 text-phoenix-800 hover:bg-phoenix-50 disabled:opacity-50"
+          :disabled="loading"
+          @click="exportFullPlaybookDownload()"
+        >Download current Playbook (.md)</button>
+        <span class="text-[11px] italic text-neutral-500">
+          This export reflects the current saved state. Draft and source-note
+          fallback may appear where final Playbook text is missing.
+        </span>
+      </div>
     </header>
 
     <div class="grid gap-3 sm:grid-cols-3 lg:grid-cols-6">
@@ -420,11 +545,32 @@ const statusLabel: Record<ChapterStatus, string> = {
               <span v-if="c.nextDue"> · next due {{ c.nextDue }}</span>
             </p>
           </div>
-          <div class="flex shrink-0 items-center gap-2">
+          <div class="flex shrink-0 flex-wrap items-center gap-2">
             <span
               class="rounded-full border px-2 py-0.5 text-xs"
               :class="statusTone[c.status]"
             >{{ statusLabel[c.status] }}</span>
+            <!-- Per-chapter export. Reuses the shared playbookExport
+                 helper so the fallback chain matches the in-app
+                 preview. Read-only. -->
+            <button
+              type="button"
+              class="rounded border border-phoenix-300 bg-white px-2 py-0.5 text-xs text-phoenix-800 hover:bg-phoenix-50 disabled:opacity-50"
+              :disabled="loading || !c.deliverables.some(studioForDeliverable)"
+              @click="exportChapterCopy(c)"
+            >
+              {{ copyState?.key === `chapter-${c.chapter}` && copyState.ok
+                ? 'Copied ✓'
+                : copyState?.key === `chapter-${c.chapter}` && !copyState.ok
+                  ? 'Copy failed'
+                  : 'Copy .md' }}
+            </button>
+            <button
+              type="button"
+              class="rounded border border-phoenix-300 bg-white px-2 py-0.5 text-xs text-phoenix-800 hover:bg-phoenix-50 disabled:opacity-50"
+              :disabled="loading || !c.deliverables.some(studioForDeliverable)"
+              @click="exportChapterDownload(c)"
+            >Download .md</button>
             <button
               class="text-xs text-phoenix-700 hover:underline"
               @click="toggle(c.chapter)"
