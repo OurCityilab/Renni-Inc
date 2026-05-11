@@ -43,20 +43,13 @@ import { getTemplateStudio } from '~/data/templateStudios'
 import { buildDeliverableMarkdown } from '~/utils/playbookExport'
 
 // ---------- low-level CSV helper ----------
-
-// Minimal CSV escape. Quotes wrap any field that contains a comma /
-// newline / double-quote; embedded quotes are doubled. We do not
-// emit a BOM; downstream spreadsheets handle UTF-8 fine.
-export function csvEscape(v: unknown): string {
-  if (v === null || v === undefined) return ''
-  const s = String(v)
-  if (/[",\n\r]/.test(s)) return `"${s.replace(/"/g, '""')}"`
-  return s
-}
-
-export function csvRow(values: unknown[]): string {
-  return values.map(csvEscape).join(',')
-}
+//
+// The canonical implementations now live in `app/utils/csvExport.ts`
+// alongside `makeCsv`, `safeCsvFilename`, and `downloadCsv`. Imported
+// (not re-exported) here so Nuxt's auto-import sees a single
+// canonical source. Existing external callers should import from
+// `~/utils/csvExport` directly.
+import { csvRow } from '~/utils/csvExport'
 
 // ---------- Markdown helpers ----------
 

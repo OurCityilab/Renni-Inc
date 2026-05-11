@@ -36,19 +36,41 @@ import {
 } from '~/utils/exportCenter'
 import {
   buildFullPlaybookMarkdown,
+  buildPlaybookEvidenceCsv,
+  buildPlaybookSectionStatusCsv,
   fullPlaybookFilename,
   chapterFilename,
-  deliverableFilename
+  deliverableFilename,
+  type ChapterExportInput,
+  type FullPlaybookExportInput
 } from '~/utils/playbookExport'
+import {
+  buildDeliverablesCsv,
+  buildGoalsCsv,
+  buildPricingScenariosCsv,
+  buildTasksCsv,
+  buildTransactionsCsv
+} from '~/utils/operationsExport'
+import { downloadCsv } from '~/utils/csvExport'
+import { useGoals } from '~/composables/useGoals'
+import { usePricing } from '~/composables/usePricing'
+import { useTransactions } from '~/composables/useTransactions'
 import IntelligenceSyncPanel from '~/components/IntelligenceSyncPanel.vue'
 
 const deliverables = useDeliverables()
 const tasks = useTasks()
 const outputs = useDeliverableOutputs()
+const goals = useGoals()
+const pricing = usePricing()
+const transactions = useTransactions()
 
 const { data: deliverableList, loading: deliverablesLoading } =
   deliverables.watchList()
 const { data: taskList, loading: tasksLoading } = tasks.watchAll()
+const { data: goalsList, loading: goalsLoading } = goals.watchList()
+const { data: pricingList, loading: pricingLoading } = pricing.watchList()
+const { data: transactionsList, loading: transactionsLoading } =
+  transactions.watchList()
 const studioBackedIds = computed<string[]>(() =>
   deliverableList.value
     .filter((d) => Boolean(getTemplateStudioForDeliverable(d)))
@@ -141,24 +163,60 @@ const fullPlaybookGroupedChapters = computed(() => {
   }
   return Array.from(grouped.values()).sort((a, b) => a.chapter - b.chapter)
 })
-const fullPlaybookMd = computed(() => {
-  const chapters = fullPlaybookGroupedChapters.value.map((ch) => ({
-    chapter: ch.chapter,
-    title: ch.title,
-    deliverables: ch.deliverables.map((d) => ({
-      deliverable: d,
-      studio: getTemplateStudioForDeliverable(d),
-      output: outputsByDeliverableId.value[d.id] ?? null
-    }))
-  }))
-  return buildFullPlaybookMarkdown(
-    { chapters },
-    {
-      mode: 'export',
-      exportedAt: fullPlaybookExportedAt.value || null
-    }
+const fullPlaybookInput = computed<FullPlaybookExportInput>(() => {
+  const chapters: ChapterExportInput[] = fullPlaybookGroupedChapters.value.map(
+    (ch) => ({
+      chapter: ch.chapter,
+      title: ch.title,
+      deliverables: ch.deliverables.map((d) => ({
+        deliverable: d,
+        studio: getTemplateStudioForDeliverable(d),
+        output: outputsByDeliverableId.value[d.id] ?? null
+      }))
+    })
   )
+  return { chapters }
 })
+const fullPlaybookMd = computed(() =>
+  buildFullPlaybookMarkdown(fullPlaybookInput.value, {
+    mode: 'export',
+    exportedAt: fullPlaybookExportedAt.value || null
+  })
+)
+
+// --- CSV builders driven off the same fullPlaybookInput so Markdown
+// and CSV stay in lockstep. Pure: never mutates Firestore.
+const sectionStatusCsv = computed(() =>
+  buildPlaybookSectionStatusCsv(fullPlaybookInput.value, { mode: 'export' })
+)
+const evidenceCsv = computed(() =>
+  buildPlaybookEvidenceCsv(fullPlaybookInput.value, { mode: 'export' })
+)
+const deliverablesCsv = computed(() =>
+  buildDeliverablesCsv(deliverableList.value)
+)
+const tasksCsv = computed(() =>
+  buildTasksCsv({
+    tasks: taskList.value,
+    deliverables: deliverableList.value.map((d) => ({
+      id: d.id,
+      title: d.title
+    }))
+  })
+)
+const goalsCsv = computed(() => buildGoalsCsv(goalsList.value))
+const pricingCsvFile = computed(() => buildPricingScenariosCsv(pricingList.value))
+const transactionsCsv = computed(() =>
+  buildTransactionsCsv(transactionsList.value)
+)
+
+const tablesLoading = computed(
+  () =>
+    loading.value ||
+    goalsLoading.value ||
+    pricingLoading.value ||
+    transactionsLoading.value
+)
 
 // Sprint 2 — Final Presentation Coach prompt + Bundle exports.
 // Coach prompt scope: defaults to "whole program"; the student can
@@ -433,6 +491,166 @@ function download(filename: string, content: string, mime: string) {
         class="w-full rounded border border-neutral-300 bg-neutral-50 p-2 font-mono text-[11px] leading-snug"
         :value="fullPlaybookMd"
       />
+    </section>
+
+    <!-- 4c. Table exports (CSV) -->
+    <section class="card space-y-3">
+      <header class="space-y-0.5">
+        <p class="text-xs font-semibold uppercase tracking-wide text-neutral-600">
+          Table exports
+        </p>
+        <p class="text-xs text-neutral-700">
+          One-row-per-item CSVs for the Playbook tables (section status,
+          evidence) and operations tables (deliverables, tasks, goals,
+          pricing, transactions). Open cleanly in Sheets / Excel /
+          Numbers.
+        </p>
+        <p class="text-[11px] italic text-neutral-500">
+          CSV exports are for review, final project documentation, and
+          instructor handoff. They exclude unnecessary internal IDs by
+          default and never mutate Firestore.
+        </p>
+      </header>
+
+      <div class="space-y-2">
+        <p class="text-[11px] font-semibold uppercase tracking-wide text-neutral-600">
+          Playbook tables
+        </p>
+        <ul class="grid gap-2 md:grid-cols-2">
+          <li class="rounded border border-neutral-200 p-2">
+            <p class="text-xs font-medium text-neutral-900">Section status CSV</p>
+            <p class="text-[11px] text-neutral-600">
+              One row per section. Includes incomplete sections and
+              fallback content-source labels.
+            </p>
+            <div class="mt-1 flex gap-2 text-xs">
+              <button
+                type="button"
+                class="rounded border border-phoenix-300 bg-white px-2 py-1 text-phoenix-800 hover:bg-phoenix-50 disabled:opacity-50"
+                :disabled="tablesLoading"
+                @click="downloadCsv('renni-playbook-section-status.csv', sectionStatusCsv)"
+              >Download .csv</button>
+              <span
+                v-if="!fullPlaybookInput.chapters.length && !tablesLoading"
+                class="text-amber-800"
+              >No studio-backed chapters loaded yet — CSV will contain headers only.</span>
+            </div>
+          </li>
+          <li class="rounded border border-neutral-200 p-2">
+            <p class="text-xs font-medium text-neutral-900">Evidence CSV</p>
+            <p class="text-[11px] text-neutral-600">
+              One row per evidence item. Includes linked evidence and
+              structured evidence.
+            </p>
+            <div class="mt-1 flex gap-2 text-xs">
+              <button
+                type="button"
+                class="rounded border border-phoenix-300 bg-white px-2 py-1 text-phoenix-800 hover:bg-phoenix-50 disabled:opacity-50"
+                :disabled="tablesLoading"
+                @click="downloadCsv('renni-playbook-evidence.csv', evidenceCsv)"
+              >Download .csv</button>
+            </div>
+          </li>
+        </ul>
+      </div>
+
+      <div class="space-y-2">
+        <p class="text-[11px] font-semibold uppercase tracking-wide text-neutral-600">
+          Operations tables
+        </p>
+        <ul class="grid gap-2 md:grid-cols-2">
+          <li class="rounded border border-neutral-200 p-2">
+            <p class="text-xs font-medium text-neutral-900">Deliverables CSV</p>
+            <p class="text-[11px] text-neutral-600">
+              {{ deliverableList.length }} deliverable<span v-if="deliverableList.length !== 1">s</span> loaded.
+            </p>
+            <div class="mt-1 flex gap-2 text-xs">
+              <button
+                type="button"
+                class="rounded border border-phoenix-300 bg-white px-2 py-1 text-phoenix-800 hover:bg-phoenix-50 disabled:opacity-50"
+                :disabled="deliverablesLoading"
+                @click="downloadCsv('renni-deliverables.csv', deliverablesCsv)"
+              >Download .csv</button>
+              <span
+                v-if="!deliverableList.length && !deliverablesLoading"
+                class="text-amber-800"
+              >No deliverables loaded — CSV will contain headers only.</span>
+            </div>
+          </li>
+          <li class="rounded border border-neutral-200 p-2">
+            <p class="text-xs font-medium text-neutral-900">Tasks CSV</p>
+            <p class="text-[11px] text-neutral-600">
+              {{ taskList.length }} task<span v-if="taskList.length !== 1">s</span> loaded.
+            </p>
+            <div class="mt-1 flex gap-2 text-xs">
+              <button
+                type="button"
+                class="rounded border border-phoenix-300 bg-white px-2 py-1 text-phoenix-800 hover:bg-phoenix-50 disabled:opacity-50"
+                :disabled="tasksLoading || deliverablesLoading"
+                @click="downloadCsv('renni-tasks.csv', tasksCsv)"
+              >Download .csv</button>
+              <span
+                v-if="!taskList.length && !tasksLoading"
+                class="text-amber-800"
+              >No tasks loaded — CSV will contain headers only.</span>
+            </div>
+          </li>
+          <li class="rounded border border-neutral-200 p-2">
+            <p class="text-xs font-medium text-neutral-900">Goals / KPIs CSV</p>
+            <p class="text-[11px] text-neutral-600">
+              {{ goalsList.length }} goal<span v-if="goalsList.length !== 1">s</span> loaded.
+            </p>
+            <div class="mt-1 flex gap-2 text-xs">
+              <button
+                type="button"
+                class="rounded border border-phoenix-300 bg-white px-2 py-1 text-phoenix-800 hover:bg-phoenix-50 disabled:opacity-50"
+                :disabled="goalsLoading"
+                @click="downloadCsv('renni-goals.csv', goalsCsv)"
+              >Download .csv</button>
+              <span
+                v-if="!goalsList.length && !goalsLoading"
+                class="text-amber-800"
+              >No goals loaded — CSV will contain headers only.</span>
+            </div>
+          </li>
+          <li class="rounded border border-neutral-200 p-2">
+            <p class="text-xs font-medium text-neutral-900">Pricing scenarios CSV</p>
+            <p class="text-[11px] text-neutral-600">
+              {{ pricingList.length }} scenario<span v-if="pricingList.length !== 1">s</span> loaded. Numbers reflect current saved inputs.
+            </p>
+            <div class="mt-1 flex gap-2 text-xs">
+              <button
+                type="button"
+                class="rounded border border-phoenix-300 bg-white px-2 py-1 text-phoenix-800 hover:bg-phoenix-50 disabled:opacity-50"
+                :disabled="pricingLoading"
+                @click="downloadCsv('renni-pricing-scenarios.csv', pricingCsvFile)"
+              >Download .csv</button>
+              <span
+                v-if="!pricingList.length && !pricingLoading"
+                class="text-amber-800"
+              >No pricing scenarios loaded — CSV will contain headers only.</span>
+            </div>
+          </li>
+          <li class="rounded border border-neutral-200 p-2 md:col-span-2">
+            <p class="text-xs font-medium text-neutral-900">Pop-up transactions CSV</p>
+            <p class="text-[11px] text-neutral-600">
+              {{ transactionsList.length }} transaction<span v-if="transactionsList.length !== 1">s</span> in the ledger. Operational export only — not a POS / refund / tax record.
+            </p>
+            <div class="mt-1 flex gap-2 text-xs">
+              <button
+                type="button"
+                class="rounded border border-phoenix-300 bg-white px-2 py-1 text-phoenix-800 hover:bg-phoenix-50 disabled:opacity-50"
+                :disabled="transactionsLoading"
+                @click="downloadCsv('renni-popup-transactions.csv', transactionsCsv)"
+              >Download .csv</button>
+              <span
+                v-if="!transactionsList.length && !transactionsLoading"
+                class="text-amber-800"
+              >No transactions yet — CSV will contain headers only.</span>
+            </div>
+          </li>
+        </ul>
+      </div>
     </section>
 
     <!-- 5. Playbook chapter export -->

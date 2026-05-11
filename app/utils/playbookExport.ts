@@ -26,6 +26,7 @@ import {
   type NormalizedDeliverablePreview,
   type PreviewMode
 } from '~/utils/playbookPreview'
+import { makeCsv, wordCount } from '~/utils/csvExport'
 
 export type PlaybookExportMode = PreviewMode
 
@@ -381,4 +382,172 @@ export function buildFullPlaybookMarkdown(
   }
 
   return joinLines(lines).trimEnd()
+}
+
+// ============================================================
+// CSV exports
+// ============================================================
+//
+// Both CSV builders reuse `normalizeDeliverablePreview` so the
+// per-section content source / fallback labels match the in-app
+// preview and the Markdown export exactly. The builders never read
+// Firestore and never mutate the input objects.
+
+const SECTION_STATUS_HEADERS = [
+  'chapter',
+  'chapterTitle',
+  'deliverableTitle',
+  'department',
+  'owner',
+  'approver',
+  'deliverableStatus',
+  'sectionTitle',
+  'sectionStatus',
+  'contentSource',
+  'contentSourceLabel',
+  'wordCount',
+  'hasFinalText',
+  'hasDraftText',
+  'hasSourceNotes',
+  'isMissing',
+  'evidenceLinkCount',
+  'structuredEvidenceCount'
+] as const
+
+/** Build a one-row-per-section CSV. Includes incomplete sections and
+ *  fallback content-source labels. Headers are always emitted, even
+ *  when no rows match. */
+export function buildPlaybookSectionStatusCsv(
+  input: FullPlaybookExportInput,
+  options: { mode?: PlaybookExportMode } = {}
+): string {
+  const mode = options.mode ?? 'export'
+  const rows: unknown[][] = []
+  const ordered = [...input.chapters].sort((a, b) => a.chapter - b.chapter)
+  for (const ch of ordered) {
+    const chapterTitle = deriveChapterTitle(ch) ?? `Chapter ${ch.chapter}`
+    for (const d of ch.deliverables) {
+      const preview = normalizeDeliverablePreview({
+        deliverable: d.deliverable,
+        studio: d.studio,
+        output: d.output,
+        mode
+      })
+      const deliverableTitle = preview.title
+      for (const section of preview.sections) {
+        const persisted = section.persistedSection
+        const hasFinalText =
+          ((persisted?.finalText ?? '').trim().length > 0)
+        const hasDraftText =
+          ((persisted?.draftText ?? '').trim().length > 0)
+        const hasSourceNotes =
+          ((persisted?.sourceNotes ?? '').trim().length > 0)
+        rows.push([
+          ch.chapter,
+          chapterTitle,
+          deliverableTitle,
+          d.deliverable.department,
+          d.deliverable.ownerEmail ?? '',
+          d.deliverable.approverEmail ?? '',
+          STATUS_LABEL[d.deliverable.status],
+          section.title,
+          section.sectionStatus ?? '',
+          section.contentSource,
+          section.contentSourceLabel,
+          wordCount(section.content),
+          hasFinalText,
+          hasDraftText,
+          hasSourceNotes,
+          section.isMissing,
+          section.evidenceLinks.length,
+          section.structuredEvidence.length
+        ])
+      }
+    }
+  }
+  return makeCsv(SECTION_STATUS_HEADERS, rows)
+}
+
+const EVIDENCE_HEADERS = [
+  'chapter',
+  'chapterTitle',
+  'deliverableTitle',
+  'department',
+  'sectionTitle',
+  'evidenceType',
+  'labelOrClaim',
+  'evidence',
+  'source',
+  'url',
+  'confidence',
+  'risk',
+  'nextValidation',
+  'relatedRequirement',
+  'contentSource'
+] as const
+
+/** Build a one-row-per-evidence-item CSV covering both linked evidence
+ *  and structured evidence. Section context (chapter, deliverable,
+ *  section title, content source) is duplicated on every row so the
+ *  output is sortable / filterable on its own in a spreadsheet. */
+export function buildPlaybookEvidenceCsv(
+  input: FullPlaybookExportInput,
+  options: { mode?: PlaybookExportMode } = {}
+): string {
+  const mode = options.mode ?? 'export'
+  const rows: unknown[][] = []
+  const ordered = [...input.chapters].sort((a, b) => a.chapter - b.chapter)
+  for (const ch of ordered) {
+    const chapterTitle = deriveChapterTitle(ch) ?? `Chapter ${ch.chapter}`
+    for (const d of ch.deliverables) {
+      const preview = normalizeDeliverablePreview({
+        deliverable: d.deliverable,
+        studio: d.studio,
+        output: d.output,
+        mode
+      })
+      const deliverableTitle = preview.title
+      for (const section of preview.sections) {
+        for (const link of section.evidenceLinks) {
+          rows.push([
+            ch.chapter,
+            chapterTitle,
+            deliverableTitle,
+            d.deliverable.department,
+            section.title,
+            'link',
+            link.label ?? '',
+            '',
+            '',
+            link.url ?? '',
+            '',
+            '',
+            '',
+            link.requirementId ?? '',
+            section.contentSource
+          ])
+        }
+        for (const entry of section.structuredEvidence) {
+          rows.push([
+            ch.chapter,
+            chapterTitle,
+            deliverableTitle,
+            d.deliverable.department,
+            section.title,
+            'structured',
+            entry.claim ?? '',
+            entry.evidence ?? '',
+            entry.source ?? '',
+            '',
+            entry.confidence ?? '',
+            entry.risk ?? '',
+            entry.nextValidation ?? '',
+            entry.requirementId ?? '',
+            section.contentSource
+          ])
+        }
+      }
+    }
+  }
+  return makeCsv(EVIDENCE_HEADERS, rows)
 }
