@@ -16,7 +16,7 @@
 //   - no builder mounts
 //   - no provisioning (hub does not create the output doc; the section
 //     workspace handles that on first edit)
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { useDeliverableOutputs } from '~/composables/useDeliverableOutputs'
 import type { Deliverable, Task } from '~/types/models'
 import type { TemplateStudio, TemplateStudioSection } from '~/types/templateStudio'
@@ -25,6 +25,7 @@ import {
   summarizeChapterProgress,
   type SectionProgress
 } from '~/utils/deliverableOutputProgress'
+import type { PreviewMode } from '~/utils/playbookPreview'
 import DeliverablePlaybookPreview from '~/components/DeliverablePlaybookPreview.vue'
 import CSuiteAdvisorCard from '~/components/CSuiteAdvisorCard.vue'
 import { getLikelyOwner } from '~/data/chapterOwners'
@@ -74,6 +75,14 @@ const cards = computed<CardModel[]>(() =>
 // 13-row map and disagreed on Ch 11. Display only; never overrides
 // ownerUid / ownerEmail / approverUid on the deliverable itself.
 const likelyOwner = computed<string>(() => getLikelyOwner(props.deliverable.id))
+
+// Preview mode toggle. Defaults to 'current' so students and chiefs
+// see what is actually saved (with fallback labels) — the previous
+// behavior was finalText-only, which gave reviewers a misleadingly
+// empty preview while sections were still in draft. The toggle stays
+// read-only: it never advances parent status, never copies draft
+// into final, and never changes output readiness.
+const previewMode = ref<PreviewMode>('current')
 
 function fmtWhen(iso?: string | null): string {
   if (!iso) return ''
@@ -365,11 +374,61 @@ function fmtWhen(iso?: string | null): string {
       </ol>
     </section>
 
-    <!-- Playbook-ready preview, extracted from the legacy workspace. -->
-    <DeliverablePlaybookPreview
-      :studio="studio"
-      :output="output"
-      :loading="loading"
-    />
+    <!-- Playbook-ready preview. The mode toggle lets students and chiefs
+         flip between the current saved state (with finalText → draftText
+         → sourceNotes fallback labels) and a strict final-only view.
+         Pure display: the toggle never mutates Firestore, never copies
+         draft into final, and never advances approval. -->
+    <section class="space-y-2" id="playbook-preview">
+      <header class="flex flex-wrap items-baseline justify-between gap-2">
+        <div>
+          <p class="text-xs font-semibold uppercase tracking-wide text-neutral-600">
+            Playbook preview
+          </p>
+          <p class="text-[11px] text-neutral-500">
+            {{
+              previewMode === 'current'
+                ? 'Current saved preview — shows fallback content where final Playbook text is missing. This is not the approved final Playbook.'
+                : 'Final preview — only sections with final Playbook text appear.'
+            }}
+          </p>
+        </div>
+        <div
+          class="inline-flex overflow-hidden rounded border border-neutral-300 text-xs"
+          role="tablist"
+          aria-label="Preview mode"
+        >
+          <button
+            type="button"
+            :class="[
+              'px-3 py-1',
+              previewMode === 'current'
+                ? 'bg-phoenix-700 text-white'
+                : 'bg-white text-neutral-700 hover:bg-neutral-50'
+            ]"
+            :aria-pressed="previewMode === 'current'"
+            @click="previewMode = 'current'"
+          >Preview current work</button>
+          <button
+            type="button"
+            :class="[
+              'border-l border-neutral-300 px-3 py-1',
+              previewMode === 'final'
+                ? 'bg-phoenix-700 text-white'
+                : 'bg-white text-neutral-700 hover:bg-neutral-50'
+            ]"
+            :aria-pressed="previewMode === 'final'"
+            @click="previewMode = 'final'"
+          >Preview final Playbook text</button>
+        </div>
+      </header>
+      <DeliverablePlaybookPreview
+        :studio="studio"
+        :output="output"
+        :loading="loading"
+        :mode="previewMode"
+        :deliverable="deliverable"
+      />
+    </section>
   </section>
 </template>

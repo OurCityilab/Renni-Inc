@@ -8,6 +8,7 @@ import {
   computeOutputReadiness,
   type OutputReadinessSummary
 } from '~/utils/outputReadiness'
+import type { PreviewMode } from '~/utils/playbookPreview'
 import type { Deliverable, DeliverableOutput, Task } from '~/types/models'
 import type { TemplateStudio } from '~/types/templateStudio'
 
@@ -318,6 +319,24 @@ function toggle(ch: number) {
   expanded.value[ch] = !expanded.value[ch]
 }
 
+// Per-chapter preview mode. Approved chapters keep the existing strict
+// finalText-only behavior (default 'final'); in-flight chapters default
+// to 'current' so reviewers can see what is actually saved with
+// fallback labels. The toggle is read-only and never advances
+// approval, output readiness, or parent status.
+const previewModeByChapter = ref<Record<number, PreviewMode>>({})
+function previewModeFor(c: ChapterRollup): PreviewMode {
+  const explicit = previewModeByChapter.value[c.chapter]
+  if (explicit) return explicit
+  return c.status === 'approved' ? 'final' : 'current'
+}
+function setPreviewMode(c: ChapterRollup, mode: PreviewMode) {
+  previewModeByChapter.value = {
+    ...previewModeByChapter.value,
+    [c.chapter]: mode
+  }
+}
+
 function studioForDeliverable(d: Deliverable): TemplateStudio | null {
   return getTemplateStudioForDeliverable(d)
 }
@@ -490,19 +509,68 @@ const statusLabel: Record<ChapterStatus, string> = {
           v-if="expanded[c.chapter]"
           class="space-y-2 border-t border-neutral-200 pt-2"
         >
+          <li v-if="c.deliverables.some(studioForDeliverable)" class="space-y-1">
+            <div class="flex flex-wrap items-baseline justify-between gap-2">
+              <p class="text-xs font-semibold uppercase tracking-wide text-neutral-600">
+                Chapter preview
+              </p>
+              <div
+                class="inline-flex overflow-hidden rounded border border-neutral-300 text-xs"
+                role="tablist"
+                aria-label="Chapter preview mode"
+              >
+                <button
+                  type="button"
+                  :class="[
+                    'px-3 py-1',
+                    previewModeFor(c) === 'current'
+                      ? 'bg-phoenix-700 text-white'
+                      : 'bg-white text-neutral-700 hover:bg-neutral-50'
+                  ]"
+                  :aria-pressed="previewModeFor(c) === 'current'"
+                  @click="setPreviewMode(c, 'current')"
+                >Current saved preview</button>
+                <button
+                  type="button"
+                  :class="[
+                    'border-l border-neutral-300 px-3 py-1',
+                    previewModeFor(c) === 'final'
+                      ? 'bg-phoenix-700 text-white'
+                      : 'bg-white text-neutral-700 hover:bg-neutral-50'
+                  ]"
+                  :aria-pressed="previewModeFor(c) === 'final'"
+                  @click="setPreviewMode(c, 'final')"
+                >Final preview</button>
+              </div>
+            </div>
+            <p class="text-[11px] italic text-neutral-500">
+              This preview shows the current saved state. Draft and source-note
+              fallback may appear where final Playbook text is missing.
+              Approved chapters use the final preview by default — neither mode
+              changes approval or readiness.
+            </p>
+          </li>
+
           <li
             v-for="d in c.deliverables"
             :key="d.id"
           >
             <DeliverableRow :deliverable="d" show-owner />
             <div
-              v-if="d.status === 'approved' && studioForDeliverable(d)"
-              class="mt-2 rounded-md border border-emerald-200 bg-emerald-50/30 p-2"
+              v-if="studioForDeliverable(d)"
+              class="mt-2 rounded-md border p-2"
+              :class="
+                d.status === 'approved'
+                  ? 'border-emerald-200 bg-emerald-50/30'
+                  : 'border-neutral-200 bg-white'
+              "
             >
               <DeliverablePlaybookPreview
                 :studio="studioForDeliverable(d)!"
                 :output="outputForDeliverable(d)"
                 :loading="outputStillLoading(d)"
+                :mode="previewModeFor(c)"
+                :deliverable="d"
               />
             </div>
           </li>

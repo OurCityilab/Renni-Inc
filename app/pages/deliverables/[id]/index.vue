@@ -272,6 +272,16 @@ async function saveNotes() {
             :is-checking-submit-requirements="isCheckingRequirementCoverage"
           />
 
+          <!-- Quick link to the read-only Playbook preview rendered by
+               the chapter hub below. Helps reviewers jump to the
+               current saved state before approving. Pure display:
+               never approves anything, never replaces the editor. -->
+          <a
+            v-if="studio"
+            href="#playbook-preview"
+            class="block text-xs text-phoenix-700 hover:underline"
+          >Preview current Playbook text ↓</a>
+
           <!-- Review notes: prominent when the deliverable is in a review state. -->
           <section
             v-if="deliverable.status === 'needs_revision' && deliverable.returnedReason"

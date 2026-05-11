@@ -1,21 +1,22 @@
 <script setup lang="ts">
-// Read-only Playbook-ready preview, extracted from the legacy
-// DeliverableOutputWorkspace so the chapter hub can render the same
-// roll-up without instantiating the full workspace. Mirrors the
-// legacy preview semantics:
-//   - per-section final text (or italic empty-state placeholder)
-//   - evidence links (label + url + type)
-//   - structured evidence entries (claim, evidence, source, risk,
-//     next validation, confidence chip)
-//   - market builder demand entries (likely buyer, market size,
-//     scenarios, strongest evidence, weakest assumption, validation)
-//   - market fit summary (target profile, primary market, positioning,
-//     scenario snapshot, source gap, etc.)
-//   - brand fit summary (brand signal, target match, references,
-//     production risk, recommended adjustment, next best move)
+// Shared read-only Playbook preview component.
 //
-// Pure display: no Firestore reads, no save, no AI calls.
+// Uses `normalizeDeliverablePreview` to decide what content text to show
+// per section (final-only vs. fallback chain) and what fallback /
+// missing-section label to surface. Builder rollups (Market Builder,
+// Market Fit, Brand Fit, Pricing Strategy), evidence links, and
+// structured evidence are rendered from the persisted section payload
+// the normalizer carries through, so the rich review surface stays
+// intact across all preview modes.
+//
+// Pure display:
+//   - no Firestore reads, no save, no AI calls
+//   - never mutates the output object
+//   - never copies draftText into finalText
+//   - never changes output readiness or approval semantics
+import { computed } from 'vue'
 import type {
+  Deliverable,
   DeliverableOutput,
   DeliverableOutputSection
 } from '~/types/models'
@@ -23,6 +24,11 @@ import type {
   TemplateStudio,
   TemplateStudioSection
 } from '~/types/templateStudio'
+import {
+  normalizeDeliverablePreview,
+  type NormalizedPreviewSection,
+  type PreviewMode
+} from '~/utils/playbookPreview'
 import {
   SCENARIO_LABEL_COPY,
   confidenceTone,
@@ -44,55 +50,118 @@ import {
   safeCompUrl as safePricingCompUrl
 } from '~/utils/pricingStrategyMath'
 
-const props = defineProps<{
-  studio: TemplateStudio
-  output: DeliverableOutput | null
-  loading?: boolean
-}>()
+const props = withDefaults(
+  defineProps<{
+    studio: TemplateStudio
+    output: DeliverableOutput | null
+    loading?: boolean
+    // Preview mode. Defaults to 'final' so legacy mounts (chapter hub,
+    // approved-state playbook expansion) keep their existing strict
+    // final-text behavior. Pass 'current' to enable the fallback chain
+    // (finalText → draftText → sourceNotes → missing) for in-flight
+    // work. 'export' mirrors current but is used by export adapters
+    // for the same fallback semantics.
+    mode?: PreviewMode
+    // Optional deliverable summary, used for the heading metadata when
+    // the renderer is mounted outside the chapter hub.
+    deliverable?: Pick<Deliverable, 'id' | 'title' | 'chapter' | 'status'>
+    showEvidence?: boolean
+    showStructuredEvidence?: boolean
+    showMissingSections?: boolean
+    showBuilders?: boolean
+    compact?: boolean
+  }>(),
+  {
+    loading: false,
+    mode: 'final',
+    deliverable: undefined,
+    showEvidence: true,
+    showStructuredEvidence: true,
+    showMissingSections: true,
+    showBuilders: true,
+    compact: false
+  }
+)
 
-function persistedSection(s: TemplateStudioSection): DeliverableOutputSection | null {
-  return props.output?.sections?.[s.id] ?? null
+// The studio's actual section objects (with marketFit/marketBuilder/
+// brandFit/pricingStrategy enable flags) are needed for the rich
+// rollups. Index them by id so each normalized section can look up its
+// studio counterpart without an O(N²) scan.
+const studioSectionById = computed<Record<string, TemplateStudioSection>>(() => {
+  const out: Record<string, TemplateStudioSection> = {}
+  for (const s of props.studio.sections) out[s.id] = s
+  return out
+})
+
+const preview = computed(() => {
+  const fallbackDeliverable: Pick<
+    Deliverable,
+    'id' | 'title' | 'chapter' | 'status'
+  > = props.deliverable ?? {
+    id: props.output?.deliverableId ?? '',
+    title: props.studio.title,
+    chapter: 0,
+    status: 'draft'
+  }
+  return normalizeDeliverablePreview({
+    deliverable: fallbackDeliverable,
+    studio: props.studio,
+    output: props.output,
+    mode: props.mode
+  })
+})
+
+function persistedFor(section: NormalizedPreviewSection): DeliverableOutputSection | null {
+  return section.persistedSection
 }
-function persistedMarketFit(s: TemplateStudioSection) {
-  return persistedSection(s)?.marketFit ?? null
+function studioForSection(section: NormalizedPreviewSection): TemplateStudioSection | null {
+  return studioSectionById.value[section.sectionId] ?? null
 }
-function persistedBrandFit(s: TemplateStudioSection) {
-  return persistedSection(s)?.brandFit ?? null
+function pricingDerivedFor(section: NormalizedPreviewSection) {
+  return computePricingDerived(persistedFor(section)?.pricingStrategy ?? null)
 }
-function persistedPricingStrategy(s: TemplateStudioSection) {
-  return persistedSection(s)?.pricingStrategy ?? null
+function pricingCompFor(section: NormalizedPreviewSection) {
+  return interpretPricingCompPosition(persistedFor(section)?.pricingStrategy ?? null)
 }
-function pricingDerivedFor(s: TemplateStudioSection) {
-  return computePricingDerived(persistedPricingStrategy(s))
+function pricingAnalysisFor(section: NormalizedPreviewSection) {
+  return analyzePricingComps(persistedFor(section)?.pricingStrategy ?? null)
 }
-function pricingCompFor(s: TemplateStudioSection) {
-  return interpretPricingCompPosition(persistedPricingStrategy(s))
+function pricingSegmentFor(section: NormalizedPreviewSection) {
+  return interpretPricingSegment(persistedFor(section)?.pricingStrategy ?? null)
 }
-function pricingAnalysisFor(s: TemplateStudioSection) {
-  return analyzePricingComps(persistedPricingStrategy(s))
-}
-function pricingSegmentFor(s: TemplateStudioSection) {
-  return interpretPricingSegment(persistedPricingStrategy(s))
-}
-function pricingCompsWithUrls(s: TemplateStudioSection) {
-  const ps = persistedPricingStrategy(s)
+function pricingCompsWithUrls(section: NormalizedPreviewSection) {
+  const ps = persistedFor(section)?.pricingStrategy
   if (!ps?.comparablePrices?.length) return []
   return ps.comparablePrices
     .map((c) => ({ ...c, _safeUrl: safePricingCompUrl(c.url) }))
     .filter((c) => c._safeUrl)
 }
+
+const headerCopy = computed<string>(() => {
+  if (props.mode === 'final') {
+    return 'Read-only roll-up of the final Playbook text from each section. This is what your team is preparing for the Brand & Operations Playbook.'
+  }
+  return 'Read-only preview of the current saved state. Where final Playbook text is missing, draft text and source notes are shown so reviewers can see what is in flight. This is not the approved final Playbook.'
+})
 </script>
 
 <template>
   <section class="card space-y-3">
     <header>
       <p class="text-xs uppercase tracking-wide text-neutral-500">
-        Playbook-ready preview
+        {{ preview.modeLabel }}
       </p>
-      <h3 class="font-medium text-neutral-900">{{ studio.title }}</h3>
-      <p class="text-xs text-neutral-600">
-        Read-only roll-up of the final Playbook text from each section. This is
-        what your team is preparing for the Brand &amp; Operations Playbook.
+      <h3 class="font-medium text-neutral-900">{{ preview.title }}</h3>
+      <p class="text-xs text-neutral-600">{{ headerCopy }}</p>
+      <p
+        v-if="preview.totalSections > 0"
+        class="mt-1 text-[11px] text-neutral-500"
+      >
+        {{ preview.sectionsWithFinalText }} of {{ preview.totalSections }} sections have final Playbook text<span v-if="preview.sectionsWithFallback > 0">
+          · {{ preview.sectionsWithFallback }} showing fallback content
+        </span><span v-if="preview.sectionsMissing > 0">
+          · {{ preview.sectionsMissing }} still missing
+        </span>.
       </p>
     </header>
 
@@ -100,31 +169,57 @@ function pricingCompsWithUrls(s: TemplateStudioSection) {
 
     <ol v-else class="space-y-3">
       <li
-        v-for="s in studio.sections"
-        :key="`preview-${s.id}`"
+        v-for="section in preview.sections"
+        :key="`preview-${section.sectionId}`"
         class="rounded-md border border-neutral-200 p-3"
       >
-        <p class="text-sm font-medium text-neutral-900">{{ s.title }}</p>
+        <div class="flex flex-wrap items-baseline justify-between gap-2">
+          <p class="text-sm font-medium text-neutral-900">{{ section.title }}</p>
+          <span
+            v-if="!section.isMissing && section.contentSource !== 'finalText'"
+            class="rounded-full border border-amber-300 bg-amber-50 px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-amber-800"
+          >{{ section.contentSourceLabel }}</span>
+          <span
+            v-else-if="section.contentSource === 'finalText'"
+            class="rounded-full border border-emerald-300 bg-emerald-50 px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-emerald-800"
+          >{{ section.contentSourceLabel }}</span>
+        </div>
+
         <p
-          v-if="(persistedSection(s)?.finalText ?? '').trim()"
+          v-if="!section.isMissing"
           class="mt-1 whitespace-pre-wrap text-sm text-neutral-800"
-        >{{ persistedSection(s)!.finalText }}</p>
-        <p v-else class="mt-1 text-xs italic text-neutral-500">
-          Final Playbook text has not been written yet. Use the section workspace
-          to turn notes and builder work into a clean final version.
+        >{{ section.content }}</p>
+
+        <p
+          v-else-if="showMissingSections"
+          class="mt-1 text-xs italic text-neutral-500"
+        >
+          <template v-if="mode === 'final'">
+            Missing final Playbook text. Use the section workspace to turn
+            notes and builder work into a clean final version.
+          </template>
+          <template v-else>
+            {{ section.missingLabel }}
+          </template>
         </p>
 
+        <p
+          v-if="!section.isMissing && section.contentSource !== 'finalText' && showMissingSections"
+          class="mt-1 text-[11px] italic text-amber-800"
+        >{{ section.missingLabel }}</p>
+
         <SavedBuilderStatePreview
-          :section="s"
-          :builder-state="persistedSection(s)?.builderState"
+          v-if="showBuilders && persistedFor(section) && studioForSection(section)"
+          :section="studioForSection(section)!"
+          :builder-state="persistedFor(section)!.builderState"
         />
 
         <ul
-          v-if="(persistedSection(s)?.evidenceLinks?.length ?? 0) > 0"
+          v-if="showEvidence && section.evidenceLinks.length > 0"
           class="mt-2 space-y-0.5 text-xs"
         >
           <li
-            v-for="link in persistedSection(s)!.evidenceLinks"
+            v-for="link in section.evidenceLinks"
             :key="`preview-link-${link.id}`"
           >
             ↳
@@ -142,7 +237,7 @@ function pricingCompsWithUrls(s: TemplateStudioSection) {
 
         <!-- Structured evidence -->
         <div
-          v-if="(persistedSection(s)?.structuredEvidence?.length ?? 0) > 0"
+          v-if="showStructuredEvidence && section.structuredEvidence.length > 0"
           class="mt-2 space-y-1.5"
         >
           <p class="text-xs font-medium uppercase tracking-wide text-neutral-500">
@@ -150,7 +245,7 @@ function pricingCompsWithUrls(s: TemplateStudioSection) {
           </p>
           <ul class="space-y-1.5 text-xs">
             <li
-              v-for="entry in persistedSection(s)!.structuredEvidence"
+              v-for="entry in section.structuredEvidence"
               :key="`preview-evidence-${entry.id}`"
               class="rounded border border-neutral-200 bg-neutral-50 p-2"
             >
@@ -184,7 +279,8 @@ function pricingCompsWithUrls(s: TemplateStudioSection) {
 
         <!-- Market Builder demand entries -->
         <div
-          v-if="s.marketBuilder?.enabled && (persistedSection(s)?.marketBuilderEntries?.length ?? 0) > 0"
+          v-if="showBuilders && studioForSection(section)?.marketBuilder?.enabled
+            && (persistedFor(section)?.marketBuilderEntries?.length ?? 0) > 0"
           class="mt-2 space-y-1.5"
         >
           <p class="text-xs font-medium uppercase tracking-wide text-neutral-500">
@@ -192,7 +288,7 @@ function pricingCompsWithUrls(s: TemplateStudioSection) {
           </p>
           <ul class="space-y-1.5 text-xs">
             <li
-              v-for="entry in persistedSection(s)!.marketBuilderEntries"
+              v-for="entry in persistedFor(section)!.marketBuilderEntries"
               :key="`preview-market-${entry.id}`"
               class="rounded border border-neutral-200 bg-neutral-50 p-2"
             >
@@ -255,255 +351,252 @@ function pricingCompsWithUrls(s: TemplateStudioSection) {
 
         <!-- Market Fit roll-up -->
         <div
-          v-if="s.marketFit?.enabled && persistedMarketFit(s)"
+          v-if="showBuilders && studioForSection(section)?.marketFit?.enabled
+            && persistedFor(section)?.marketFit"
           class="mt-2 space-y-1 text-xs"
         >
           <p class="font-medium uppercase tracking-wide text-neutral-500">
             Market fit
           </p>
           <p
-            v-if="(persistedMarketFit(s)!.productFacts?.productName || '').trim() ||
-                  (persistedMarketFit(s)!.productFacts?.price != null)"
+            v-if="(persistedFor(section)!.marketFit!.productFacts?.productName || '').trim()
+              || (persistedFor(section)!.marketFit!.productFacts?.price != null)"
             class="text-neutral-700"
           >
             <span class="font-medium text-neutral-600">Product:</span>
-            {{ persistedMarketFit(s)!.productFacts?.productName || '—' }}
-            <span v-if="persistedMarketFit(s)!.productFacts?.price != null">
-              · {{ fmtCurrency(persistedMarketFit(s)!.productFacts!.price ?? null) }}
+            {{ persistedFor(section)!.marketFit!.productFacts?.productName || '—' }}
+            <span v-if="persistedFor(section)!.marketFit!.productFacts?.price != null">
+              · {{ fmtCurrency(persistedFor(section)!.marketFit!.productFacts!.price ?? null) }}
             </span>
           </p>
           <p
-            v-if="(persistedMarketFit(s)!.recommendation?.likelyPrimaryMarket || '').trim()"
+            v-if="(persistedFor(section)!.marketFit!.recommendation?.likelyPrimaryMarket || '').trim()"
             class="text-neutral-700"
           >
             <span class="font-medium text-neutral-600">Primary market:</span>
-            {{ persistedMarketFit(s)!.recommendation!.likelyPrimaryMarket }}
-            <span v-if="(persistedMarketFit(s)!.recommendation?.likelySecondaryMarket || '').trim()">
-              · secondary: {{ persistedMarketFit(s)!.recommendation!.likelySecondaryMarket }}
+            {{ persistedFor(section)!.marketFit!.recommendation!.likelyPrimaryMarket }}
+            <span v-if="(persistedFor(section)!.marketFit!.recommendation?.likelySecondaryMarket || '').trim()">
+              · secondary: {{ persistedFor(section)!.marketFit!.recommendation!.likelySecondaryMarket }}
             </span>
           </p>
           <p
-            v-if="(persistedMarketFit(s)!.recommendation?.launchOrValidationMarket || '').trim()"
+            v-if="(persistedFor(section)!.marketFit!.recommendation?.launchOrValidationMarket || '').trim()"
             class="text-neutral-700"
           >
             <span class="font-medium text-neutral-600">Launch / validation market:</span>
-            {{ persistedMarketFit(s)!.recommendation!.launchOrValidationMarket }}
+            {{ persistedFor(section)!.marketFit!.recommendation!.launchOrValidationMarket }}
           </p>
           <p
-            v-if="(persistedMarketFit(s)!.recommendation?.positioningSummary || '').trim()"
+            v-if="(persistedFor(section)!.marketFit!.recommendation?.positioningSummary || '').trim()"
             class="whitespace-pre-wrap text-neutral-700"
           >
             <span class="font-medium text-neutral-600">Positioning:</span>
-            {{ persistedMarketFit(s)!.recommendation!.positioningSummary }}
+            {{ persistedFor(section)!.marketFit!.recommendation!.positioningSummary }}
           </p>
           <p
-            v-if="(persistedMarketFit(s)!.recommendation?.strongestEvidence || '').trim()"
+            v-if="(persistedFor(section)!.marketFit!.recommendation?.strongestEvidence || '').trim()"
             class="text-neutral-700"
           >
             <span class="font-medium text-neutral-600">Strongest evidence:</span>
-            {{ persistedMarketFit(s)!.recommendation!.strongestEvidence }}
+            {{ persistedFor(section)!.marketFit!.recommendation!.strongestEvidence }}
           </p>
           <p
-            v-if="(persistedMarketFit(s)!.recommendation?.weakestAssumption || '').trim()"
+            v-if="(persistedFor(section)!.marketFit!.recommendation?.weakestAssumption || '').trim()"
             class="text-neutral-700"
           >
             <span class="font-medium text-neutral-600">Weakest assumption:</span>
-            {{ persistedMarketFit(s)!.recommendation!.weakestAssumption }}
+            {{ persistedFor(section)!.marketFit!.recommendation!.weakestAssumption }}
           </p>
           <p
-            v-if="(persistedMarketFit(s)!.recommendation?.recommendedNextValidation || '').trim()"
+            v-if="(persistedFor(section)!.marketFit!.recommendation?.recommendedNextValidation || '').trim()"
             class="text-neutral-700"
           >
             <span class="font-medium text-neutral-600">Next validation:</span>
-            {{ persistedMarketFit(s)!.recommendation!.recommendedNextValidation }}
+            {{ persistedFor(section)!.marketFit!.recommendation!.recommendedNextValidation }}
           </p>
-          <template v-if="buildDemandSnapshot(persistedMarketFit(s))">
+          <template v-if="buildDemandSnapshot(persistedFor(section)!.marketFit ?? null)">
             <p class="text-neutral-700">
               <span class="font-medium text-neutral-600">Selected segment:</span>
-              {{ buildDemandSnapshot(persistedMarketFit(s))!.segmentName }}
+              {{ buildDemandSnapshot(persistedFor(section)!.marketFit ?? null)!.segmentName }}
             </p>
             <p
-              v-if="buildDemandSnapshot(persistedMarketFit(s))!.targetProfile"
+              v-if="buildDemandSnapshot(persistedFor(section)!.marketFit ?? null)!.targetProfile"
               class="text-neutral-700"
             >
               <span class="font-medium text-neutral-600">Target profile:</span>
-              {{ buildDemandSnapshot(persistedMarketFit(s))!.targetProfile }}
+              {{ buildDemandSnapshot(persistedFor(section)!.marketFit ?? null)!.targetProfile }}
             </p>
             <p
-              v-if="buildDemandSnapshot(persistedMarketFit(s))!.baseBuyers != null
-                    || buildDemandSnapshot(persistedMarketFit(s))!.baseRevenue != null"
+              v-if="buildDemandSnapshot(persistedFor(section)!.marketFit ?? null)!.baseBuyers != null
+                || buildDemandSnapshot(persistedFor(section)!.marketFit ?? null)!.baseRevenue != null"
               class="text-neutral-700"
             >
               <span class="font-medium text-neutral-600">Base scenario:</span>
-              {{ fmtNumber(buildDemandSnapshot(persistedMarketFit(s))!.baseBuyers) }} buyers ·
-              {{ fmtCurrency(buildDemandSnapshot(persistedMarketFit(s))!.baseRevenue) }} revenue
+              {{ fmtNumber(buildDemandSnapshot(persistedFor(section)!.marketFit ?? null)!.baseBuyers) }} buyers ·
+              {{ fmtCurrency(buildDemandSnapshot(persistedFor(section)!.marketFit ?? null)!.baseRevenue) }} revenue
             </p>
             <p
-              v-if="buildDemandSnapshot(persistedMarketFit(s))!.tradeoff"
+              v-if="buildDemandSnapshot(persistedFor(section)!.marketFit ?? null)!.tradeoff"
               class="text-neutral-700"
             >
               <span class="font-medium text-neutral-600">Key tradeoff:</span>
-              {{ buildDemandSnapshot(persistedMarketFit(s))!.tradeoff }}
+              {{ buildDemandSnapshot(persistedFor(section)!.marketFit ?? null)!.tradeoff }}
             </p>
           </template>
         </div>
 
         <!-- Brand Fit roll-up -->
         <div
-          v-if="s.brandFit?.enabled && buildBrandFitSnapshot(persistedBrandFit(s))"
+          v-if="showBuilders && studioForSection(section)?.brandFit?.enabled
+            && buildBrandFitSnapshot(persistedFor(section)?.brandFit ?? null)"
           class="mt-2 space-y-1 text-xs"
         >
           <p class="font-medium uppercase tracking-wide text-neutral-500">
             Brand fit
           </p>
           <p
-            v-if="buildBrandFitSnapshot(persistedBrandFit(s))!.brandSignal"
+            v-if="buildBrandFitSnapshot(persistedFor(section)?.brandFit ?? null)!.brandSignal"
             class="text-neutral-700"
           >
             <span class="font-medium text-neutral-600">Brand signal:</span>
-            {{ buildBrandFitSnapshot(persistedBrandFit(s))!.brandSignal }}
+            {{ buildBrandFitSnapshot(persistedFor(section)?.brandFit ?? null)!.brandSignal }}
           </p>
           <p
-            v-if="buildBrandFitSnapshot(persistedBrandFit(s))!.targetCustomerMatch"
+            v-if="buildBrandFitSnapshot(persistedFor(section)?.brandFit ?? null)!.targetCustomerMatch"
             class="text-neutral-700"
           >
             <span class="font-medium text-neutral-600">Target match:</span>
-            {{ buildBrandFitSnapshot(persistedBrandFit(s))!.targetCustomerMatch }}
+            {{ buildBrandFitSnapshot(persistedFor(section)?.brandFit ?? null)!.targetCustomerMatch }}
           </p>
           <p
-            v-if="buildBrandFitSnapshot(persistedBrandFit(s))!.strongestReference"
+            v-if="buildBrandFitSnapshot(persistedFor(section)?.brandFit ?? null)!.strongestReference"
             class="text-neutral-700"
           >
             <span class="font-medium text-neutral-600">Strongest reference:</span>
-            {{ buildBrandFitSnapshot(persistedBrandFit(s))!.strongestReference }}
+            {{ buildBrandFitSnapshot(persistedFor(section)?.brandFit ?? null)!.strongestReference }}
           </p>
           <p
-            v-if="buildBrandFitSnapshot(persistedBrandFit(s))!.recommendedAdjustment"
+            v-if="buildBrandFitSnapshot(persistedFor(section)?.brandFit ?? null)!.recommendedAdjustment"
             class="whitespace-pre-wrap text-neutral-700"
           >
             <span class="font-medium text-neutral-600">Recommended adjustment:</span>
-            {{ buildBrandFitSnapshot(persistedBrandFit(s))!.recommendedAdjustment }}
+            {{ buildBrandFitSnapshot(persistedFor(section)?.brandFit ?? null)!.recommendedAdjustment }}
           </p>
           <p
-            v-if="buildBrandFitSnapshot(persistedBrandFit(s))!.nextBestMove"
+            v-if="buildBrandFitSnapshot(persistedFor(section)?.brandFit ?? null)!.nextBestMove"
             class="text-neutral-700"
           >
             <span class="font-medium text-neutral-600">Next best move:</span>
-            {{ buildBrandFitSnapshot(persistedBrandFit(s))!.nextBestMove }}
+            {{ buildBrandFitSnapshot(persistedFor(section)?.brandFit ?? null)!.nextBestMove }}
           </p>
         </div>
 
-        <!-- Pricing Strategy roll-up (Ch. 8 Section 2 only). Compact
-             read-only summary of the pricing strategy builder state.
-             Pure display — never replaces finalText, never gates
-             Playbook readiness, never writes to pricingScenarios. -->
+        <!-- Pricing Strategy roll-up (Ch. 8 Section 2 only). -->
         <div
-          v-if="s.pricingStrategy?.enabled && persistedPricingStrategy(s)"
+          v-if="showBuilders && studioForSection(section)?.pricingStrategy?.enabled
+            && persistedFor(section)?.pricingStrategy"
           class="mt-2 space-y-1 text-xs"
         >
           <p class="font-medium uppercase tracking-wide text-neutral-500">
             Pricing strategy
           </p>
           <p
-            v-if="(persistedPricingStrategy(s)!.productName || '').trim()"
+            v-if="(persistedFor(section)!.pricingStrategy!.productName || '').trim()"
             class="text-neutral-700"
           >
             <span class="font-medium text-neutral-600">Product:</span>
-            {{ persistedPricingStrategy(s)!.productName }}
+            {{ persistedFor(section)!.pricingStrategy!.productName }}
           </p>
           <p
-            v-if="persistedPricingStrategy(s)!.proposedPrice != null"
+            v-if="persistedFor(section)!.pricingStrategy!.proposedPrice != null"
             class="text-neutral-700"
           >
             <span class="font-medium text-neutral-600">Proposed price:</span>
-            ${{ fmtPricingMoney(persistedPricingStrategy(s)!.proposedPrice) }}
+            ${{ fmtPricingMoney(persistedFor(section)!.pricingStrategy!.proposedPrice) }}
           </p>
           <p class="text-neutral-700">
             <span class="font-medium text-neutral-600">Total unit cost:</span>
-            ${{ fmtPricingMoney(pricingDerivedFor(s).totalUnitCost) }}
+            ${{ fmtPricingMoney(pricingDerivedFor(section).totalUnitCost) }}
           </p>
           <p
-            v-if="pricingDerivedFor(s).unitMargin != null"
+            v-if="pricingDerivedFor(section).unitMargin != null"
             class="text-neutral-700"
           >
             <span class="font-medium text-neutral-600">Unit margin:</span>
-            <span :class="pricingDerivedFor(s).belowCost ? 'text-rose-700 font-medium' : ''">
-              ${{ fmtPricingMoney(pricingDerivedFor(s).unitMargin) }}
+            <span :class="pricingDerivedFor(section).belowCost ? 'text-rose-700 font-medium' : ''">
+              ${{ fmtPricingMoney(pricingDerivedFor(section).unitMargin) }}
             </span>
           </p>
           <p
-            v-if="pricingDerivedFor(s).grossMarginPct != null"
+            v-if="pricingDerivedFor(section).grossMarginPct != null"
             class="text-neutral-700"
           >
             <span class="font-medium text-neutral-600">Gross margin:</span>
-            {{ fmtPricingPct(pricingDerivedFor(s).grossMarginPct) }}
+            {{ fmtPricingPct(pricingDerivedFor(section).grossMarginPct) }}
           </p>
           <p
-            v-if="pricingDerivedFor(s).breakEvenUnits != null"
+            v-if="pricingDerivedFor(section).breakEvenUnits != null"
             class="text-neutral-700"
           >
             <span class="font-medium text-neutral-600">Break-even:</span>
-            {{ fmtPricingUnits(pricingDerivedFor(s).breakEvenUnits) }} units
+            {{ fmtPricingUnits(pricingDerivedFor(section).breakEvenUnits) }} units
           </p>
           <p
-            v-if="pricingDerivedFor(s).targetMarginPrice != null"
+            v-if="pricingDerivedFor(section).targetMarginPrice != null"
             class="text-neutral-700"
           >
             <span class="font-medium text-neutral-600">Target-margin price:</span>
-            ${{ fmtPricingMoney(pricingDerivedFor(s).targetMarginPrice) }}
+            ${{ fmtPricingMoney(pricingDerivedFor(section).targetMarginPrice) }}
           </p>
           <p
-            v-if="pricingCompFor(s).min != null && pricingCompFor(s).max != null"
+            v-if="pricingCompFor(section).min != null && pricingCompFor(section).max != null"
             class="text-neutral-700"
           >
             <span class="font-medium text-neutral-600">Comp range:</span>
-            ${{ fmtPricingMoney(pricingCompFor(s).min) }}–${{ fmtPricingMoney(pricingCompFor(s).max) }}
-            <span v-if="pricingCompFor(s).median != null">
-              · median ${{ fmtPricingMoney(pricingCompFor(s).median) }}
+            ${{ fmtPricingMoney(pricingCompFor(section).min) }}–${{ fmtPricingMoney(pricingCompFor(section).max) }}
+            <span v-if="pricingCompFor(section).median != null">
+              · median ${{ fmtPricingMoney(pricingCompFor(section).median) }}
             </span>
           </p>
           <p class="text-neutral-700">
             <span class="font-medium text-neutral-600">Comp evidence:</span>
-            {{ pricingAnalysisFor(s).evidence.label }}
-            ({{ pricingAnalysisFor(s).evidence.validCompCount }})
+            {{ pricingAnalysisFor(section).evidence.label }}
+            ({{ pricingAnalysisFor(section).evidence.validCompCount }})
           </p>
           <p
-            v-if="pricingCompFor(s).band !== 'needs_evidence'"
+            v-if="pricingCompFor(section).band !== 'needs_evidence'"
             class="text-neutral-700"
           >
             <span class="font-medium text-neutral-600">Price position:</span>
-            {{ pricingCompFor(s).label }}
+            {{ pricingCompFor(section).label }}
           </p>
           <p
-            v-if="(persistedPricingStrategy(s)!.targetSegment || '').trim()"
+            v-if="(persistedFor(section)!.pricingStrategy!.targetSegment || '').trim()"
             class="text-neutral-700"
           >
             <span class="font-medium text-neutral-600">Best-fit segment:</span>
-            {{ pricingSegmentFor(s).label }}
+            {{ pricingSegmentFor(section).label }}
           </p>
           <p
-            v-if="persistedPricingStrategy(s)!.confidence"
+            v-if="persistedFor(section)!.pricingStrategy!.confidence"
             class="text-neutral-700"
           >
             <span class="font-medium text-neutral-600">Confidence:</span>
-            {{ persistedPricingStrategy(s)!.confidence }}
+            {{ persistedFor(section)!.pricingStrategy!.confidence }}
           </p>
           <p
-            v-if="(persistedPricingStrategy(s)!.validationStep || '').trim()"
+            v-if="(persistedFor(section)!.pricingStrategy!.validationStep || '').trim()"
             class="text-neutral-700"
           >
             <span class="font-medium text-neutral-600">Validation step:</span>
-            {{ persistedPricingStrategy(s)!.validationStep }}
+            {{ persistedFor(section)!.pricingStrategy!.validationStep }}
           </p>
-          <!-- V1.1 — render student-supplied source links if any. Pure
-               display; URLs are filtered through safeCompUrl so non
-               http/https schemes never reach an <a href>. -->
           <ul
-            v-if="pricingCompsWithUrls(s).length > 0"
+            v-if="pricingCompsWithUrls(section).length > 0"
             class="space-y-0.5"
           >
             <li
-              v-for="c in pricingCompsWithUrls(s)"
+              v-for="c in pricingCompsWithUrls(section)"
               :key="`pricing-comp-link-${c.id}`"
               class="text-neutral-700"
             >
