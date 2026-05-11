@@ -451,6 +451,32 @@ function download(filename: string, content: string, mime: string) {
       />
     </section>
 
+    <!-- 4a. Print-ready Playbook entry point -->
+    <section class="card space-y-2 border-phoenix-200 bg-phoenix-50/30">
+      <header class="flex flex-wrap items-baseline justify-between gap-2">
+        <div>
+          <p class="text-xs font-semibold uppercase tracking-wide text-phoenix-700">
+            Print-ready Playbook
+          </p>
+          <p class="text-xs text-neutral-700">
+            Open a polished, browser-printable Final Submission Mode of
+            the entire Playbook. Use your browser's print dialog and
+            choose Save as PDF for a final-project-ready document.
+          </p>
+          <p class="text-[11px] italic text-neutral-500">
+            Read-only. No Firestore writes, no draft-into-final
+            promotion, no approval changes.
+          </p>
+        </div>
+        <div class="flex gap-2 text-xs">
+          <NuxtLink
+            to="/playbook/print"
+            class="rounded border border-phoenix-400 bg-phoenix-600 px-2 py-1 font-medium text-white hover:bg-phoenix-700"
+          >Open print-ready Playbook</NuxtLink>
+        </div>
+      </header>
+    </section>
+
     <!-- 4b. Full current Playbook export -->
     <section class="card space-y-2 border-phoenix-200 bg-phoenix-50/30">
       <header class="flex flex-wrap items-baseline justify-between gap-2">

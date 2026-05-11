@@ -60,3 +60,165 @@ body {
     @apply chip bg-emerald-100 text-emerald-800;
   }
 }
+
+/* ============================================================
+   Final Submission Mode / Print-ready Playbook
+   ============================================================
+
+   These rules apply only when the user invokes the browser print
+   dialog from /playbook/print (or any page that uses the same
+   .print-document scaffolding). They are deliberately scoped to
+   `@media print` so the in-app layout is unaffected.
+
+   Posture (do not relax):
+   - The print route is read-only; nothing here writes to Firestore,
+     mutates approval, or changes output readiness.
+   - We do NOT bundle any new fonts, libraries, or document
+     generators. Save as PDF flows entirely through the browser
+     print dialog.
+   - `.print-hidden` collapses interactive chrome (Print button,
+     mode toggles, etc.) so the saved PDF reads as a finished
+     document.
+   - Page breaks are nudged with `break-before-page` /
+     `break-inside-avoid`; print engines honor these as hints,
+     never as guarantees, so we also keep section content compact
+     and avoid fragile fixed positioning.
+*/
+
+/* Screen-time helpers used by the print page itself. */
+.print-hidden:not(.print-only) { /* allow on-screen rendering */ }
+.print-only { display: none; }
+
+@media screen {
+  /* Hide print-only banner content from the in-app screen view. */
+  .print-only { display: none !important; }
+}
+
+@media print {
+  :root { color-scheme: light; }
+
+  /* Nuke the in-app chrome wherever it might still be in the DOM. */
+  html, body, #__nuxt {
+    background: #ffffff !important;
+    color: #111111 !important;
+    max-width: 100% !important;
+    overflow: visible !important;
+  }
+  body {
+    @apply bg-white text-neutral-900;
+    font-size: 11pt;
+    line-height: 1.45;
+  }
+  header, footer, nav, aside,
+  .print-hidden {
+    display: none !important;
+  }
+  .print-only { display: block !important; }
+
+  /* Strip card shadows / hover surfaces; we want clean ink, not
+     screen affordances. */
+  .card,
+  .print-document .card,
+  .print-document .rounded-md,
+  .print-document .rounded {
+    box-shadow: none !important;
+    background: transparent !important;
+  }
+
+  /* Document scaffold. The print page mounts a single
+     .print-document wrapper; everything inside it gets these
+     baseline rules. */
+  .print-document {
+    margin: 0 !important;
+    padding: 0 !important;
+    max-width: 100% !important;
+  }
+  .print-document a {
+    color: #111111 !important;
+    text-decoration: none !important;
+  }
+  .print-document a::after {
+    /* Inline the URL after links so the PDF preserves the
+       reference; suppress for internal anchors and footnote-style
+       links flagged with .print-link-bare. */
+    content: " (" attr(href) ")";
+    font-size: 0.85em;
+    color: #555555;
+    word-break: break-all;
+  }
+  .print-document a.print-link-bare::after { content: ""; }
+
+  /* Headings & section spacing. */
+  .print-document h1 { font-size: 24pt; margin: 0 0 0.25in 0; }
+  .print-document h2 { font-size: 16pt; margin-top: 0.25in; }
+  .print-document h3 { font-size: 13pt; margin-top: 0.2in; }
+  .print-document h4 { font-size: 11pt; margin-top: 0.15in; }
+
+  /* Page break helpers. */
+  .print-cover,
+  .print-chapter-divider {
+    break-before: page;
+    page-break-before: always;
+  }
+  .print-toc,
+  .print-readiness,
+  .print-appendix {
+    break-before: page;
+    page-break-before: always;
+  }
+  .print-cover { break-after: page; page-break-after: always; }
+  .print-section,
+  .print-deliverable {
+    break-inside: avoid-page;
+    page-break-inside: avoid;
+  }
+  /* Allow long sections to break across pages without losing the
+     heading — the section heading should "stick" to its content. */
+  .print-document h2, .print-document h3 {
+    break-after: avoid-page;
+    page-break-after: avoid;
+  }
+
+  /* Builder rollup tables can be wide; allow horizontal compression
+     and fall back to wrapping rather than overflowing the page. */
+  .print-document table {
+    width: 100% !important;
+    border-collapse: collapse;
+    font-size: 9pt;
+    table-layout: fixed;
+    word-break: break-word;
+  }
+  .print-document table th,
+  .print-document table td {
+    border: 1px solid #d4d4d4;
+    padding: 4pt 6pt;
+    vertical-align: top;
+  }
+  .print-document pre,
+  .print-document code {
+    white-space: pre-wrap !important;
+    word-break: break-word;
+    font-size: 9.5pt;
+  }
+
+  /* Compact pill chips for status. */
+  .print-document .chip,
+  .print-document .chip-draft,
+  .print-document .chip-review,
+  .print-document .chip-revision,
+  .print-document .chip-approved {
+    border: 1px solid #cfcfcf !important;
+    background: transparent !important;
+    color: #111111 !important;
+    padding: 1pt 4pt !important;
+    font-size: 9pt !important;
+  }
+
+  /* Page-level metadata footer (browser print engines render this
+     at the bottom of each page when the user enables headers/footers
+     in the print dialog). We don't force it on — it's a hint. */
+  @page {
+    margin: 0.6in 0.6in 0.7in 0.6in;
+  }
+}
+

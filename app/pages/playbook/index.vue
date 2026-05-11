@@ -477,6 +477,14 @@ const statusLabel: Record<ChapterStatus, string> = {
            missing) is applied by the shared normalizer; approval and
            output readiness are not changed. -->
       <div class="flex flex-wrap items-center gap-2 text-xs">
+        <NuxtLink
+          to="/playbook/print"
+          class="rounded border border-phoenix-400 bg-phoenix-600 px-2 py-1 font-medium text-white hover:bg-phoenix-700"
+        >Open Final Submission Mode</NuxtLink>
+        <NuxtLink
+          to="/playbook/print"
+          class="rounded border border-phoenix-300 bg-white px-2 py-1 text-phoenix-800 hover:bg-phoenix-50"
+        >Print / Save as PDF</NuxtLink>
         <button
           type="button"
           class="rounded border border-phoenix-300 bg-white px-2 py-1 text-phoenix-800 hover:bg-phoenix-50 disabled:opacity-50"
@@ -496,8 +504,8 @@ const statusLabel: Record<ChapterStatus, string> = {
           @click="exportFullPlaybookDownload()"
         >Download current Playbook (.md)</button>
         <span class="text-[11px] italic text-neutral-500">
-          This export reflects the current saved state. Draft and source-note
-          fallback may appear where final Playbook text is missing.
+          Final Submission Mode opens a print-ready document you can save
+          as PDF. Markdown export reflects the current saved state.
         </span>
       </div>
     </header>

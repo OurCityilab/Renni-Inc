@@ -11,7 +11,7 @@
     "generate": "nuxt generate",
     "postinstall": "nuxt prepare",
     "typecheck": "nuxt typecheck",
-    "check:release": "npm run typecheck && npm run test:classifier && npm run test:approval && npm run test:progress && npm run test:preview && npm run test:export && npm run test:csv && NITRO_PRESET=node-server npm run build",
+    "check:release": "npm run typecheck && npm run test:classifier && npm run test:approval && npm run test:progress && npm run test:preview && npm run test:export && npm run test:csv && npm run test:readiness && NITRO_PRESET=node-server npm run build",
     "seed": "tsx scripts/seed-all.ts",
     "seed:users": "tsx scripts/seed-users.ts",
     "seed:deliverables": "tsx scripts/seed-deliverables.ts",
@@ -33,6 +33,7 @@
     "test:preview": "tsx app/__tests__/playbookPreview.test.ts",
     "test:export": "tsx app/__tests__/playbookExport.test.ts",
     "test:csv": "tsx app/__tests__/csvExport.test.ts",
+    "test:readiness": "tsx app/__tests__/playbookReadiness.test.ts",
     "backfill:tasks": "tsx scripts/backfill-task-alignment.ts",
     "sync:users": "tsx scripts/sync-users-from-roster.ts"
   },
