@@ -29,18 +29,20 @@ import { getTemplateStudioForDeliverable } from '~/data/templateStudios'
 type ViewFilter =
   | 'all'
   | 'mine'
-  | 'needs_work'
+  | 'work_started'
+  | 'sections_ready'
   | 'ready_to_submit'
-  | 'needs_review'
+  | 'submitted_for_review'
   | 'needs_revision'
   | 'approved'
 
 const FILTER_LABELS: Record<ViewFilter, string> = {
   all: 'All deliverables',
   mine: 'My work',
-  needs_work: 'Needs work',
+  work_started: 'Work started',
+  sections_ready: 'Sections marked ready',
   ready_to_submit: 'Ready to submit',
-  needs_review: 'Needs review',
+  submitted_for_review: 'Submitted for review',
   needs_revision: 'Needs revision',
   approved: 'Approved'
 }
@@ -99,6 +101,12 @@ interface DeliverableRow {
   missingRequiredLabels: string[]
   isOwner: boolean
   canApprove: boolean
+  hasAnySectionWork: boolean
+  hasReadySections: boolean
+  totalSections: number | null
+  readySections: number | null
+  sectionsWithWork: number | null
+  hasOutputLoaded: boolean
 }
 
 // Single derived row per deliverable so the reviewer queue and the main
@@ -131,10 +139,17 @@ const rows = computed<DeliverableRow[]>(() => {
       submitBlockReason: progress.submitBlockReason,
       missingRequiredLabels: progress.missingRequiredLabels,
       isOwner,
-      canApprove
+      canApprove,
+      hasAnySectionWork: progress.hasAnySectionWork,
+      hasReadySections: progress.hasReadySections,
+      totalSections: progress.totalSections,
+      readySections: progress.readySections,
+      sectionsWithWork: progress.sectionsWithWork,
+      hasOutputLoaded: outputFor(d) !== null
     }
   })
 })
+
 
 const filteredRows = computed(() => {
   const q = query.value.trim().toLowerCase()
@@ -153,20 +168,51 @@ const filteredRows = computed(() => {
             (d.ownerUid === auth.user.uid || d.approverUid === auth.user.uid)) ||
           row.canApprove
         )
-      case 'needs_work':
-        return row.bucket === 'needs_work'
+      case 'work_started':
+        // Any saved section work (text, in_progress, or ready). Folds
+        // across all parent statuses so a draft deliverable with one
+        // started section appears here even before submit.
+        return row.hasAnySectionWork
+      case 'sections_ready':
+        // At least one section.status === 'ready' on the live output
+        // snapshot. Independent of parent status, the submit gate, and
+        // the requirement-coverage state — saved section readiness
+        // alone is enough to land here.
+        return row.hasReadySections
       case 'ready_to_submit':
-        return row.bucket === 'ready_to_submit'
-      case 'needs_review':
-        return row.bucket === 'needs_review'
+        return row.canSubmit
+      case 'submitted_for_review':
+        return d.status === 'in_review'
       case 'needs_revision':
-        return row.bucket === 'needs_revision'
+        return d.status === 'needs_revision'
       case 'approved':
-        return row.bucket === 'approved'
+        return d.status === 'approved'
       default:
         return true
     }
   })
+})
+
+// Per-filter empty-state copy. Plain English, never raw enum strings.
+const emptyStateCopy = computed<string>(() => {
+  switch (view.value) {
+    case 'work_started':
+      return 'No saved section work was found yet.'
+    case 'sections_ready':
+      return 'No saved ready sections were found. If a section was marked ready, refresh the page. If it still does not appear, the section status may not be saving to the deliverable output.'
+    case 'ready_to_submit':
+      return 'No deliverables are ready to submit yet. Cover the required checks first.'
+    case 'submitted_for_review':
+      return 'No deliverables are currently submitted for review.'
+    case 'needs_revision':
+      return 'No deliverables are waiting on revision.'
+    case 'approved':
+      return 'No deliverables have been approved yet.'
+    case 'mine':
+      return "Nothing is assigned to you yet in this view."
+    default:
+      return 'No deliverables match the current view.'
+  }
 })
 
 // Reviewer queue. Reuses the same row derivation; we just pick the
@@ -340,12 +386,12 @@ function bucketBadge(b: DeliverableProgressBucket): string {
       No deliverables found.
     </p>
     <p v-else-if="filtersHideWork" class="text-sm text-neutral-500">
-      No deliverables match the current view. Try
+      {{ emptyStateCopy }}
       <button
         type="button"
-        class="text-phoenix-700 underline"
+        class="ml-1 text-phoenix-700 underline"
         @click="view = 'all'"
-      >All deliverables</button>.
+      >Show all deliverables</button>.
     </p>
 
     <div v-else class="space-y-2">
@@ -384,6 +430,14 @@ function bucketBadge(b: DeliverableProgressBucket): string {
 
         <div class="mt-2 space-y-1 text-xs text-neutral-700">
           <p v-if="row.sectionProgressLabel">{{ row.sectionProgressLabel }}</p>
+          <p
+            v-if="row.hasOutputLoaded && (row.readySections || row.sectionsWithWork)"
+            class="text-neutral-600"
+          >
+            Saved section progress found:
+            {{ row.readySections ?? 0 }} ready,
+            {{ Math.max((row.sectionsWithWork ?? 0) - (row.readySections ?? 0), 0) }} started.
+          </p>
           <p>{{ row.nextActionLabel }}</p>
         </div>
 

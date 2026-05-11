@@ -40,6 +40,12 @@ export interface DeliverableProgressSummary {
   totalSections: number | null
   readySections: number | null
   sectionsWithWork: number | null
+  // Independent of the parent status bucket. Used by the index page to
+  // surface "Work started" and "Sections marked ready" filters even
+  // while the parent deliverable.status is still draft — that is the
+  // whole point of the section-readiness signal.
+  hasAnySectionWork: boolean
+  hasReadySections: boolean
   // Submit gate state. canSubmit means: parent is draft/needs_revision
   // AND requirement coverage has no required gaps. blockReason describes
   // the gap when canSubmit is false but submitEligible is true.
@@ -113,6 +119,9 @@ export function computeDeliverableProgress(
   const sectionProgressLabel =
     total > 0 ? `${ready} of ${total} sections marked ready` : null
 
+  const hasAnySectionWork = withWork > 0
+  const hasReadySections = ready > 0
+
   if (deliverable.status === 'approved') {
     return {
       bucket: 'approved',
@@ -122,6 +131,8 @@ export function computeDeliverableProgress(
       totalSections: total || null,
       readySections: ready,
       sectionsWithWork: withWork,
+      hasAnySectionWork,
+      hasReadySections,
       submitEligible: false,
       canSubmit: false,
       submitBlockReason: null,
@@ -139,6 +150,8 @@ export function computeDeliverableProgress(
       totalSections: total || null,
       readySections: ready,
       sectionsWithWork: withWork,
+      hasAnySectionWork,
+      hasReadySections,
       submitEligible: false,
       canSubmit: false,
       submitBlockReason: null,
@@ -157,6 +170,8 @@ export function computeDeliverableProgress(
       totalSections: total || null,
       readySections: ready,
       sectionsWithWork: withWork,
+      hasAnySectionWork,
+      hasReadySections,
       submitEligible,
       canSubmit,
       submitBlockReason: !coverageReady
@@ -182,6 +197,8 @@ export function computeDeliverableProgress(
       totalSections: total || null,
       readySections: ready,
       sectionsWithWork: withWork,
+      hasAnySectionWork,
+      hasReadySections,
       submitEligible,
       canSubmit,
       submitBlockReason: null,
@@ -191,17 +208,21 @@ export function computeDeliverableProgress(
 
   return {
     bucket: 'needs_work',
-    statusLabel: 'In progress',
+    statusLabel: hasAnySectionWork ? 'In progress' : 'Not started',
     sectionProgressLabel,
     nextActionLabel:
       total > 0
         ? ready === total
           ? 'All sections marked ready. Finish required checks to submit.'
           : 'Keep building the sections, then submit the full deliverable for review.'
-        : 'Open this deliverable to start the sections.',
+        : hasAnySectionWork
+          ? 'Keep building the sections, then submit the full deliverable for review.'
+          : 'Open this deliverable to start the sections.',
     totalSections: total || null,
     readySections: ready,
     sectionsWithWork: withWork,
+    hasAnySectionWork,
+    hasReadySections,
     submitEligible,
     canSubmit: false,
     submitBlockReason: !coverageReady
