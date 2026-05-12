@@ -83,6 +83,26 @@ function firstBalancedJsonObject(text: string): string | null {
   return null
 }
 
+export interface AiReviewCoachingJsonDiagnostics {
+  responseCharCount: number
+  firstCharWasBrace: boolean
+  balancedJsonObjectFound: boolean
+  retryUsed: boolean
+}
+
+export function summarizeAiReviewCoachingJsonDiagnostics(
+  text: string,
+  retryUsed: boolean
+): AiReviewCoachingJsonDiagnostics {
+  const trimmed = String(text ?? '').trim()
+  return {
+    responseCharCount: trimmed.length,
+    firstCharWasBrace: trimmed.startsWith('{'),
+    balancedJsonObjectFound: firstBalancedJsonObject(trimmed) !== null,
+    retryUsed
+  }
+}
+
 export function extractAiReviewCoachingJson(
   text: string
 ): Record<string, unknown> {

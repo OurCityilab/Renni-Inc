@@ -7,12 +7,15 @@
 import { strict as assert } from 'node:assert'
 import {
   buildAiReviewCoachingJsonRepairUserMessage,
+  buildAiReviewCoachingSimplifiedSystemPrompt,
+  buildAiReviewCoachingSimplifiedUserMessage,
   buildAiReviewCoachingSystemPrompt,
   buildAiReviewCoachingUserMessage
 } from '../../server/utils/aiReviewCoachingPrompt'
 import {
   AiReviewCoachingJsonParseError,
-  extractAiReviewCoachingJson
+  extractAiReviewCoachingJson,
+  summarizeAiReviewCoachingJsonDiagnostics
 } from '../../server/utils/aiReviewCoachingJson'
 import {
   buildInvocationDoc,
@@ -21,7 +24,10 @@ import {
 import {
   CoachingValidationError,
   buildSafeFallback,
+  convertSimplifiedCoachingToFull,
+  missingTopLevelCoachingFields,
   scanBannedPhrases,
+  validateSimplifiedCoachingOutput,
   validateCoachingOutput
 } from '../../server/utils/aiReviewCoachingValidator'
 import {
@@ -123,6 +129,25 @@ test('repair user message requests JSON-only retry without raw bad output', () =
   assert.equal(msg.includes('Here is the invalid response'), false)
 })
 
+test('simplified recovery prompt uses smaller schema and JSON-only rules', () => {
+  const p = buildAiReviewCoachingSimplifiedSystemPrompt('company')
+  assert.match(p, /RECOVERY MODE/)
+  assert.match(p, /SIMPLIFIED RECOVERY OUTPUT SHAPE/)
+  assert.match(p, /coachingPriorities: string\[\]/)
+  assert.match(p, /first\s+character\s+must\s+be\s+\{/i)
+  assert.match(p, /last\s+character\s+must\s+be\s+\}/i)
+  assert.match(p, /Do not use\s+Markdown\s+fences/i)
+  assert.equal(p.includes('AiReviewCoachingOutput SHAPE'), false)
+})
+
+test('simplified recovery user message does not include raw bad output', () => {
+  const msg = buildAiReviewCoachingSimplifiedUserMessage(makePayload())
+  assert.match(msg, /prior response did not match/i)
+  assert.match(msg, /PAYLOAD START/)
+  assert.match(msg, /PAYLOAD END/)
+  assert.equal(msg.includes('Here is the invalid response'), false)
+})
+
 test('fixture prompt builders create scope-specific guidance', () => {
   const pairs: Array<[AiReviewReportPayload, RegExp]> = [
     [earlySemesterCompanyPayload, /COMPANY SCOPE FOCUS/],
@@ -199,6 +224,20 @@ test('JSON extractor rejects incomplete JSON', () => {
     () => extractAiReviewCoachingJson('{"executiveSummary":"ok"'),
     AiReviewCoachingJsonParseError
   )
+})
+
+test('JSON diagnostics report metadata only', () => {
+  const diag = summarizeAiReviewCoachingJsonDiagnostics(
+    'prefix {"executiveSummary":"ok"} suffix',
+    true
+  )
+  assert.equal(diag.responseCharCount > 0, true)
+  assert.equal(diag.firstCharWasBrace, false)
+  assert.equal(diag.balancedJsonObjectFound, true)
+  assert.equal(diag.retryUsed, true)
+  const serialized = JSON.stringify(diag)
+  assert.equal(serialized.includes('executiveSummary'), false)
+  assert.equal(serialized.includes('prefix'), false)
 })
 
 /* -------- validator -------- */
@@ -318,6 +357,52 @@ test('banned phrase in any string field is rejected', () => {
   )
 })
 
+test('missing top-level fields are reported without raw output', () => {
+  const missing = missingTopLevelCoachingFields({
+    executiveSummary: 'ok',
+    safetyReminder: AI_REVIEW_COACHING_SAFETY_REMINDER
+  })
+  assert.ok(missing.includes('coachingPriorities'))
+  assert.ok(missing.includes('recommendedNextActions'))
+  assert.equal(missing.includes('executiveSummary'), false)
+})
+
+test('simplified coaching response converts into valid full output', () => {
+  const simplified = validateSimplifiedCoachingOutput({
+    executiveSummary: 'Leadership should focus on evidence gaps today.',
+    coachingPriorities: ['Marketing has draft fallback in one section.'],
+    missingEvidence: ['Pricing assumptions need a source or assumption note.'],
+    recommendedNextActions: ['Ask the CFO to verify pricing assumptions.'],
+    suggestedTalkingPoints: ['Use the deterministic report as the status source.'],
+    limitations: ['Attribution metadata is thin.'],
+    safetyReminder: AI_REVIEW_COACHING_SAFETY_REMINDER
+  })
+  const full = validateCoachingOutput(
+    convertSimplifiedCoachingToFull(simplified)
+  )
+  assert.equal(full.safetyReminder, AI_REVIEW_COACHING_SAFETY_REMINDER)
+  assert.equal(full.coachingPriorities.length, 1)
+  assert.equal(full.missingEvidence.length, 1)
+  assert.equal(full.recommendedNextActions.length, 1)
+  assert.equal(full.coachingPriorities[0]!.owner, 'Unknown owner')
+})
+
+test('simplified conversion still rejects unsafe phrases', () => {
+  const simplified = validateSimplifiedCoachingOutput({
+    executiveSummary: 'Leadership should focus on evidence gaps today.',
+    coachingPriorities: ['A specific student is lazy.'],
+    missingEvidence: [],
+    recommendedNextActions: [],
+    suggestedTalkingPoints: [],
+    limitations: [],
+    safetyReminder: AI_REVIEW_COACHING_SAFETY_REMINDER
+  })
+  assert.throws(
+    () => validateCoachingOutput(convertSimplifiedCoachingToFull(simplified)),
+    (err) => err instanceof CoachingValidationError && err.reason === 'safety'
+  )
+})
+
 test('banned phrase scanner walks nested arrays', () => {
   const obj = {
     a: 'fine',
@@ -344,6 +429,9 @@ test('safe fallback emits valid shape with the exact safety reminder', () => {
   const validated = validateCoachingOutput(fb)
   assert.equal(validated.safetyReminder, AI_REVIEW_COACHING_SAFETY_REMINDER)
   assert.equal(validated.coachingPriorities.length, 0)
+  assert.match(validated.executiveSummary, /provider responded/i)
+  assert.match(validated.executiveSummary, /required coaching format/i)
+  assert.match(validated.limitations.join(' '), /Try again/)
   assert.ok(validated.limitations.length >= 1)
 })
 
@@ -405,6 +493,15 @@ test('audit invocation doc stores metadata only', () => {
       outcome: 'success',
       validationOutcome: 'passed',
       safetyScanOutcome: 'passed',
+      validationDiagnostics: {
+        category: null,
+        missingTopLevelFields: ['coachingPriorities'],
+        responseCharCount: 250,
+        firstCharWasBrace: false,
+        balancedJsonObjectFound: true,
+        retryUsed: true,
+        simplifiedFallbackUsed: true
+      },
       payloadStats: stats,
       provider: { name: 'anthropic-messages' },
       durationMs: 123,
@@ -419,11 +516,21 @@ test('audit invocation doc stores metadata only', () => {
   assert.equal(doc.chapter, 5)
   assert.deepEqual(doc.provider, { name: 'anthropic-messages' })
   assert.deepEqual(doc.payloadStats, stats)
+  assert.deepEqual(doc.validationDiagnostics, {
+    category: null,
+    missingTopLevelFields: ['coachingPriorities'],
+    responseCharCount: 250,
+    firstCharWasBrace: false,
+    balancedJsonObjectFound: true,
+    retryUsed: true,
+    simplifiedFallbackUsed: true
+  })
 
   const serialized = JSON.stringify(doc)
   assert.equal(serialized.includes('House Phoenix promises a bold rebirth'), false)
   assert.equal(serialized.includes('deterministicSummary'), false)
-  assert.equal(serialized.includes('coachingPriorities'), false)
+  assert.equal(serialized.includes('contentExcerpt'), false)
+  assert.equal(serialized.includes('raw provider text'), false)
   assert.equal(serialized.includes('idToken'), false)
   assert.equal(serialized.includes('apiKey'), false)
 })

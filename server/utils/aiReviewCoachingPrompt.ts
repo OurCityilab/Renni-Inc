@@ -74,6 +74,38 @@ OUTPUT FORMAT
 - safetyReminder MUST be exactly: "${AI_REVIEW_COACHING_SAFETY_REMINDER}"
 `.trim()
 
+const SIMPLIFIED_SAFETY_RULES = `
+You are an AI coaching assistant for the Renni Inc. Brand and
+Operations Playbook leadership team.
+
+CONTRACT (do NOT relax)
+- The deterministic JSON payload the user sends is the ONLY source
+  of truth. Do not invent deliverables, sections, evidence, owners,
+  numbers, dates, or text that is not in the payload.
+- You do not approve work. You do not grade work. Approval always
+  belongs to a human reviewer.
+- You are coaching leaders about WORK STATE. Do not judge students
+  or describe character, effort, intent, capability, or worth.
+- Never claim authorship. If an exact actor is not present in the
+  payload, use "Unknown owner" or attribution-limited language.
+- Owners must be an email that appears in the payload or the literal
+  string "Unknown owner".
+- You do NOT write the words "AI approved" or "AI grade" in your
+  output. You DO write "AI coaching only. Human leaders approve
+  work." verbatim in the safetyReminder field.
+- Echo relevant payload limitations instead of guessing.
+
+OUTPUT FORMAT
+- Return ONE JSON object. No prose outside the JSON. No Markdown
+  fences.
+- Your entire response must be one valid JSON object. The first
+  character must be { and the last character must be }. Do not use
+  Markdown fences. Do not include commentary before or after the
+  JSON.
+- Do not output undefined. Use empty arrays or null where applicable.
+- safetyReminder MUST be exactly: "${AI_REVIEW_COACHING_SAFETY_REMINDER}"
+`.trim()
+
 const COMPANY_FOCUS = `
 COMPANY SCOPE FOCUS
 - Audience: Instructor/Admin, Co-CEOs, COO.
@@ -194,6 +226,22 @@ AiReviewCoachingOutput SHAPE (TypeScript)
 }
 `.trim()
 
+const SIMPLIFIED_RESPONSE_SCHEMA_DOCUMENTATION = `
+SIMPLIFIED RECOVERY OUTPUT SHAPE (TypeScript)
+
+{
+  executiveSummary: string,
+  coachingPriorities: string[],
+  missingEvidence: string[],
+  recommendedNextActions: string[],
+  suggestedTalkingPoints: string[],
+  limitations: string[],
+  safetyReminder: "AI coaching only. Human leaders approve work."
+}
+
+Keep every string short, concrete, and based only on payload facts.
+`.trim()
+
 /** Build the system prompt for a given report type. The shared safety
  *  rules are first, then the scope-specific focus, then the response
  *  schema. Splitting the sections this way makes the rules easy to
@@ -205,6 +253,17 @@ export function buildAiReviewCoachingSystemPrompt(
     SHARED_SAFETY_RULES,
     focusForReportType(reportType),
     RESPONSE_SCHEMA_DOCUMENTATION
+  ].join('\n\n')
+}
+
+export function buildAiReviewCoachingSimplifiedSystemPrompt(
+  reportType: AiReviewReportType
+): string {
+  return [
+    SIMPLIFIED_SAFETY_RULES,
+    focusForReportType(reportType),
+    'RECOVERY MODE: The full nested schema failed validation. Return the simplified shape only.',
+    SIMPLIFIED_RESPONSE_SCHEMA_DOCUMENTATION
   ].join('\n\n')
 }
 
@@ -236,6 +295,23 @@ export function buildAiReviewCoachingJsonRepairUserMessage(
     'The first character must be { and the last character must be }.',
     'Do not use Markdown fences. Do not include prose, explanations, or commentary outside JSON.',
     'Do not output undefined. Use empty arrays or null where applicable.',
+    '',
+    'PAYLOAD START',
+    JSON.stringify(payload),
+    'PAYLOAD END'
+  ].join('\n')
+}
+
+export function buildAiReviewCoachingSimplifiedUserMessage(
+  payload: AiReviewReportPayload
+): string {
+  return [
+    'The prior response did not match the required coaching format.',
+    'Create a shorter coaching response using the simplified schema from the system prompt.',
+    'Return one valid JSON object only. The first character must be { and the last character must be }.',
+    'Do not use Markdown fences. Do not include prose, explanations, or commentary outside JSON.',
+    'Do not output undefined. Use empty arrays or null where applicable.',
+    'Use the exact safetyReminder literal.',
     '',
     'PAYLOAD START',
     JSON.stringify(payload),

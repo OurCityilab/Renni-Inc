@@ -268,26 +268,44 @@ function refreshMetrics() {
             <div class="rounded border border-neutral-200 bg-neutral-50 p-2">
               <dt class="text-neutral-500">Calls</dt>
               <dd class="font-semibold">{{ coachingMetrics.metrics.value.totalToday }}</dd>
+              <p class="mt-1 text-[10px] leading-tight text-neutral-500">
+                Total coaching attempts today.
+              </p>
             </div>
             <div class="rounded border border-neutral-200 bg-neutral-50 p-2">
               <dt class="text-neutral-500">Success</dt>
               <dd class="font-semibold">{{ coachingMetrics.metrics.value.successCount }}</dd>
+              <p class="mt-1 text-[10px] leading-tight text-neutral-500">
+                Validated coaching outputs.
+              </p>
             </div>
             <div class="rounded border border-neutral-200 bg-neutral-50 p-2">
               <dt class="text-neutral-500">Disabled</dt>
               <dd class="font-semibold">{{ coachingMetrics.metrics.value.disabledCount }}</dd>
+              <p class="mt-1 text-[10px] leading-tight text-neutral-500">
+                Blocked by config.
+              </p>
             </div>
             <div class="rounded border border-neutral-200 bg-neutral-50 p-2">
               <dt class="text-neutral-500">Forbidden</dt>
               <dd class="font-semibold">{{ coachingMetrics.metrics.value.forbiddenCount }}</dd>
+              <p class="mt-1 text-[10px] leading-tight text-neutral-500">
+                Blocked by permissions.
+              </p>
             </div>
             <div class="rounded border border-neutral-200 bg-neutral-50 p-2">
               <dt class="text-neutral-500">Validation</dt>
               <dd class="font-semibold">{{ coachingMetrics.metrics.value.validationFailureCount }}</dd>
+              <p class="mt-1 text-[10px] leading-tight text-neutral-500">
+                Provider responded but output failed format/schema validation.
+              </p>
             </div>
             <div class="rounded border border-neutral-200 bg-neutral-50 p-2">
               <dt class="text-neutral-500">Safety</dt>
               <dd class="font-semibold">{{ coachingMetrics.metrics.value.safetyFailureCount }}</dd>
+              <p class="mt-1 text-[10px] leading-tight text-neutral-500">
+                Provider output was blocked by safety rules.
+              </p>
             </div>
           </dl>
         </section>

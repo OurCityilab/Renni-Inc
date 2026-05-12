@@ -21,6 +21,7 @@
 // effects.
 
 import { strict as assert } from 'node:assert'
+import { readFileSync } from 'node:fs'
 import { isRef } from 'vue'
 import {
   AI_REVIEW_COACHING_SAFETY_REMINDER,
@@ -265,10 +266,24 @@ test('safe fallback renders as copyable coaching output', () => {
   )
   assert.match(block, /^# Company AI Leadership Coaching/m)
   assert.match(block, /Executive summary/)
+  assert.match(block, /provider responded/)
+  assert.match(block, /required coaching format/)
   assert.match(block, /Limitations/)
   assert.match(block, /not valid JSON after retry/)
+  assert.match(block, /Try again/)
   assert.ok(block.includes(AI_REVIEW_COACHING_SAFETY_REMINDER))
   assertNoUnsafePhrases(block)
+})
+
+test('metrics card copy explains validation and safety counts', () => {
+  const source = readFileSync('app/pages/c-suite/review.vue', 'utf8')
+  assert.match(
+    source,
+    /Provider responded but output failed format\/schema validation/
+  )
+  assert.match(source, /Provider output was blocked by safety rules/)
+  assert.match(source, /Total coaching attempts today/)
+  assert.match(source, /Validated coaching outputs/)
 })
 
 test('copy block never includes raw payload JSON', () => {

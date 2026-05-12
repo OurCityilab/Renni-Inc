@@ -45,6 +45,19 @@ const BANNED_PHRASES: readonly string[] = [
   'incapable'
 ] as const
 
+export const AI_REVIEW_COACHING_TOP_LEVEL_FIELDS: readonly string[] = [
+  'executiveSummary',
+  'coachingPriorities',
+  'strongestAreas',
+  'weakestAreas',
+  'missingEvidence',
+  'escalationItems',
+  'suggestedTalkingPoints',
+  'recommendedNextActions',
+  'limitations',
+  'safetyReminder'
+] as const
+
 function isStr(v: unknown): v is string {
   return typeof v === 'string'
 }
@@ -312,6 +325,125 @@ function validateNextAction(raw: unknown, path: string) {
   }
 }
 
+export function missingTopLevelCoachingFields(raw: unknown): string[] {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
+    return [...AI_REVIEW_COACHING_TOP_LEVEL_FIELDS]
+  }
+  const obj = raw as Record<string, unknown>
+  return AI_REVIEW_COACHING_TOP_LEVEL_FIELDS.filter((key) => !(key in obj))
+}
+
+export interface SimplifiedAiReviewCoachingOutput {
+  executiveSummary: string
+  coachingPriorities: string[]
+  missingEvidence: string[]
+  recommendedNextActions: string[]
+  suggestedTalkingPoints: string[]
+  limitations: string[]
+  safetyReminder: typeof AI_REVIEW_COACHING_SAFETY_REMINDER
+}
+
+function requireSimplifiedField(
+  obj: Record<string, unknown>,
+  key: keyof SimplifiedAiReviewCoachingOutput
+): unknown {
+  if (!(key in obj)) {
+    throw new CoachingValidationError(
+      `Missing simplified field "${key}"`,
+      'shape',
+      key
+    )
+  }
+  return obj[key]
+}
+
+export function validateSimplifiedCoachingOutput(
+  raw: unknown
+): SimplifiedAiReviewCoachingOutput {
+  const root = asObject(raw, '(root)')
+  const out: SimplifiedAiReviewCoachingOutput = {
+    executiveSummary: asString(
+      requireSimplifiedField(root, 'executiveSummary'),
+      'executiveSummary'
+    ),
+    coachingPriorities: asStringArray(
+      requireSimplifiedField(root, 'coachingPriorities'),
+      'coachingPriorities'
+    ),
+    missingEvidence: asStringArray(
+      requireSimplifiedField(root, 'missingEvidence'),
+      'missingEvidence'
+    ),
+    recommendedNextActions: asStringArray(
+      requireSimplifiedField(root, 'recommendedNextActions'),
+      'recommendedNextActions'
+    ),
+    suggestedTalkingPoints: asStringArray(
+      requireSimplifiedField(root, 'suggestedTalkingPoints'),
+      'suggestedTalkingPoints'
+    ),
+    limitations: asStringArray(
+      requireSimplifiedField(root, 'limitations'),
+      'limitations'
+    ),
+    safetyReminder: asString(
+      requireSimplifiedField(root, 'safetyReminder'),
+      'safetyReminder'
+    ) as typeof AI_REVIEW_COACHING_SAFETY_REMINDER
+  }
+  if (out.safetyReminder !== AI_REVIEW_COACHING_SAFETY_REMINDER) {
+    throw new CoachingValidationError(
+      'safetyReminder does not match the required literal',
+      'shape',
+      'safetyReminder'
+    )
+  }
+  return out
+}
+
+const SIMPLIFIED_EVIDENCE_FALLBACK =
+  'See deterministic report counts and limitations.'
+
+export function convertSimplifiedCoachingToFull(
+  simplified: SimplifiedAiReviewCoachingOutput
+): AiReviewCoachingOutput {
+  return {
+    executiveSummary: simplified.executiveSummary,
+    coachingPriorities: simplified.coachingPriorities.map((issue) => ({
+      issue,
+      evidenceFromPayload: SIMPLIFIED_EVIDENCE_FALLBACK,
+      whyItMatters:
+        'This item affects leadership readiness and should be checked against the deterministic report.',
+      coachingMove:
+        'Use the deterministic report to confirm the gap, then coach the owner on the next concrete revision.',
+      owner: 'Unknown owner',
+      urgency: 'medium',
+      definitionOfDone:
+        'A human leader verifies the item is addressed in the underlying work and deterministic report.'
+    })),
+    strongestAreas: [],
+    weakestAreas: [],
+    missingEvidence: simplified.missingEvidence.map((issue) => ({
+      sectionOrDeliverable: 'Evidence gap',
+      issue,
+      neededEvidence:
+        'Add a source, link, assumption note, or structured evidence entry that supports the section claim.',
+      owner: 'Unknown owner'
+    })),
+    escalationItems: [],
+    suggestedTalkingPoints: simplified.suggestedTalkingPoints,
+    recommendedNextActions: simplified.recommendedNextActions.map((action) => ({
+      action,
+      owner: 'Unknown owner',
+      urgency: 'medium',
+      definitionOfDone:
+        'A human leader confirms the action is complete using the deterministic report and current work state.'
+    })),
+    limitations: simplified.limitations,
+    safetyReminder: simplified.safetyReminder
+  }
+}
+
 /** Validate a parsed JSON object against the AiReviewCoachingOutput
  *  shape. Throws CoachingValidationError on first failure. */
 export function validateCoachingOutput(
@@ -403,7 +535,7 @@ export function buildSafeFallback(
 ): AiReviewCoachingOutput {
   return {
     executiveSummary:
-      'AI coaching is unavailable for this request. The deterministic report above is unaffected — review the work-state counts and limitations to plan your next coaching moves.',
+      'The AI provider responded, but the response did not match the required coaching format. The deterministic report above is still valid.',
     coachingPriorities: [],
     strongestAreas: [],
     weakestAreas: [],
@@ -412,8 +544,8 @@ export function buildSafeFallback(
     suggestedTalkingPoints: [],
     recommendedNextActions: [],
     limitations: [
-      'AI coaching could not be generated for this request.',
-      detail || 'Try again later. The deterministic report remains the source of truth.'
+      'Try again, or use the deterministic work-state report for today\'s coaching conversation.',
+      detail || 'The deterministic report remains the source of truth.'
     ],
     safetyReminder: AI_REVIEW_COACHING_SAFETY_REMINDER
   }

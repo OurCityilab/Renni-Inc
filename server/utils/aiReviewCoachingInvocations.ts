@@ -43,12 +43,29 @@ export type AiReviewCoachingValidationOutcome =
   | 'failed_parse'
   | 'failed_shape'
   | 'failed_safety'
+  | 'failed_personal_judgment'
   | 'not_reached'
 
 export type AiReviewCoachingSafetyScanOutcome =
   | 'passed'
   | 'failed'
   | 'not_reached'
+
+export type AiReviewCoachingValidationFailureCategory =
+  | 'failed_parse'
+  | 'failed_shape'
+  | 'failed_safety'
+  | 'failed_personal_judgment'
+
+export interface AiReviewCoachingValidationDiagnostics {
+  category: AiReviewCoachingValidationFailureCategory | null
+  missingTopLevelFields?: string[]
+  responseCharCount?: number | null
+  firstCharWasBrace?: boolean | null
+  balancedJsonObjectFound?: boolean | null
+  retryUsed?: boolean
+  simplifiedFallbackUsed?: boolean
+}
 
 export interface AiReviewCoachingInvocationInput {
   uid: string | null
@@ -59,6 +76,7 @@ export interface AiReviewCoachingInvocationInput {
   outcome: AiReviewCoachingOutcome
   validationOutcome: AiReviewCoachingValidationOutcome
   safetyScanOutcome: AiReviewCoachingSafetyScanOutcome
+  validationDiagnostics?: AiReviewCoachingValidationDiagnostics | null
   payloadStats: {
     deliverableCount: number
     sectionCount: number
@@ -77,6 +95,35 @@ function coerceString(v: unknown): string | null {
   if (typeof v !== 'string') return null
   const t = v.trim()
   return t.length > 0 ? t : null
+}
+
+function coerceDiagnostics(
+  input: AiReviewCoachingInvocationInput['validationDiagnostics']
+): AiReviewCoachingValidationDiagnostics | null {
+  if (!input) return null
+  return {
+    category: input.category ?? null,
+    missingTopLevelFields: Array.isArray(input.missingTopLevelFields)
+      ? input.missingTopLevelFields
+          .filter((field): field is string => typeof field === 'string')
+          .slice(0, 12)
+      : [],
+    responseCharCount:
+      typeof input.responseCharCount === 'number' &&
+      Number.isFinite(input.responseCharCount)
+        ? input.responseCharCount
+        : null,
+    firstCharWasBrace:
+      typeof input.firstCharWasBrace === 'boolean'
+        ? input.firstCharWasBrace
+        : null,
+    balancedJsonObjectFound:
+      typeof input.balancedJsonObjectFound === 'boolean'
+        ? input.balancedJsonObjectFound
+        : null,
+    retryUsed: input.retryUsed === true,
+    simplifiedFallbackUsed: input.simplifiedFallbackUsed === true
+  }
 }
 
 /** Compact payload-stats snapshot used at every outcome branch. Pure;
@@ -123,6 +170,7 @@ export function buildInvocationDoc(
     outcome: input.outcome,
     validationOutcome: input.validationOutcome,
     safetyScanOutcome: input.safetyScanOutcome,
+    validationDiagnostics: coerceDiagnostics(input.validationDiagnostics),
     payloadStats: input.payloadStats,
     provider: input.provider,
     durationMs: input.durationMs,

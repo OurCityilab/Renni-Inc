@@ -19,7 +19,11 @@ test('metrics aggregate metadata only', () => {
       reportType: 'department',
       outcome: 'ai_safety_check_failed',
       durationMs: 300,
-      payloadStats: { payloadBytes: 3000 }
+      payloadStats: { payloadBytes: 3000 },
+      validationDiagnostics: {
+        category: 'failed_safety',
+        simplifiedFallbackUsed: false
+      }
     },
     {
       createdAt: '2026-05-12T12:03:00.000Z',
@@ -27,20 +31,36 @@ test('metrics aggregate metadata only', () => {
       outcome: 'ai_forbidden',
       durationMs: null,
       payloadStats: null
+    },
+    {
+      createdAt: '2026-05-12T12:04:00.000Z',
+      reportType: 'company',
+      outcome: 'ai_validation_failed',
+      durationMs: 500,
+      payloadStats: { payloadBytes: 5000 },
+      validationDiagnostics: {
+        category: 'failed_shape',
+        simplifiedFallbackUsed: true
+      }
     }
   ])
-  assert.equal(metrics.totalToday, 3)
-  assert.equal(metrics.byReportType.company, 1)
+  assert.equal(metrics.totalToday, 4)
+  assert.equal(metrics.byReportType.company, 2)
   assert.equal(metrics.byReportType.department, 1)
   assert.equal(metrics.byReportType.chapter, 1)
   assert.equal(metrics.successCount, 1)
   assert.equal(metrics.forbiddenCount, 1)
+  assert.equal(metrics.validationFailureCount, 1)
   assert.equal(metrics.safetyFailureCount, 1)
-  assert.equal(metrics.averagePayloadBytes, 2000)
-  assert.equal(metrics.averageDurationMs, 200)
+  assert.equal(metrics.validationFailureCategories.failed_shape, 1)
+  assert.equal(metrics.validationFailureCategories.failed_safety, 1)
+  assert.equal(metrics.simplifiedFallbackCount, 1)
+  assert.equal(metrics.averagePayloadBytes, 3000)
+  assert.equal(metrics.averageDurationMs, 300)
   const serialized = JSON.stringify(metrics)
   assert.equal(serialized.includes('contentExcerpt'), false)
   assert.equal(serialized.includes('executiveSummary'), false)
+  assert.equal(serialized.includes('raw provider text'), false)
 })
 
 let failed = 0

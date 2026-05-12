@@ -41,15 +41,22 @@ import {
 import { scanForPersonalJudgment } from '~~/server/utils/executiveAdvisor/aiSafetyScan'
 import {
   buildAiReviewCoachingJsonRepairUserMessage,
+  buildAiReviewCoachingSimplifiedSystemPrompt,
+  buildAiReviewCoachingSimplifiedUserMessage,
   buildAiReviewCoachingSystemPrompt,
   buildAiReviewCoachingUserMessage
 } from '~~/server/utils/aiReviewCoachingPrompt'
 import {
   extractAiReviewCoachingJson,
-  AiReviewCoachingJsonParseError
+  AiReviewCoachingJsonParseError,
+  summarizeAiReviewCoachingJsonDiagnostics,
+  type AiReviewCoachingJsonDiagnostics
 } from '~~/server/utils/aiReviewCoachingJson'
 import {
   buildSafeFallback,
+  convertSimplifiedCoachingToFull,
+  missingTopLevelCoachingFields,
+  validateSimplifiedCoachingOutput,
   validateCoachingOutput,
   CoachingValidationError
 } from '~~/server/utils/aiReviewCoachingValidator'
@@ -257,6 +264,7 @@ export default defineEventHandler(async (event) => {
     outcome: 'ai_provider_error',
     validationOutcome: 'not_reached',
     safetyScanOutcome: 'not_reached',
+    validationDiagnostics: null,
     payloadStats: null,
     provider: { name: 'anthropic-messages' },
     durationMs: null,
@@ -324,23 +332,31 @@ export default defineEventHandler(async (event) => {
     const userMessage = buildAiReviewCoachingUserMessage(payload)
 
     // 8. Provider call.
-    async function callProvider(userPrompt: string): Promise<string> {
+    async function callProviderWithSystem(
+      nextSystemPrompt: string,
+      userPrompt: string,
+      maxOutputTokens = 1800
+    ): Promise<string> {
       try {
         return await callAnthropicMessages({
           apiKey,
           baseUrl,
           model,
-          systemPrompt,
+          systemPrompt: nextSystemPrompt,
           userPrompt,
-          maxOutputTokens: 1800
+          maxOutputTokens
         })
       } catch (e) {
         if (e instanceof ProviderError) providerErrorFn(e.message)
         providerErrorFn('Provider call failed.')
       }
     }
+    const callProvider = (userPrompt: string) =>
+      callProviderWithSystem(systemPrompt, userPrompt)
 
     const providerText = await callProvider(userMessage)
+    let responseDiagnostics: AiReviewCoachingJsonDiagnostics =
+      summarizeAiReviewCoachingJsonDiagnostics(providerText, false)
 
     // 9. JSON extraction. Tolerates common model drift
     //    (markdown fences, surrounding prose, first balanced JSON
@@ -356,11 +372,21 @@ export default defineEventHandler(async (event) => {
       const repairText = await callProvider(
         buildAiReviewCoachingJsonRepairUserMessage(payload)
       )
+      responseDiagnostics = summarizeAiReviewCoachingJsonDiagnostics(
+        repairText,
+        true
+      )
       try {
         raw2 = extractAiReviewCoachingJson(repairText)
       } catch (repairErr) {
         if (!(repairErr instanceof AiReviewCoachingJsonParseError)) throw repairErr
         audit.validationOutcome = 'failed_parse'
+        audit.validationDiagnostics = {
+          ...responseDiagnostics,
+          category: 'failed_parse',
+          missingTopLevelFields: [],
+          simplifiedFallbackUsed: false
+        }
         audit.outcome = 'ai_validation_failed'
         audit.errorCode = 'ai_validation_failed'
         return buildSafeFallback('AI response was not valid JSON after retry.')
@@ -377,17 +403,112 @@ export default defineEventHandler(async (event) => {
       if (e instanceof CoachingValidationError) {
         if (e.reason === 'safety') {
           audit.validationOutcome = 'failed_safety'
+          audit.validationDiagnostics = {
+            ...responseDiagnostics,
+            category: 'failed_safety',
+            missingTopLevelFields: [],
+            simplifiedFallbackUsed: false
+          }
           safetyCheckFailed('AI response failed safety validation.')
         }
-        // Shape failures fall back to a safe canned response rather
-        // than erroring. The deterministic report on the page is
-        // unaffected. Record the shape failure on the audit log.
-        audit.validationOutcome = 'failed_shape'
-        audit.outcome = 'ai_validation_failed'
-        audit.errorCode = 'ai_validation_failed'
-        return buildSafeFallback('AI response shape was invalid.')
+        const missingTopLevelFields = missingTopLevelCoachingFields(raw2)
+        audit.validationDiagnostics = {
+          ...responseDiagnostics,
+          category: 'failed_shape',
+          missingTopLevelFields,
+          simplifiedFallbackUsed: false
+        }
+        // Shape failures often mean the provider produced useful
+        // content in the wrong nested shape. Make one final smaller
+        // schema request, then convert it into the full validated
+        // output shape. Raw provider text is never logged or stored.
+        const simplifiedText = await callProviderWithSystem(
+          buildAiReviewCoachingSimplifiedSystemPrompt(reportType),
+          buildAiReviewCoachingSimplifiedUserMessage(payload),
+          1200
+        )
+        const simplifiedDiagnostics = summarizeAiReviewCoachingJsonDiagnostics(
+          simplifiedText,
+          true
+        )
+        let simplifiedRaw: unknown
+        try {
+          simplifiedRaw = extractAiReviewCoachingJson(simplifiedText)
+        } catch (simplifiedParseErr) {
+          if (!(simplifiedParseErr instanceof AiReviewCoachingJsonParseError)) {
+            throw simplifiedParseErr
+          }
+          audit.validationOutcome = 'failed_parse'
+          audit.validationDiagnostics = {
+            ...simplifiedDiagnostics,
+            category: 'failed_parse',
+            missingTopLevelFields,
+            simplifiedFallbackUsed: true
+          }
+          audit.outcome = 'ai_validation_failed'
+          audit.errorCode = 'ai_validation_failed'
+          return buildSafeFallback(
+            'AI provider response failed required coaching format after simplified retry.'
+          )
+        }
+        try {
+          const simplified = validateSimplifiedCoachingOutput(simplifiedRaw)
+          validated = validateCoachingOutput(
+            convertSimplifiedCoachingToFull(simplified)
+          )
+          audit.validationOutcome = 'passed'
+          audit.validationDiagnostics = {
+            ...simplifiedDiagnostics,
+            category: null,
+            missingTopLevelFields,
+            simplifiedFallbackUsed: true
+          }
+        } catch (simplifiedErr) {
+          if (simplifiedErr instanceof CoachingValidationError) {
+            if (simplifiedErr.reason === 'safety') {
+              audit.validationOutcome = 'failed_safety'
+              audit.validationDiagnostics = {
+                ...simplifiedDiagnostics,
+                category: 'failed_safety',
+                missingTopLevelFields,
+                simplifiedFallbackUsed: true
+              }
+              safetyCheckFailed('AI response failed safety validation.')
+            }
+            audit.validationOutcome = 'failed_shape'
+            audit.validationDiagnostics = {
+              ...simplifiedDiagnostics,
+              category: 'failed_shape',
+              missingTopLevelFields,
+              simplifiedFallbackUsed: true
+            }
+            audit.outcome = 'ai_validation_failed'
+            audit.errorCode = 'ai_validation_failed'
+            return buildSafeFallback(
+              'AI provider response failed required coaching format after simplified retry.'
+            )
+          }
+          audit.validationOutcome = 'failed_shape'
+          audit.validationDiagnostics = {
+            ...simplifiedDiagnostics,
+            category: 'failed_shape',
+            missingTopLevelFields,
+            simplifiedFallbackUsed: true
+          }
+          audit.outcome = 'ai_validation_failed'
+          audit.errorCode = 'ai_validation_failed'
+          return buildSafeFallback(
+            'AI provider response failed required coaching format after simplified retry.'
+          )
+        }
       }
       audit.validationOutcome = 'failed_shape'
+      audit.validationDiagnostics = {
+        ...responseDiagnostics,
+        category: 'failed_shape',
+        missingTopLevelFields: missingTopLevelCoachingFields(raw2),
+        simplifiedFallbackUsed: false
+      }
       audit.outcome = 'ai_validation_failed'
       audit.errorCode = 'ai_validation_failed'
       return buildSafeFallback('AI response could not be validated.')
@@ -398,6 +519,11 @@ export default defineEventHandler(async (event) => {
     const personalScan = scanForPersonalJudgment(validated)
     if (!personalScan.ok) {
       audit.safetyScanOutcome = 'failed'
+      audit.validationOutcome = 'failed_personal_judgment'
+      audit.validationDiagnostics = {
+        ...(audit.validationDiagnostics ?? responseDiagnostics),
+        category: 'failed_personal_judgment'
+      }
       // eslint-disable-next-line no-console
       console.warn(
         'ai_review_coaching: personal-judgment scan hit',

@@ -2,7 +2,10 @@
 // The endpoint reads server-only audit docs, then exposes aggregate
 // counts only. No payloads, outputs, raw prompts, or user activity feed.
 
-import type { AiReviewCoachingOutcome } from '~~/server/utils/aiReviewCoachingInvocations'
+import type {
+  AiReviewCoachingOutcome,
+  AiReviewCoachingValidationFailureCategory
+} from '~~/server/utils/aiReviewCoachingInvocations'
 import type { AiReviewReportType } from '~~/app/types/aiReviewReports'
 
 export interface AiReviewCoachingMetricDoc {
@@ -12,6 +15,10 @@ export interface AiReviewCoachingMetricDoc {
   durationMs?: number | null
   payloadStats?: {
     payloadBytes?: number | null
+  } | null
+  validationDiagnostics?: {
+    category?: AiReviewCoachingValidationFailureCategory | null
+    simplifiedFallbackUsed?: boolean | null
   } | null
 }
 
@@ -23,6 +30,8 @@ export interface AiReviewCoachingMetrics {
   disabledCount: number
   forbiddenCount: number
   validationFailureCount: number
+  validationFailureCategories: Record<AiReviewCoachingValidationFailureCategory, number>
+  simplifiedFallbackCount: number
   safetyFailureCount: number
   latestInvocationAt: string | null
   averagePayloadBytes: number | null
@@ -38,6 +47,13 @@ export function aggregateAiReviewCoachingMetrics(
     chapter: 0
   }
   const outcomeCounts: Record<string, number> = {}
+  const validationFailureCategories: Record<AiReviewCoachingValidationFailureCategory, number> = {
+    failed_parse: 0,
+    failed_shape: 0,
+    failed_safety: 0,
+    failed_personal_judgment: 0
+  }
+  let simplifiedFallbackCount = 0
   let latestInvocationAt: string | null = null
   let payloadByteTotal = 0
   let payloadByteCount = 0
@@ -50,6 +66,18 @@ export function aggregateAiReviewCoachingMetrics(
     }
     const outcome = doc.outcome ?? 'unknown'
     outcomeCounts[outcome] = (outcomeCounts[outcome] ?? 0) + 1
+    const category = doc.validationDiagnostics?.category
+    if (
+      category === 'failed_parse' ||
+      category === 'failed_shape' ||
+      category === 'failed_safety' ||
+      category === 'failed_personal_judgment'
+    ) {
+      validationFailureCategories[category] += 1
+    }
+    if (doc.validationDiagnostics?.simplifiedFallbackUsed === true) {
+      simplifiedFallbackCount += 1
+    }
     if (doc.createdAt && (!latestInvocationAt || doc.createdAt > latestInvocationAt)) {
       latestInvocationAt = doc.createdAt
     }
@@ -72,6 +100,8 @@ export function aggregateAiReviewCoachingMetrics(
     disabledCount: outcomeCounts.ai_disabled ?? 0,
     forbiddenCount: outcomeCounts.ai_forbidden ?? 0,
     validationFailureCount: outcomeCounts.ai_validation_failed ?? 0,
+    validationFailureCategories,
+    simplifiedFallbackCount,
     safetyFailureCount: outcomeCounts.ai_safety_check_failed ?? 0,
     latestInvocationAt,
     averagePayloadBytes:
