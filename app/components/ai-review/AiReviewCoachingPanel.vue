@@ -8,13 +8,14 @@
 //   - The panel labels every output as coaching, never approval.
 //   - The output stays in local state — never persisted, never
 //     mutates the payload.
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import type {
   AiReviewCoachingUrgency,
   AiReviewReportPayload
 } from '~/types/aiReviewReports'
 import { AI_REVIEW_COACHING_SAFETY_REMINDER } from '~/types/aiReviewReports'
 import { useAiReviewCoaching } from '~/composables/useAiReviewCoaching'
+import { buildAiReviewCoachingCopyBlock } from '~/utils/aiReviewCoachingCopyBlock'
 
 const props = defineProps<{
   payload: AiReviewReportPayload
@@ -48,6 +49,31 @@ const URGENCY_TONE: Record<AiReviewCoachingUrgency, string> = {
 const safetyReminder = AI_REVIEW_COACHING_SAFETY_REMINDER
 
 const errorIsDisabled = computed(() => errorCode.value === 'ai_disabled')
+
+// --- Copy coaching summary ---
+const copyState = ref<'idle' | 'copied' | 'failed'>('idle')
+async function copyCoachingSummary() {
+  if (!coaching.value) return
+  const block = buildAiReviewCoachingCopyBlock(coaching.value, props.payload, {
+    generatedAt: new Date().toISOString()
+  })
+  if (typeof navigator === 'undefined' || !navigator.clipboard) {
+    copyState.value = 'failed'
+    setTimeout(() => {
+      copyState.value = 'idle'
+    }, 2500)
+    return
+  }
+  try {
+    await navigator.clipboard.writeText(block)
+    copyState.value = 'copied'
+  } catch {
+    copyState.value = 'failed'
+  }
+  setTimeout(() => {
+    copyState.value = 'idle'
+  }, 2500)
+}
 </script>
 
 <template>
@@ -72,6 +98,20 @@ const errorIsDisabled = computed(() => errorCode.value === 'ai_disabled')
           @click="onClickGenerate()"
         >
           {{ loading ? 'Generating…' : coaching ? 'Regenerate coaching' : 'Generate AI Coaching' }}
+        </button>
+        <button
+          v-if="coaching"
+          type="button"
+          class="rounded border border-phoenix-300 bg-white px-3 py-1 text-phoenix-800 hover:bg-phoenix-50"
+          @click="copyCoachingSummary()"
+        >
+          {{
+            copyState === 'copied'
+              ? 'Copied ✓'
+              : copyState === 'failed'
+                ? 'Copy failed'
+                : 'Copy coaching summary'
+          }}
         </button>
         <button
           v-if="coaching"

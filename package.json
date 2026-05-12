@@ -11,7 +11,7 @@
     "generate": "nuxt generate",
     "postinstall": "nuxt prepare",
     "typecheck": "nuxt typecheck",
-    "check:release": "npm run typecheck && npm run test:classifier && npm run test:approval && npm run test:progress && npm run test:preview && npm run test:export && npm run test:csv && npm run test:readiness && npm run test:aireview && npm run test:aireview-coaching && NITRO_PRESET=node-server npm run build",
+    "check:release": "npm run typecheck && npm run test:classifier && npm run test:approval && npm run test:progress && npm run test:preview && npm run test:export && npm run test:csv && npm run test:readiness && npm run test:aireview && npm run test:aireview-coaching && npm run test:aireview-coaching-panel && NITRO_PRESET=node-server npm run build",
     "seed": "tsx scripts/seed-all.ts",
     "seed:users": "tsx scripts/seed-users.ts",
     "seed:deliverables": "tsx scripts/seed-deliverables.ts",
@@ -36,6 +36,7 @@
     "test:readiness": "tsx app/__tests__/playbookReadiness.test.ts",
     "test:aireview": "tsx app/__tests__/aiReviewPayload.test.ts",
     "test:aireview-coaching": "tsx app/__tests__/aiReviewCoaching.test.ts",
+    "test:aireview-coaching-panel": "tsx app/__tests__/aiReviewCoachingPanel.test.ts",
     "backfill:tasks": "tsx scripts/backfill-task-alignment.ts",
     "sync:users": "tsx scripts/sync-users-from-roster.ts"
   },

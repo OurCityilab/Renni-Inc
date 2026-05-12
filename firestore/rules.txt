@@ -302,6 +302,20 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    // -------- aiReviewCoachingInvocations --------
+    // Server-side audit log for AI Leadership Coaching calls. Written
+    // exclusively by the /api/ai/review-coaching endpoint via the
+    // Firebase Admin SDK; clients have no read or write surface.
+    // Admin / instructor reads happen through the Firebase Console
+    // or future server-side admin tooling. The endpoint never
+    // writes the deterministic payload, the AI response body, the
+    // raw provider response, the Firebase ID token, full student
+    // section excerpts, or private profile data into this
+    // collection. See server/utils/aiReviewCoachingInvocations.ts.
+    match /aiReviewCoachingInvocations/{invocationId} {
+      allow read, write: if false;
+    }
+
     // -------- feedback --------
     match /feedback/{id} {
       allow read: if isSignedIn();

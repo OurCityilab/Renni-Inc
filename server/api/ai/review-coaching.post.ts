@@ -50,6 +50,12 @@ import {
   validateCoachingOutput,
   CoachingValidationError
 } from '~~/server/utils/aiReviewCoachingValidator'
+import {
+  recordAiReviewCoachingInvocation,
+  summarizePayloadStats,
+  type AiReviewCoachingInvocationInput,
+  type AiReviewCoachingOutcome
+} from '~~/server/utils/aiReviewCoachingInvocations'
 import type {
   AiReviewCoachingOutput,
   AiReviewReportPayload,
@@ -235,114 +241,173 @@ function parsePayload(raw: unknown): AiReviewReportPayload {
 // ---- Endpoint ----
 
 export default defineEventHandler(async (event) => {
-  // 1. Auth gate.
-  const idToken = readBearerToken(event)
-  let uid = ''
+  const startedAt = Date.now()
+  // Audit-log accumulator. Mutated as we step through the handler so
+  // the final write captures the precise outcome at whichever branch
+  // we exit on. The catch + finally below ensure we record on every
+  // exit path — success, fallback return, or thrown createError.
+  const audit: AiReviewCoachingInvocationInput = {
+    uid: null,
+    email: null,
+    role: null,
+    reportType: null,
+    scope: null,
+    outcome: 'ai_provider_error',
+    validationOutcome: 'not_reached',
+    safetyScanOutcome: 'not_reached',
+    payloadStats: null,
+    provider: { name: 'anthropic-messages' },
+    durationMs: null,
+    errorCode: null
+  }
+
   try {
-    const decoded = await adminAuth().verifyIdToken(idToken)
-    uid = decoded.uid
-  } catch {
-    unauthorized('Sign in again to use review coaching.')
-  }
-  if (!uid) unauthorized('Sign in again to use review coaching.')
-
-  // 2. Feature flag + provider key.
-  const config = useRuntimeConfig()
-  const enabled = config.aiReviewCoachingEnabled === true
-  const apiKey = (config.aiCritiqueApiKey as string | undefined) || ''
-  if (!enabled || !apiKey) disabled('AI review coaching is unavailable.')
-  const baseUrl =
-    (config.aiCritiqueBaseUrl as string | undefined) ||
-    'https://api.anthropic.com'
-  const model =
-    (config.aiCritiqueModel as string | undefined) ||
-    'claude-haiku-4-5-20251001'
-
-  // 3. Server-side role lookup. Members are rejected before any
-  //    provider call.
-  const user = await resolveUser(uid)
-  if (user.role === 'member') {
-    forbidden('Review coaching is available to leadership roles only.')
-  }
-
-  // 4. Per-user daily limit. Pre-flight rejection here does not
-  //    consume the budget; only successful provider calls do.
-  if (!withinDailyLimit(uid)) {
-    rateLimited(
-      `Daily AI call limit reached (${AI_DAILY_LIMIT}/day). Try again tomorrow.`
-    )
-  }
-
-  // 5. Body parsing + payload cap.
-  const raw = await readBody(event)
-  const payload = parsePayload(raw)
-
-  // 6. Scope-level permission check based on the payload contents.
-  if (!isAuthorizedForScope(user, payload)) {
-    forbidden('Your role cannot request coaching for this scope.')
-  }
-
-  // 7. Build prompts. The deterministic payload is the entire context.
-  const reportType: AiReviewReportType = payload.scope.reportType
-  const systemPrompt = buildAiReviewCoachingSystemPrompt(reportType)
-  const userMessage = buildAiReviewCoachingUserMessage(payload)
-
-  // 8. Provider call.
-  let providerText = ''
-  try {
-    providerText = await callAnthropicMessages({
-      apiKey,
-      baseUrl,
-      model,
-      systemPrompt,
-      userPrompt: userMessage,
-      maxOutputTokens: 1800
-    })
-  } catch (e) {
-    if (e instanceof ProviderError) providerErrorFn(e.message)
-    providerErrorFn('Provider call failed.')
-  }
-
-  // 9. JSON parse.
-  let raw2: unknown
-  try {
-    raw2 = parseModelJson(providerText)
-  } catch (e) {
-    if (e instanceof MalformedResponseError) invalidResponse(e.message)
-    invalidResponse('AI response was not valid JSON.')
-  }
-
-  // 10. Shape validation. Fall back gracefully on failure rather than
-  //     surfacing raw model text to the client.
-  let validated: AiReviewCoachingOutput
-  try {
-    validated = validateCoachingOutput(raw2)
-  } catch (e) {
-    if (e instanceof CoachingValidationError) {
-      if (e.reason === 'safety') {
-        safetyCheckFailed('AI response failed safety validation.')
-      }
-      // Shape failures fall back to a safe canned response rather than
-      // erroring. The deterministic report on the page is unaffected.
-      return buildSafeFallback('AI response shape was invalid.')
+    // 1. Auth gate.
+    const idToken = readBearerToken(event)
+    let uid = ''
+    try {
+      const decoded = await adminAuth().verifyIdToken(idToken)
+      uid = decoded.uid
+    } catch {
+      unauthorized('Sign in again to use review coaching.')
     }
-    return buildSafeFallback('AI response could not be validated.')
+    if (!uid) unauthorized('Sign in again to use review coaching.')
+    audit.uid = uid
+
+    // 2. Feature flag + provider key.
+    const config = useRuntimeConfig()
+    const enabled = config.aiReviewCoachingEnabled === true
+    const apiKey = (config.aiCritiqueApiKey as string | undefined) || ''
+    if (!enabled || !apiKey) disabled('AI review coaching is unavailable.')
+    const baseUrl =
+      (config.aiCritiqueBaseUrl as string | undefined) ||
+      'https://api.anthropic.com'
+    const model =
+      (config.aiCritiqueModel as string | undefined) ||
+      'claude-haiku-4-5-20251001'
+
+    // 3. Server-side role lookup. Members are rejected before any
+    //    provider call.
+    const user = await resolveUser(uid)
+    audit.email = user.email || null
+    audit.role = user.role
+    if (user.role === 'member') {
+      forbidden('Review coaching is available to leadership roles only.')
+    }
+
+    // 4. Per-user daily limit. Pre-flight rejection here does not
+    //    consume the budget; only successful provider calls do.
+    if (!withinDailyLimit(uid)) {
+      rateLimited(
+        `Daily AI call limit reached (${AI_DAILY_LIMIT}/day). Try again tomorrow.`
+      )
+    }
+
+    // 5. Body parsing + payload cap.
+    const raw = await readBody(event)
+    const payload = parsePayload(raw)
+    audit.reportType = payload.scope.reportType
+    audit.scope = payload.scope
+    const payloadBytes = JSON.stringify(payload).length
+    audit.payloadStats = summarizePayloadStats(payload, payloadBytes)
+
+    // 6. Scope-level permission check based on the payload contents.
+    if (!isAuthorizedForScope(user, payload)) {
+      forbidden('Your role cannot request coaching for this scope.')
+    }
+
+    // 7. Build prompts. The deterministic payload is the entire context.
+    const reportType: AiReviewReportType = payload.scope.reportType
+    const systemPrompt = buildAiReviewCoachingSystemPrompt(reportType)
+    const userMessage = buildAiReviewCoachingUserMessage(payload)
+
+    // 8. Provider call.
+    let providerText = ''
+    try {
+      providerText = await callAnthropicMessages({
+        apiKey,
+        baseUrl,
+        model,
+        systemPrompt,
+        userPrompt: userMessage,
+        maxOutputTokens: 1800
+      })
+    } catch (e) {
+      if (e instanceof ProviderError) providerErrorFn(e.message)
+      providerErrorFn('Provider call failed.')
+    }
+
+    // 9. JSON parse.
+    let raw2: unknown
+    try {
+      raw2 = parseModelJson(providerText)
+    } catch (e) {
+      if (e instanceof MalformedResponseError) invalidResponse(e.message)
+      invalidResponse('AI response was not valid JSON.')
+    }
+
+    // 10. Shape validation. Fall back gracefully on failure rather than
+    //     surfacing raw model text to the client.
+    let validated: AiReviewCoachingOutput
+    try {
+      validated = validateCoachingOutput(raw2)
+      audit.validationOutcome = 'passed'
+    } catch (e) {
+      if (e instanceof CoachingValidationError) {
+        if (e.reason === 'safety') {
+          audit.validationOutcome = 'failed_safety'
+          safetyCheckFailed('AI response failed safety validation.')
+        }
+        // Shape failures fall back to a safe canned response rather
+        // than erroring. The deterministic report on the page is
+        // unaffected. Record the shape failure on the audit log.
+        audit.validationOutcome = 'failed_shape'
+        audit.outcome = 'ai_validation_failed'
+        audit.errorCode = 'ai_validation_failed'
+        return buildSafeFallback('AI response shape was invalid.')
+      }
+      audit.validationOutcome = 'failed_shape'
+      audit.outcome = 'ai_validation_failed'
+      audit.errorCode = 'ai_validation_failed'
+      return buildSafeFallback('AI response could not be validated.')
+    }
+
+    // 11. Personal-judgment scan (executive advisor's shared list).
+    //     Hits → 422 + skip budget increment.
+    const personalScan = scanForPersonalJudgment(validated)
+    if (!personalScan.ok) {
+      audit.safetyScanOutcome = 'failed'
+      // eslint-disable-next-line no-console
+      console.warn(
+        'ai_review_coaching: personal-judgment scan hit',
+        personalScan.hits.map((h) => h.phrase)
+      )
+      safetyCheckFailed('AI response failed safety validation.')
+    }
+    audit.safetyScanOutcome = 'passed'
+
+    // 12. Successful call → consume daily budget.
+    recordSuccessfulCall(uid)
+    audit.outcome = 'success'
+
+    return validated
+  } catch (err) {
+    // h3 createError() exposes our envelope as err.data.code. Use that
+    // to label the audit outcome; default to ai_provider_error so a
+    // truly unexpected failure is still recorded.
+    const data = (err as { data?: { code?: ErrorCode } }).data
+    const code = data?.code ?? null
+    const auditCode: AiReviewCoachingOutcome | null =
+      code === 'ai_invalid_request' || code === 'ai_invalid_response'
+        ? 'ai_validation_failed'
+        : code
+    audit.outcome = auditCode ?? 'ai_provider_error'
+    audit.errorCode = auditCode
+    throw err
+  } finally {
+    audit.durationMs = Date.now() - startedAt
+    // Best-effort write. The helper swallows/logs write failures so
+    // the audit path never changes the endpoint result.
+    await recordAiReviewCoachingInvocation(audit)
   }
-
-  // 11. Personal-judgment scan (executive advisor's shared list).
-  //     Hits → 422 + skip budget increment.
-  const personalScan = scanForPersonalJudgment(validated)
-  if (!personalScan.ok) {
-    // eslint-disable-next-line no-console
-    console.warn(
-      'ai_review_coaching: personal-judgment scan hit',
-      personalScan.hits.map((h) => h.phrase)
-    )
-    safetyCheckFailed('AI response failed safety validation.')
-  }
-
-  // 12. Successful call → consume daily budget.
-  recordSuccessfulCall(uid)
-
-  return validated
 })

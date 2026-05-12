@@ -10,6 +10,10 @@ import {
   buildAiReviewCoachingUserMessage
 } from '../../server/utils/aiReviewCoachingPrompt'
 import {
+  buildInvocationDoc,
+  summarizePayloadStats
+} from '../../server/utils/aiReviewCoachingInvocations'
+import {
   CoachingValidationError,
   buildSafeFallback,
   scanBannedPhrases,
@@ -23,6 +27,13 @@ import type {
   AiReviewCoachingOutput,
   AiReviewReportPayload
 } from '../types/aiReviewReports'
+import { buildAiReviewCoachingCopyBlock } from '../utils/aiReviewCoachingCopyBlock'
+import {
+  allFixtures,
+  earlySemesterCompanyPayload,
+  midSemesterDepartmentPayload,
+  finalWeekChapterPayload
+} from './fixtures/aiReviewPayloads'
 
 interface Test {
   name: string
@@ -90,6 +101,32 @@ test('user message includes the deterministic payload as JSON', () => {
   assert.match(msg, /PAYLOAD END/)
   // Confirm the payload's deliverable id is present in the JSON body.
   assert.ok(msg.includes('d-1'))
+})
+
+test('fixture prompt builders create scope-specific guidance', () => {
+  const pairs: Array<[AiReviewReportPayload, RegExp]> = [
+    [earlySemesterCompanyPayload, /COMPANY SCOPE FOCUS/],
+    [midSemesterDepartmentPayload, /DEPARTMENT SCOPE FOCUS/],
+    [finalWeekChapterPayload, /CHAPTER SCOPE FOCUS/]
+  ]
+  for (const [payload, expected] of pairs) {
+    const prompt = buildAiReviewCoachingSystemPrompt(payload.scope.reportType)
+    assert.match(prompt, expected)
+    assert.match(prompt, /deterministic JSON payload/i)
+    assert.match(prompt, /do not approve/i)
+  }
+})
+
+test('fixture user messages include parseable deterministic payload JSON', () => {
+  for (const payload of allFixtures) {
+    const msg = buildAiReviewCoachingUserMessage(payload)
+    const match = /PAYLOAD START\n([\s\S]+)\nPAYLOAD END/.exec(msg)
+    assert.ok(match, 'message should wrap payload JSON')
+    const parsed = JSON.parse(match[1] ?? '') as AiReviewReportPayload
+    assert.equal(parsed.reportType, payload.reportType)
+    assert.equal(parsed.scope.reportType, payload.scope.reportType)
+    assert.equal(parsed.constraints.noApproval, true)
+  }
 })
 
 /* -------- validator -------- */
@@ -236,6 +273,79 @@ test('safe fallback emits valid shape with the exact safety reminder', () => {
   assert.equal(validated.safetyReminder, AI_REVIEW_COACHING_SAFETY_REMINDER)
   assert.equal(validated.coachingPriorities.length, 0)
   assert.ok(validated.limitations.length >= 1)
+})
+
+test('synthesized coaching output validates for each golden fixture', () => {
+  for (const payload of allFixtures) {
+    const output = makeValidOutput()
+    output.executiveSummary = `${payload.reportType} scope has ${payload.deterministicSummary.totalDeliverables} deliverable(s) in the deterministic payload.`
+    const validated = validateCoachingOutput(output)
+    assert.equal(validated.safetyReminder, AI_REVIEW_COACHING_SAFETY_REMINDER)
+  }
+})
+
+test('safe fallback validates for each golden fixture', () => {
+  for (const payload of allFixtures) {
+    const fallback = buildSafeFallback(
+      `${payload.reportType} fixture fallback validation.`
+    )
+    const validated = validateCoachingOutput(fallback)
+    assert.equal(validated.coachingPriorities.length, 0)
+    assert.match(validated.limitations.join(' '), /fixture fallback validation/)
+  }
+})
+
+test('copy helper produces safe summaries for each golden fixture', () => {
+  for (const payload of allFixtures) {
+    const block = buildAiReviewCoachingCopyBlock(
+      makeValidOutput(),
+      payload,
+      { generatedAt: payload.generatedAt }
+    )
+    assert.match(block, /AI coaching only\. Human leaders approve work\./)
+    assert.match(block, /Executive summary/)
+    assert.match(block, /Coaching priorities/)
+    assert.equal(block.includes('"deterministicSummary"'), false)
+    assert.equal(block.includes('"deliverables"'), false)
+  }
+})
+
+test('audit invocation doc stores metadata only', () => {
+  const stats = summarizePayloadStats(
+    finalWeekChapterPayload,
+    JSON.stringify(finalWeekChapterPayload).length
+  )
+  const doc = buildInvocationDoc(
+    {
+      uid: 'user-1',
+      email: 'instructor@example.com',
+      role: 'admin',
+      reportType: finalWeekChapterPayload.reportType,
+      scope: finalWeekChapterPayload.scope,
+      outcome: 'success',
+      validationOutcome: 'passed',
+      safetyScanOutcome: 'passed',
+      payloadStats: stats,
+      provider: { name: 'anthropic-messages' },
+      durationMs: 123,
+      errorCode: null
+    },
+    '2026-05-12T00:00:00.000Z'
+  )
+  assert.equal(doc.uid, 'user-1')
+  assert.equal(doc.email, 'instructor@example.com')
+  assert.equal(doc.reportType, 'chapter')
+  assert.equal(doc.deliverableId, 'd-ch05-brand')
+  assert.equal(doc.chapter, 5)
+  assert.deepEqual(doc.provider, { name: 'anthropic-messages' })
+  assert.deepEqual(doc.payloadStats, stats)
+
+  const serialized = JSON.stringify(doc)
+  assert.equal(serialized.includes('House Phoenix promises a bold rebirth'), false)
+  assert.equal(serialized.includes('deterministicSummary'), false)
+  assert.equal(serialized.includes('coachingPriorities'), false)
+  assert.equal(serialized.includes('idToken'), false)
+  assert.equal(serialized.includes('apiKey'), false)
 })
 
 test('validator rejects "Written by ___" claims', () => {
