@@ -363,6 +363,7 @@ export type AiReviewCoachingSafetyReminder =
   typeof AI_REVIEW_COACHING_SAFETY_REMINDER
 
 export interface AiReviewCoachingOutput {
+  source?: 'ai' | 'deterministic_fallback'
   executiveSummary: string
   coachingPriorities: AiReviewCoachingPriority[]
   strongestAreas: AiReviewCoachingStrongArea[]

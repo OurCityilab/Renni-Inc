@@ -23,8 +23,10 @@ import {
 } from '../../server/utils/aiReviewCoachingInvocations'
 import {
   CoachingValidationError,
+  buildDeterministicCoachingFallback,
   buildSafeFallback,
   convertSimplifiedCoachingToFull,
+  missingCompactCoachingFields,
   missingTopLevelCoachingFields,
   scanBannedPhrases,
   validateSimplifiedCoachingOutput,
@@ -129,20 +131,23 @@ test('repair user message requests JSON-only retry without raw bad output', () =
   assert.equal(msg.includes('Here is the invalid response'), false)
 })
 
-test('simplified recovery prompt uses smaller schema and JSON-only rules', () => {
+test('compact schema is the primary prompt path', () => {
   const p = buildAiReviewCoachingSimplifiedSystemPrompt('company')
-  assert.match(p, /RECOVERY MODE/)
-  assert.match(p, /SIMPLIFIED RECOVERY OUTPUT SHAPE/)
+  assert.match(p, /PRIMARY MODE/)
+  assert.match(p, /COMPACT PRIMARY OUTPUT SHAPE/)
   assert.match(p, /coachingPriorities: string\[\]/)
+  assert.match(p, /strongestAreas: string\[\]/)
+  assert.match(p, /weakestAreas: string\[\]/)
+  assert.match(p, /escalationItems: string\[\]/)
   assert.match(p, /first\s+character\s+must\s+be\s+\{/i)
   assert.match(p, /last\s+character\s+must\s+be\s+\}/i)
   assert.match(p, /Do not use\s+Markdown\s+fences/i)
   assert.equal(p.includes('AiReviewCoachingOutput SHAPE'), false)
 })
 
-test('simplified recovery user message does not include raw bad output', () => {
+test('compact primary user message does not include raw bad output', () => {
   const msg = buildAiReviewCoachingSimplifiedUserMessage(makePayload())
-  assert.match(msg, /prior response did not match/i)
+  assert.match(msg, /compact schema/i)
   assert.match(msg, /PAYLOAD START/)
   assert.match(msg, /PAYLOAD END/)
   assert.equal(msg.includes('Here is the invalid response'), false)
@@ -367,11 +372,26 @@ test('missing top-level fields are reported without raw output', () => {
   assert.equal(missing.includes('executiveSummary'), false)
 })
 
+test('compact missing fields are reported against compact schema', () => {
+  const missing = missingCompactCoachingFields({
+    executiveSummary: 'ok',
+    coachingPriorities: [],
+    safetyReminder: AI_REVIEW_COACHING_SAFETY_REMINDER
+  })
+  assert.ok(missing.includes('strongestAreas'))
+  assert.ok(missing.includes('weakestAreas'))
+  assert.ok(missing.includes('escalationItems'))
+  assert.equal(missing.includes('executiveSummary'), false)
+})
+
 test('simplified coaching response converts into valid full output', () => {
   const simplified = validateSimplifiedCoachingOutput({
     executiveSummary: 'Leadership should focus on evidence gaps today.',
     coachingPriorities: ['Marketing has draft fallback in one section.'],
+    strongestAreas: ['Several sections have saved work.'],
+    weakestAreas: ['Evidence coverage needs attention.'],
     missingEvidence: ['Pricing assumptions need a source or assumption note.'],
+    escalationItems: ['Overdue finance work may affect final readiness.'],
     recommendedNextActions: ['Ask the CFO to verify pricing assumptions.'],
     suggestedTalkingPoints: ['Use the deterministic report as the status source.'],
     limitations: ['Attribution metadata is thin.'],
@@ -382,16 +402,26 @@ test('simplified coaching response converts into valid full output', () => {
   )
   assert.equal(full.safetyReminder, AI_REVIEW_COACHING_SAFETY_REMINDER)
   assert.equal(full.coachingPriorities.length, 1)
+  assert.equal(full.strongestAreas.length, 1)
+  assert.equal(full.weakestAreas.length, 1)
   assert.equal(full.missingEvidence.length, 1)
+  assert.equal(full.escalationItems.length, 1)
   assert.equal(full.recommendedNextActions.length, 1)
   assert.equal(full.coachingPriorities[0]!.owner, 'Unknown owner')
+  assert.equal(
+    full.coachingPriorities[0]!.definitionOfDone,
+    'The assigned team updates the section, adds evidence where needed, and prepares it for human review.'
+  )
 })
 
 test('simplified conversion still rejects unsafe phrases', () => {
   const simplified = validateSimplifiedCoachingOutput({
     executiveSummary: 'Leadership should focus on evidence gaps today.',
     coachingPriorities: ['A specific student is lazy.'],
+    strongestAreas: [],
+    weakestAreas: [],
     missingEvidence: [],
+    escalationItems: [],
     recommendedNextActions: [],
     suggestedTalkingPoints: [],
     limitations: [],
@@ -401,6 +431,27 @@ test('simplified conversion still rejects unsafe phrases', () => {
     () => validateCoachingOutput(convertSimplifiedCoachingToFull(simplified)),
     (err) => err instanceof CoachingValidationError && err.reason === 'safety'
   )
+})
+
+test('deterministic fallback produces useful coaching from payload counts', () => {
+  const payload = makePayload()
+  payload.deterministicSummary.sectionsMissing = 2
+  payload.deterministicSummary.overdueDeliverables = 1
+  payload.deterministicSummary.needsRevisionDeliverables = 1
+  payload.deterministicSummary.evidenceLinkCount = 0
+  payload.deterministicSummary.structuredEvidenceCount = 0
+  const fallback = buildDeterministicCoachingFallback(
+    payload,
+    'AI provider response failed required coaching format.'
+  )
+  assert.equal(fallback.source, 'deterministic_fallback')
+  assert.match(fallback.executiveSummary, /Deterministic fallback coaching/)
+  assert.ok(fallback.coachingPriorities.length >= 4)
+  assert.ok(fallback.recommendedNextActions.length >= 5)
+  assert.match(fallback.limitations.join(' '), /AI coaching failed/)
+  assert.match(fallback.limitations.join(' '), /No student authorship inferred/)
+  assert.equal(validateCoachingOutput(fallback).safetyReminder, AI_REVIEW_COACHING_SAFETY_REMINDER)
+  assert.equal(/AI approved|AI grade|Written by|lazy|poor performer|weak student|bad student|incapable/i.test(JSON.stringify(fallback)), false)
 })
 
 test('banned phrase scanner walks nested arrays', () => {
@@ -496,11 +547,14 @@ test('audit invocation doc stores metadata only', () => {
       validationDiagnostics: {
         category: null,
         missingTopLevelFields: ['coachingPriorities'],
+        receivedTopLevelFields: ['executiveSummary', 'coachingPriorities'],
         responseCharCount: 250,
         firstCharWasBrace: false,
         balancedJsonObjectFound: true,
         retryUsed: true,
-        simplifiedFallbackUsed: true
+        compactAttemptUsed: true,
+        simplifiedFallbackUsed: true,
+        finalFailureStage: null
       },
       payloadStats: stats,
       provider: { name: 'anthropic-messages' },
@@ -519,11 +573,14 @@ test('audit invocation doc stores metadata only', () => {
   assert.deepEqual(doc.validationDiagnostics, {
     category: null,
     missingTopLevelFields: ['coachingPriorities'],
+    receivedTopLevelFields: ['executiveSummary', 'coachingPriorities'],
     responseCharCount: 250,
     firstCharWasBrace: false,
     balancedJsonObjectFound: true,
     retryUsed: true,
-    simplifiedFallbackUsed: true
+    compactAttemptUsed: true,
+    simplifiedFallbackUsed: true,
+    finalFailureStage: null
   })
 
   const serialized = JSON.stringify(doc)

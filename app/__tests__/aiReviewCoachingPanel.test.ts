@@ -275,6 +275,16 @@ test('safe fallback renders as copyable coaching output', () => {
   assertNoUnsafePhrases(block)
 })
 
+test('panel renders deterministic fallback explanation', () => {
+  const source = readFileSync('app/components/ai-review/AiReviewCoachingPanel.vue', 'utf8')
+  assert.match(source, /isDeterministicFallback/)
+  assert.match(source, /Deterministic fallback coaching/)
+  assert.match(
+    source,
+    /generated from\s+work-state data only/
+  )
+})
+
 test('diagnostics card copy is clearly technical, not student performance', () => {
   const source = readFileSync('app/pages/c-suite/review.vue', 'utf8')
   assert.equal(/AI coaching usage today/i.test(source), false)

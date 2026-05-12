@@ -227,12 +227,15 @@ AiReviewCoachingOutput SHAPE (TypeScript)
 `.trim()
 
 const SIMPLIFIED_RESPONSE_SCHEMA_DOCUMENTATION = `
-SIMPLIFIED RECOVERY OUTPUT SHAPE (TypeScript)
+COMPACT PRIMARY OUTPUT SHAPE (TypeScript)
 
 {
   executiveSummary: string,
   coachingPriorities: string[],
+  strongestAreas: string[],
+  weakestAreas: string[],
   missingEvidence: string[],
+  escalationItems: string[],
   recommendedNextActions: string[],
   suggestedTalkingPoints: string[],
   limitations: string[],
@@ -262,7 +265,7 @@ export function buildAiReviewCoachingSimplifiedSystemPrompt(
   return [
     SIMPLIFIED_SAFETY_RULES,
     focusForReportType(reportType),
-    'RECOVERY MODE: The full nested schema failed validation. Return the simplified shape only.',
+    'PRIMARY MODE: Return the compact string-array shape only. Server code will convert it into the full display shape.',
     SIMPLIFIED_RESPONSE_SCHEMA_DOCUMENTATION
   ].join('\n\n')
 }
@@ -306,8 +309,7 @@ export function buildAiReviewCoachingSimplifiedUserMessage(
   payload: AiReviewReportPayload
 ): string {
   return [
-    'The prior response did not match the required coaching format.',
-    'Create a shorter coaching response using the simplified schema from the system prompt.',
+    'Create a concise coaching response using the compact schema from the system prompt.',
     'Return one valid JSON object only. The first character must be { and the last character must be }.',
     'Do not use Markdown fences. Do not include prose, explanations, or commentary outside JSON.',
     'Do not output undefined. Use empty arrays or null where applicable.',

@@ -12,7 +12,10 @@
 //     server. The existing aiSafetyScan helper covers the personal-
 //     judgment list; this validator adds the AI-claim list.
 
-import type { AiReviewCoachingOutput } from '~~/app/types/aiReviewReports'
+import type {
+  AiReviewCoachingOutput,
+  AiReviewReportPayload
+} from '~~/app/types/aiReviewReports'
 import { AI_REVIEW_COACHING_SAFETY_REMINDER } from '~~/app/types/aiReviewReports'
 
 export class CoachingValidationError extends Error {
@@ -54,6 +57,19 @@ export const AI_REVIEW_COACHING_TOP_LEVEL_FIELDS: readonly string[] = [
   'escalationItems',
   'suggestedTalkingPoints',
   'recommendedNextActions',
+  'limitations',
+  'safetyReminder'
+] as const
+
+export const AI_REVIEW_COACHING_COMPACT_FIELDS: readonly string[] = [
+  'executiveSummary',
+  'coachingPriorities',
+  'strongestAreas',
+  'weakestAreas',
+  'missingEvidence',
+  'escalationItems',
+  'recommendedNextActions',
+  'suggestedTalkingPoints',
   'limitations',
   'safetyReminder'
 ] as const
@@ -333,10 +349,21 @@ export function missingTopLevelCoachingFields(raw: unknown): string[] {
   return AI_REVIEW_COACHING_TOP_LEVEL_FIELDS.filter((key) => !(key in obj))
 }
 
+export function missingCompactCoachingFields(raw: unknown): string[] {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
+    return [...AI_REVIEW_COACHING_COMPACT_FIELDS]
+  }
+  const obj = raw as Record<string, unknown>
+  return AI_REVIEW_COACHING_COMPACT_FIELDS.filter((key) => !(key in obj))
+}
+
 export interface SimplifiedAiReviewCoachingOutput {
   executiveSummary: string
   coachingPriorities: string[]
+  strongestAreas: string[]
+  weakestAreas: string[]
   missingEvidence: string[]
+  escalationItems: string[]
   recommendedNextActions: string[]
   suggestedTalkingPoints: string[]
   limitations: string[]
@@ -370,9 +397,21 @@ export function validateSimplifiedCoachingOutput(
       requireSimplifiedField(root, 'coachingPriorities'),
       'coachingPriorities'
     ),
+    strongestAreas: asStringArray(
+      requireSimplifiedField(root, 'strongestAreas'),
+      'strongestAreas'
+    ),
+    weakestAreas: asStringArray(
+      requireSimplifiedField(root, 'weakestAreas'),
+      'weakestAreas'
+    ),
     missingEvidence: asStringArray(
       requireSimplifiedField(root, 'missingEvidence'),
       'missingEvidence'
+    ),
+    escalationItems: asStringArray(
+      requireSimplifiedField(root, 'escalationItems'),
+      'escalationItems'
     ),
     recommendedNextActions: asStringArray(
       requireSimplifiedField(root, 'recommendedNextActions'),
@@ -413,35 +452,164 @@ export function convertSimplifiedCoachingToFull(
       issue,
       evidenceFromPayload: SIMPLIFIED_EVIDENCE_FALLBACK,
       whyItMatters:
-        'This item affects leadership readiness and should be checked against the deterministic report.',
-      coachingMove:
-        'Use the deterministic report to confirm the gap, then coach the owner on the next concrete revision.',
+        'This affects leadership readiness and team coaching.',
+      coachingMove: issue,
       owner: 'Unknown owner',
       urgency: 'medium',
       definitionOfDone:
-        'A human leader verifies the item is addressed in the underlying work and deterministic report.'
+        'The assigned team updates the section, adds evidence where needed, and prepares it for human review.'
     })),
-    strongestAreas: [],
-    weakestAreas: [],
-    missingEvidence: simplified.missingEvidence.map((issue) => ({
-      sectionOrDeliverable: 'Evidence gap',
+    strongestAreas: simplified.strongestAreas.map((area) => ({
+      area,
+      evidenceFromPayload:
+        'See deterministic report counts and available work.',
+      whyItMatters:
+        'This gives leaders a usable starting point.'
+    })),
+    weakestAreas: simplified.weakestAreas.map((issue) => ({
+      area: issue,
       issue,
-      neededEvidence:
-        'Add a source, link, assumption note, or structured evidence entry that supports the section claim.',
+      recommendedFix: issue,
       owner: 'Unknown owner'
     })),
-    escalationItems: [],
+    missingEvidence: simplified.missingEvidence.map((issue) => ({
+      sectionOrDeliverable: issue,
+      issue,
+      neededEvidence:
+        'Add a source, assumption, calculation, or structured evidence entry.',
+      owner: 'Unknown owner'
+    })),
+    escalationItems: simplified.escalationItems.map((issue) => ({
+      issue,
+      escalateTo: 'Co-CEOs / COO',
+      reason: 'This may affect final readiness.',
+      urgency: 'medium'
+    })),
     suggestedTalkingPoints: simplified.suggestedTalkingPoints,
     recommendedNextActions: simplified.recommendedNextActions.map((action) => ({
       action,
       owner: 'Unknown owner',
       urgency: 'medium',
       definitionOfDone:
-        'A human leader confirms the action is complete using the deterministic report and current work state.'
+        'The action is completed and reflected in the deterministic report.'
     })),
     limitations: simplified.limitations,
     safetyReminder: simplified.safetyReminder
   }
+}
+
+function fallbackPriority(issue: string): AiReviewCoachingOutput['coachingPriorities'][number] {
+  return {
+    issue,
+    evidenceFromPayload: SIMPLIFIED_EVIDENCE_FALLBACK,
+    whyItMatters: 'This affects leadership readiness and team coaching.',
+    coachingMove: issue,
+    owner: 'Unknown owner',
+    urgency: 'medium',
+    definitionOfDone:
+      'The assigned team updates the section, adds evidence where needed, and prepares it for human review.'
+  }
+}
+
+function fallbackAction(action: string): AiReviewCoachingOutput['recommendedNextActions'][number] {
+  return {
+    action,
+    owner: 'Unknown owner',
+    urgency: 'medium',
+    definitionOfDone:
+      'The action is completed and reflected in the deterministic report.'
+  }
+}
+
+export function buildDeterministicCoachingFallback(
+  payload: AiReviewReportPayload,
+  detail = ''
+): AiReviewCoachingOutput {
+  const summary = payload.deterministicSummary
+  const priorities: AiReviewCoachingOutput['coachingPriorities'] = []
+  if (summary.sectionsMissing > 0) {
+    priorities.push(fallbackPriority(
+      `${summary.sectionsMissing} section${summary.sectionsMissing === 1 ? '' : 's'} need final content before the work is ready for human review.`
+    ))
+  }
+  if (summary.overdueDeliverables > 0) {
+    priorities.push(fallbackPriority(
+      `${summary.overdueDeliverables} deliverable${summary.overdueDeliverables === 1 ? ' is' : 's are'} overdue and should be resolved or re-scoped.`
+    ))
+  }
+  if (summary.needsRevisionDeliverables > 0) {
+    priorities.push(fallbackPriority(
+      `${summary.needsRevisionDeliverables} deliverable${summary.needsRevisionDeliverables === 1 ? ' needs' : 's need'} revision before approval can happen.`
+    ))
+  }
+  if (summary.evidenceLinkCount === 0) {
+    priorities.push(fallbackPriority(
+      'No evidence links are recorded in this report scope.'
+    ))
+  }
+  if (summary.structuredEvidenceCount === 0) {
+    priorities.push(fallbackPriority(
+      'No structured evidence entries are recorded in this report scope.'
+    ))
+  }
+  if (summary.sectionsWithDraftFallback + summary.sectionsWithSourceNotesFallback > 0) {
+    priorities.push(fallbackPriority(
+      `${summary.sectionsWithDraftFallback + summary.sectionsWithSourceNotesFallback} section${summary.sectionsWithDraftFallback + summary.sectionsWithSourceNotesFallback === 1 ? ' is' : 's are'} relying on draft or source-note fallback instead of final text.`
+    ))
+  }
+  if (!priorities.length) {
+    priorities.push(fallbackPriority(
+      'Use the deterministic report to confirm final text, evidence, and review readiness before the next leadership meeting.'
+    ))
+  }
+
+  const nextActions = [
+    'Finish missing final text in the highest-priority chapters.',
+    'Add evidence to chapters with weak or missing support.',
+    'Resolve overdue deliverables or reset ownership and due dates.',
+    'Move ready items into human review.',
+    'Use chapter review panels to coach owners on the next concrete revision.'
+  ].map(fallbackAction)
+
+  const validated = validateCoachingOutput({
+    source: 'deterministic_fallback',
+    executiveSummary:
+      'Deterministic fallback coaching. AI coaching could not be generated, so this fallback uses deterministic work-state data only.',
+    coachingPriorities: priorities,
+    strongestAreas: [],
+    weakestAreas: [],
+    missingEvidence: summary.evidenceLinkCount + summary.structuredEvidenceCount === 0
+      ? [{
+          sectionOrDeliverable: 'Current report scope',
+          issue: 'Evidence coverage is limited or missing.',
+          neededEvidence:
+            'Add a source, assumption, calculation, or structured evidence entry.',
+          owner: 'Unknown owner'
+        }]
+      : [],
+    escalationItems: summary.overdueDeliverables > 0 || summary.needsRevisionDeliverables > 0
+      ? [{
+          issue: 'Objective work-state gaps may affect final readiness.',
+          escalateTo: 'Co-CEOs / COO',
+          reason: 'This may affect final readiness.',
+          urgency: 'medium'
+        }]
+      : [],
+    suggestedTalkingPoints: [
+      `Deterministic readiness is ${payload.deterministicReadiness.label}.`,
+      `${summary.sectionsMissing} section(s) are missing content.`,
+      `${summary.overdueDeliverables} deliverable(s) are overdue.`
+    ],
+    recommendedNextActions: nextActions,
+    limitations: [
+      'AI coaching failed.',
+      detail || 'The AI provider did not return a usable coaching format.',
+      'Deterministic report remains source of truth.',
+      'No student authorship inferred.'
+    ],
+    safetyReminder: AI_REVIEW_COACHING_SAFETY_REMINDER
+  })
+  return { ...validated, source: 'deterministic_fallback' }
 }
 
 /** Validate a parsed JSON object against the AiReviewCoachingOutput

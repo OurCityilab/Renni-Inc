@@ -60,11 +60,14 @@ export type AiReviewCoachingValidationFailureCategory =
 export interface AiReviewCoachingValidationDiagnostics {
   category: AiReviewCoachingValidationFailureCategory | null
   missingTopLevelFields?: string[]
+  receivedTopLevelFields?: string[]
   responseCharCount?: number | null
   firstCharWasBrace?: boolean | null
   balancedJsonObjectFound?: boolean | null
   retryUsed?: boolean
+  compactAttemptUsed?: boolean
   simplifiedFallbackUsed?: boolean
+  finalFailureStage?: 'compact_parse' | 'compact_shape' | 'compact_safety' | 'personal_judgment' | null
 }
 
 export interface AiReviewCoachingInvocationInput {
@@ -108,6 +111,11 @@ function coerceDiagnostics(
           .filter((field): field is string => typeof field === 'string')
           .slice(0, 12)
       : [],
+    receivedTopLevelFields: Array.isArray(input.receivedTopLevelFields)
+      ? input.receivedTopLevelFields
+          .filter((field): field is string => typeof field === 'string')
+          .slice(0, 12)
+      : [],
     responseCharCount:
       typeof input.responseCharCount === 'number' &&
       Number.isFinite(input.responseCharCount)
@@ -122,7 +130,9 @@ function coerceDiagnostics(
         ? input.balancedJsonObjectFound
         : null,
     retryUsed: input.retryUsed === true,
-    simplifiedFallbackUsed: input.simplifiedFallbackUsed === true
+    compactAttemptUsed: input.compactAttemptUsed === true,
+    simplifiedFallbackUsed: input.simplifiedFallbackUsed === true,
+    finalFailureStage: input.finalFailureStage ?? null
   }
 }
 

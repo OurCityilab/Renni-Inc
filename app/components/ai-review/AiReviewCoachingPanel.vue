@@ -54,6 +54,9 @@ const URGENCY_TONE: Record<AiReviewCoachingUrgency, string> = {
 const safetyReminder = AI_REVIEW_COACHING_SAFETY_REMINDER
 
 const errorIsDisabled = computed(() => errorCode.value === 'ai_disabled')
+const isDeterministicFallback = computed(
+  () => coaching.value?.source === 'deterministic_fallback'
+)
 
 // --- Copy coaching summary ---
 const copyState = ref<'idle' | 'copied' | 'failed'>('idle')
@@ -154,6 +157,15 @@ async function copyCoachingSummary() {
     </p>
 
     <div v-if="coaching" class="space-y-4 text-sm text-neutral-800">
+      <p
+        v-if="isDeterministicFallback"
+        class="rounded-md border border-amber-200 bg-amber-50 p-2 text-xs text-amber-900"
+      >
+        Deterministic fallback coaching. The AI provider did not return a
+        usable coaching format, so this summary was generated from
+        work-state data only.
+      </p>
+
       <section>
         <p class="text-xs font-semibold uppercase tracking-wide text-neutral-600">
           Executive summary
