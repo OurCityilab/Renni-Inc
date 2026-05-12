@@ -1248,3 +1248,175 @@ export const GOAL_STATUSES: readonly GoalStatus[] = [
   'at_risk',
   'complete'
 ] as const
+
+// -------- Team Pulse 1 — Calibration Check-In V1 --------
+//
+// POSTURE (do not relax)
+// ----------------------
+//   - Team Pulse is calibration + support + coaching only.
+//   - Never an automatic grade. Never an approval gate.
+//   - Privacy-safe by default: students never read raw peer
+//     responses; chiefs never see a named peer rating matrix.
+//   - No AI scoring in V1. Aggregation + flags are deterministic
+//     and emit "needs review" / "calibration discussion" copy,
+//     never punitive language.
+
+export type TeamPulseCycleStatus =
+  | 'draft'
+  | 'open'
+  | 'closed'
+  | 'summarized'
+
+export type TeamPulseRelationship =
+  | 'self'
+  | 'peer'
+  | 'leader'
+  | 'direct_report'
+
+export type DirectWorkLevel = 'none' | 'little' | 'some' | 'a_lot'
+
+export type TeamPulseSummaryScope = 'student' | 'department' | 'company'
+
+export type TeamPulseFlagType =
+  | 'uniform_high_scorer'
+  | 'uniform_low_scorer'
+  | 'self_peer_gap'
+  | 'low_direct_work_confidence'
+  | 'peer_disagreement'
+
+export type TeamPulseFlagSeverity = 'info' | 'review'
+
+export interface TeamPulseFlag {
+  flagType: TeamPulseFlagType
+  severity: TeamPulseFlagSeverity
+  /** Internal one-line description. */
+  message: string
+  /** Student / chief-facing copy. Never punitive. */
+  reviewCopy: string
+}
+
+// ---- Rating dimensions ----
+// The five core peer/self dimensions and the five leader dimensions
+// each map to a 1–5 Likert anchor (see app/utils/teamPulseRubric.ts).
+
+export interface TeamPulseRatings {
+  contribution: number
+  reliability: number
+  communication: number
+  qualityStandard: number
+  teamSupportLeadership: number
+}
+
+export interface TeamPulseLeadershipRatings {
+  clearDirection: number
+  fairDelegation: number
+  followUpAccountability: number
+  respectfulCommunication: number
+  helpWhenStuck: number
+}
+
+export interface TeamPulseComments {
+  /** What this person does well. */
+  strength: string
+  /** One thing they could do better. */
+  improvement: string
+  /** What support / coaching would help them. */
+  supportNeeded: string
+  /** Required when any score is a 1 or a 5; optional otherwise. */
+  evidenceExample: string
+}
+
+// ---- teamPulseCycles/{id} ----
+export interface TeamPulseCycle {
+  id: string
+  title: string
+  description: string
+  status: TeamPulseCycleStatus
+  opensAt: IsoTimestamp | null
+  closesAt: IsoTimestamp | null
+  departmentsIncluded: Department[]
+  /** V1 is always true — calibration-only. The field exists so a
+   *  future cycle can flip it explicitly when grading / approval
+   *  policy changes. */
+  calibrationOnly: boolean
+  includeSelfRatings: boolean
+  includePeerRatings: boolean
+  includeLeaderRatings: boolean
+  createdByUid: string
+  createdByEmail: string
+  createdAt: IsoTimestamp
+  updatedAt: IsoTimestamp
+}
+
+// ---- teamPulseResponses/{id} ----
+// One row per (rater, ratee) pair within a cycle. Self-ratings have
+// raterUid === rateeUid and relationship === 'self'.
+export interface TeamPulseResponse {
+  id: string
+  cycleId: string
+  raterUid: string
+  raterEmail: string
+  raterRole: Role
+  raterDepartment: Department
+  rateeUid: string
+  rateeEmail: string
+  rateeRole: Role
+  rateeDepartment: Department
+  relationship: TeamPulseRelationship
+  /** Required gate. When 'none', ratings should be omitted. */
+  directWorkLevel: DirectWorkLevel
+  /** Optional — omitted when directWorkLevel === 'none' OR the cycle
+   *  excludes peer ratings for this relationship. */
+  ratings?: TeamPulseRatings
+  /** Optional — populated only for leader relationships when the
+   *  cycle includes leader ratings. */
+  leadershipRatings?: TeamPulseLeadershipRatings
+  comments: TeamPulseComments
+  submittedAt: IsoTimestamp
+  updatedAt: IsoTimestamp
+}
+
+// ---- teamPulseSummaries/{id} ----
+// Aggregated per-subject (student or department) view written by an
+// admin or computed deterministically and stored for read access.
+export interface TeamPulseSummary {
+  id: string
+  cycleId: string
+  /** Either a uid (scope='student') or a Department literal
+   *  (scope='department'/'company'). */
+  subjectUid?: string
+  subjectEmail?: string
+  subjectDepartment?: Department | 'company'
+  scope: TeamPulseSummaryScope
+  /** Per-dimension averages (1–5) where the rubric applies. */
+  averages: {
+    contribution?: number
+    reliability?: number
+    communication?: number
+    qualityStandard?: number
+    teamSupportLeadership?: number
+    clearDirection?: number
+    fairDelegation?: number
+    followUpAccountability?: number
+    respectfulCommunication?: number
+    helpWhenStuck?: number
+  }
+  selfAverages?: Partial<TeamPulseRatings>
+  peerAverages?: Partial<TeamPulseRatings>
+  leaderAverages?: Partial<TeamPulseLeadershipRatings>
+  responseCount: number
+  peerResponseCount?: number
+  selfResponseCount?: number
+  leaderResponseCount?: number
+  directWorkBreakdown: {
+    none: number
+    little: number
+    some: number
+    a_lot: number
+  }
+  flags: TeamPulseFlag[]
+  /** Plain-language coaching summary. Never punitive. */
+  coachingSummary: string
+  createdAt: IsoTimestamp
+  updatedAt: IsoTimestamp
+}

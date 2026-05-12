@@ -58,6 +58,22 @@ service cloud.firestore {
       return hasDeliverableDoc(id)
         && deliverableDoc(id).status in ['draft', 'needs_revision'];
     }
+    function isDepartmentChiefForDepartment(dept) {
+      return isSignedIn()
+        && userDoc().role in ['coo', 'cfo', 'cmo', 'csgo']
+        && userDoc().department == dept;
+    }
+    function teamPulseCycleDoc(cycleId) {
+      return get(/databases/$(database)/documents/teamPulseCycles/$(cycleId)).data;
+    }
+    function teamPulseCycleIsOpen(cycleId) {
+      return exists(/databases/$(database)/documents/teamPulseCycles/$(cycleId))
+        && teamPulseCycleDoc(cycleId).status == 'open';
+    }
+    function teamPulseCycleIsClosed(cycleId) {
+      return exists(/databases/$(database)/documents/teamPulseCycles/$(cycleId))
+        && teamPulseCycleDoc(cycleId).status in ['closed', 'summarized'];
+    }
 
     // -------- roster --------
     // Seed-populated registry of allowed accounts, keyed by email.
@@ -325,6 +341,50 @@ service cloud.firestore {
     // leadership review history or write their own snapshots.
     match /aiReviewSnapshots/{snapshotId} {
       allow read, write: if false;
+    }
+
+    // -------- Team Pulse 1: Calibration Check-In --------
+    // Calibration and coaching only. Not an approval workflow, not a
+    // leaderboard, and not an automatic grading surface.
+    match /teamPulseCycles/{cycleId} {
+      allow read: if isSignedIn();
+      allow create, update, delete: if isAdmin();
+    }
+
+    match /teamPulseResponses/{responseId} {
+      allow read: if isAdmin()
+        || (isSignedIn() && resource.data.raterUid == request.auth.uid);
+      allow create: if isSignedIn()
+        && request.resource.data.raterUid == request.auth.uid
+        && teamPulseCycleIsOpen(request.resource.data.cycleId);
+      allow update: if isSignedIn()
+        && resource.data.raterUid == request.auth.uid
+        && request.resource.data.raterUid == resource.data.raterUid
+        && request.resource.data.rateeUid == resource.data.rateeUid
+        && request.resource.data.cycleId == resource.data.cycleId
+        && teamPulseCycleIsOpen(resource.data.cycleId);
+      allow delete: if isAdmin();
+    }
+
+    match /teamPulseSummaries/{summaryId} {
+      allow read: if isAdmin()
+        || (
+          isSignedIn()
+          && resource.data.scope in ['company', 'department']
+          && (isCoCEO() || hasRole('coo'))
+        )
+        || (
+          isSignedIn()
+          && resource.data.scope == 'department'
+          && isDepartmentChiefForDepartment(resource.data.subjectDepartment)
+        )
+        || (
+          isSignedIn()
+          && resource.data.scope == 'student'
+          && resource.data.subjectUid == request.auth.uid
+          && teamPulseCycleIsClosed(resource.data.cycleId)
+        );
+      allow create, update, delete: if isAdmin();
     }
 
     // -------- feedback --------

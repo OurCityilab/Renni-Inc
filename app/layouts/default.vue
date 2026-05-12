@@ -53,6 +53,7 @@ const navGroups = computed<NavGroup[]>(() => {
   }
   workItems.push(
     { to: '/deliverables', label: 'Deliverables', hint: 'All Playbook chapters and their status' },
+    { to: '/team-pulse', label: 'Team Pulse', hint: 'Calibration check-ins for teamwork and support' },
     { to: '/departments', label: 'Departments', hint: 'Per-team views with chief advisor cards' },
     { to: '/playbook', label: 'Playbook', hint: 'Chapter-level approval rollup' }
   )
@@ -91,6 +92,7 @@ const navGroups = computed<NavGroup[]>(() => {
   if (auth.isAdmin || auth.isCoCEO || auth.profile?.role === 'coo')
     adminItems.push({ to: '/c-suite/review', label: 'Company Review', hint: 'Deterministic leadership review — work state, evidence, readiness. No AI approval.' })
   if (auth.isAdmin) adminItems.push({ to: '/team', label: 'Team', hint: 'Roster + roles' })
+  if (auth.isAdmin) adminItems.push({ to: '/team-pulse/admin', label: 'Pulse Admin', hint: 'Create cycles and review Team Pulse summaries' })
   if (auth.isAdmin) adminItems.push({ to: '/admin/users', label: 'Users', hint: 'Access manager — alternate approved emails, signup status' })
   if (adminItems.length) groups.push({ label: 'Admin', items: adminItems })
   return groups
