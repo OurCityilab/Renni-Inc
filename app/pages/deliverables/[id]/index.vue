@@ -14,6 +14,10 @@ import {
   buildDeliverableMarkdown,
   deliverableFilename
 } from '~/utils/playbookExport'
+import { buildChapterReviewPayload } from '~/utils/aiReviewPayload'
+import AiReviewReadinessBadge from '~/components/ai-review/AiReviewReadinessBadge.vue'
+import AiReviewSectionTable from '~/components/ai-review/AiReviewSectionTable.vue'
+import AiReviewLimitationsList from '~/components/ai-review/AiReviewLimitationsList.vue'
 
 const route = useRoute()
 const auth = useAuthStore()
@@ -159,6 +163,47 @@ const submitBlockReason = computed(() => {
   //    your chief if you do not have permission."
   return 'Almost ready. The chief reviewer is waiting on at least one task for these required checks:'
 })
+
+// --- Chapter Review (deterministic leadership report) ---
+// Gated to admin / Co-CEO / COO / matching department chief / owner.
+// Read-only display of the deterministic chapter payload.
+const canSeeChapterReview = computed<boolean>(() => {
+  if (!deliverable.value) return false
+  if (auth.isAdmin || auth.isCoCEO) return true
+  if (auth.profile?.role === 'coo') return true
+  if (
+    auth.isChief &&
+    auth.profile?.department === deliverable.value.department
+  ) {
+    return true
+  }
+  // Assigned owner can see their own chapter review.
+  if (auth.user?.uid && auth.user.uid === deliverable.value.ownerUid) return true
+  return false
+})
+const reviewPayload = computed(() => {
+  if (!deliverable.value) return null
+  return buildChapterReviewPayload(
+    {
+      requester: {
+        email: auth.profile?.email ?? '',
+        role: auth.profile?.role ?? null,
+        department: auth.profile?.department ?? null
+      },
+      deliverables: [deliverable.value],
+      outputsByDeliverableId: {
+        [deliverable.value.id]: deliverableOutput.value ?? null
+      },
+      studioResolver: getTemplateStudioForDeliverable,
+      tasks: relatedTasks.value,
+      goals: []
+    },
+    { deliverableId: deliverable.value.id }
+  )
+})
+const reviewDeliverableSummary = computed(
+  () => reviewPayload.value?.deliverables[0] ?? null
+)
 
 // Reverse-chronological; most recent at top.
 const history = computed<DeliverableEvent[]>(() => {
@@ -337,6 +382,87 @@ async function saveNotes() {
             :missing-required-labels="missingRequiredLabels"
             :is-checking-submit-requirements="isCheckingRequirementCoverage"
           />
+
+          <!-- Deterministic Chapter Review.
+               Gated to admin / Co-CEO / COO / matching dept chief /
+               owner. Read-only display of the deterministic payload.
+               No AI calls; no approval / submit gate change. -->
+          <section
+            v-if="canSeeChapterReview && reviewPayload && reviewDeliverableSummary"
+            class="space-y-3 rounded-lg border border-neutral-200 bg-white p-4 shadow-sm"
+            aria-label="Chapter Review"
+          >
+            <header class="space-y-0.5">
+              <p class="text-xs font-semibold uppercase tracking-wide text-neutral-600">
+                Chapter Review
+              </p>
+              <p class="text-[11px] italic text-neutral-500">
+                Deterministic work-state report for this chapter. No AI
+                approval, no AI grade.
+              </p>
+            </header>
+            <AiReviewReadinessBadge :readiness="reviewPayload.deterministicReadiness" />
+
+            <ul class="flex flex-wrap gap-x-4 gap-y-1 text-xs text-neutral-700">
+              <li>
+                Final text:
+                {{ reviewDeliverableSummary.sectionsWithFinalText }} /
+                {{ reviewDeliverableSummary.totalSections }}
+              </li>
+              <li v-if="reviewDeliverableSummary.sectionsWithDraftFallback > 0">
+                Draft fallback:
+                {{ reviewDeliverableSummary.sectionsWithDraftFallback }}
+              </li>
+              <li v-if="reviewDeliverableSummary.sectionsWithSourceNotesFallback > 0">
+                Source-note fallback:
+                {{ reviewDeliverableSummary.sectionsWithSourceNotesFallback }}
+              </li>
+              <li v-if="reviewDeliverableSummary.sectionsMissing > 0" class="text-rose-700">
+                Missing: {{ reviewDeliverableSummary.sectionsMissing }}
+              </li>
+              <li>
+                Evidence: {{ reviewDeliverableSummary.evidenceLinkCount }}
+              </li>
+              <li>
+                Structured evidence:
+                {{ reviewDeliverableSummary.structuredEvidenceCount }}
+              </li>
+              <li>
+                {{
+                  reviewDeliverableSummary.canSubmit
+                    ? 'Ready for human review'
+                    : 'Submit gate not yet clear'
+                }}
+              </li>
+            </ul>
+
+            <p
+              v-if="reviewDeliverableSummary.missingRequiredRequirementLabels.length"
+              class="rounded-md border border-amber-200 bg-amber-50 p-2 text-xs text-amber-900"
+            >
+              Missing required task coverage:
+              {{ reviewDeliverableSummary.missingRequiredRequirementLabels.slice(0, 4).join(', ') }}
+              <span v-if="reviewDeliverableSummary.missingRequiredRequirementLabels.length > 4">
+                and {{ reviewDeliverableSummary.missingRequiredRequirementLabels.length - 4 }} more
+              </span>
+            </p>
+
+            <p class="text-[11px] text-neutral-600">
+              {{ reviewDeliverableSummary.attribution.summaryStatement }}
+            </p>
+
+            <AiReviewSectionTable
+              :sections="reviewDeliverableSummary.sections"
+              :show-excerpt="false"
+            />
+
+            <AiReviewLimitationsList
+              :limitations="[
+                ...reviewPayload.limitations,
+                ...reviewPayload.deterministicReadiness.limitations
+              ]"
+            />
+          </section>
 
           <!-- Quick link to the read-only Playbook preview rendered by
                the chapter hub below. Helps reviewers jump to the

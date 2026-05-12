@@ -15,6 +15,13 @@ import { rolesForDepartment } from '~/utils/cSuiteAdvisor'
 import RoleAdvisorCard from '~/components/RoleAdvisorCard.vue'
 import { getTemplateStudioForDeliverable } from '~/data/templateStudios'
 import { deepLinkForTask } from '~/utils/requirementToSection'
+import { buildDepartmentReviewPayload } from '~/utils/aiReviewPayload'
+import AiReviewReadinessBadge from '~/components/ai-review/AiReviewReadinessBadge.vue'
+import AiReviewSummaryPanel from '~/components/ai-review/AiReviewSummaryPanel.vue'
+import AiReviewLimitationsList from '~/components/ai-review/AiReviewLimitationsList.vue'
+import AiReviewDeliverableCard from '~/components/ai-review/AiReviewDeliverableCard.vue'
+import AiReviewTaskList from '~/components/ai-review/AiReviewTaskList.vue'
+import AiReviewGoalList from '~/components/ai-review/AiReviewGoalList.vue'
 
 // Local goal-status label map. Goals are simpler (4 values, single
 // surface) so an inline map is preferred over another shared util.
@@ -59,6 +66,42 @@ const studioBackedIds = computed<string[]>(() =>
 const { data: outputsByDeliverableId, loading: outputsLoading } =
   outputs.watchManyOutputs(studioBackedIds)
 const advisorRoles = computed(() => rolesForDepartment(dept.value))
+
+// --- Department Review (deterministic leadership report) ---
+// Gated to admin / Co-CEO / COO / matching department chief.
+// Read-only; never mutates Firestore or approval state.
+const canSeeReview = computed<boolean>(() => {
+  if (auth.isAdmin || auth.isCoCEO) return true
+  if (auth.profile?.role === 'coo') return true
+  if (auth.isChief && auth.profile?.department === dept.value) return true
+  return false
+})
+const reviewLoading = computed(
+  () =>
+    delLoading.value ||
+    tasksLoading.value ||
+    goalsLoading.value ||
+    outputsLoading.value
+)
+const reviewRequester = computed(() => ({
+  email: auth.profile?.email ?? '',
+  role: auth.profile?.role ?? null,
+  department: auth.profile?.department ?? null
+}))
+const reviewPayload = computed(() => {
+  if (!valid.value) return null
+  return buildDepartmentReviewPayload(
+    {
+      requester: reviewRequester.value,
+      deliverables: allDeliverables.value,
+      outputsByDeliverableId: outputsByDeliverableId.value,
+      studioResolver: getTemplateStudioForDeliverable,
+      tasks: allTasks.value,
+      goals: allGoals.value
+    },
+    dept.value
+  )
+})
 const advisorLoading = computed(
   () => tasksLoading.value || delLoading.value || outputsLoading.value
 )
@@ -309,6 +352,54 @@ function firstReviewSectionHref(d: Deliverable): string | null {
         :outputs="outputsByDeliverableId"
         :loading="advisorLoading"
       />
+
+      <!-- Deterministic Department Review.
+           Gated to admin / Co-CEO / COO / matching department chief.
+           Read-only display of the deterministic payload. -->
+      <section
+        v-if="canSeeReview"
+        class="space-y-3 rounded-lg border border-neutral-200 bg-white p-4 shadow-sm"
+        aria-label="Department Review"
+      >
+        <header class="space-y-0.5">
+          <p class="text-xs font-semibold uppercase tracking-wide text-neutral-600">
+            Department Review
+          </p>
+          <p class="text-[11px] italic text-neutral-500">
+            This report uses assignment, status, evidence, and last-saved
+            metadata. It does not prove authorship.
+          </p>
+        </header>
+        <p
+          v-if="reviewLoading || !reviewPayload"
+          class="text-sm text-neutral-500"
+        >Loading review payload…</p>
+        <template v-else>
+          <AiReviewReadinessBadge :readiness="reviewPayload.deterministicReadiness" />
+          <AiReviewSummaryPanel :summary="reviewPayload.deterministicSummary" />
+          <AiReviewLimitationsList
+            :limitations="[
+              ...reviewPayload.limitations,
+              ...reviewPayload.deterministicReadiness.limitations
+            ]"
+          />
+          <section v-if="reviewPayload.deliverables.length" class="space-y-2">
+            <p class="text-xs font-semibold uppercase tracking-wide text-neutral-600">
+              Deliverables in scope
+            </p>
+            <ul class="grid gap-3 lg:grid-cols-2">
+              <li
+                v-for="dl in reviewPayload.deliverables"
+                :key="`dept-review-${dl.id}`"
+              >
+                <AiReviewDeliverableCard :deliverable="dl" />
+              </li>
+            </ul>
+          </section>
+          <AiReviewTaskList :tasks="reviewPayload.tasks" />
+          <AiReviewGoalList :goals="reviewPayload.goals" />
+        </template>
+      </section>
 
       <!-- Who is on this team? -->
       <section class="card space-y-2">
