@@ -63,6 +63,11 @@ CONTRACT (do NOT relax)
 OUTPUT FORMAT
 - Return ONE JSON object. No prose outside the JSON. No
   Markdown fences.
+- Your entire response must be one valid JSON object. The first
+  character must be { and the last character must be }. Do not use
+  Markdown fences. Do not include commentary before or after the
+  JSON.
+- Do not output undefined. Use empty arrays or null where applicable.
 - The JSON object must match the AiReviewCoachingOutput shape
   documented below. Required fields must be present even when
   empty (use [] for arrays and "" for unused strings).
@@ -211,9 +216,26 @@ export function buildAiReviewCoachingUserMessage(
   payload: AiReviewReportPayload
 ): string {
   const intro =
-    'The deterministic AiReviewReportPayload below is the only source of truth. Cite its facts. Return one JSON object matching AiReviewCoachingOutput. Do not include prose outside the JSON.'
+    'The deterministic AiReviewReportPayload below is the only source of truth. Cite its facts. Return one JSON object matching AiReviewCoachingOutput. The first character must be { and the last character must be }. Do not include prose or Markdown fences outside the JSON. Do not output undefined; use empty arrays or null where applicable.'
   return [
     intro,
+    '',
+    'PAYLOAD START',
+    JSON.stringify(payload),
+    'PAYLOAD END'
+  ].join('\n')
+}
+
+export function buildAiReviewCoachingJsonRepairUserMessage(
+  payload: AiReviewReportPayload
+): string {
+  return [
+    'Your prior response was not valid JSON.',
+    'Regenerate the coaching output from the deterministic payload below.',
+    'Return the same kind of response as one valid JSON object only.',
+    'The first character must be { and the last character must be }.',
+    'Do not use Markdown fences. Do not include prose, explanations, or commentary outside JSON.',
+    'Do not output undefined. Use empty arrays or null where applicable.',
     '',
     'PAYLOAD START',
     JSON.stringify(payload),

@@ -40,6 +40,7 @@ export type AiReviewCoachingOutcome =
 
 export type AiReviewCoachingValidationOutcome =
   | 'passed'
+  | 'failed_parse'
   | 'failed_shape'
   | 'failed_safety'
   | 'not_reached'

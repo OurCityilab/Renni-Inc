@@ -6,9 +6,14 @@
 
 import { strict as assert } from 'node:assert'
 import {
+  buildAiReviewCoachingJsonRepairUserMessage,
   buildAiReviewCoachingSystemPrompt,
   buildAiReviewCoachingUserMessage
 } from '../../server/utils/aiReviewCoachingPrompt'
+import {
+  AiReviewCoachingJsonParseError,
+  extractAiReviewCoachingJson
+} from '../../server/utils/aiReviewCoachingJson'
 import {
   buildInvocationDoc,
   summarizePayloadStats
@@ -71,6 +76,9 @@ test('system prompt requires JSON-only output and exact safety reminder', () => 
   const p = buildAiReviewCoachingSystemPrompt('department')
   assert.match(p, /ONE\s+JSON\s+object/i)
   assert.match(p, /No\s+Markdown\s+fences/i)
+  assert.match(p, /first\s+character\s+must\s+be\s+\{/i)
+  assert.match(p, /last\s+character\s+must\s+be\s+\}/i)
+  assert.match(p, /Do not output undefined/i)
   assert.ok(
     p.includes(`safetyReminder MUST be exactly: "${AI_REVIEW_COACHING_SAFETY_REMINDER}"`),
     'prompt must require the exact safety reminder literal'
@@ -97,10 +105,22 @@ test('user message includes the deterministic payload as JSON', () => {
   const payload = makePayload()
   const msg = buildAiReviewCoachingUserMessage(payload)
   assert.match(msg, /source of truth/i)
+  assert.match(msg, /first character must be \{/i)
+  assert.match(msg, /last character must be \}/i)
   assert.match(msg, /PAYLOAD START/)
   assert.match(msg, /PAYLOAD END/)
   // Confirm the payload's deliverable id is present in the JSON body.
   assert.ok(msg.includes('d-1'))
+})
+
+test('repair user message requests JSON-only retry without raw bad output', () => {
+  const payload = makePayload()
+  const msg = buildAiReviewCoachingJsonRepairUserMessage(payload)
+  assert.match(msg, /prior response was not valid JSON/i)
+  assert.match(msg, /first character must be \{/i)
+  assert.match(msg, /Do not use Markdown fences/i)
+  assert.match(msg, /PAYLOAD START/)
+  assert.equal(msg.includes('Here is the invalid response'), false)
 })
 
 test('fixture prompt builders create scope-specific guidance', () => {
@@ -127,6 +147,58 @@ test('fixture user messages include parseable deterministic payload JSON', () =>
     assert.equal(parsed.scope.reportType, payload.scope.reportType)
     assert.equal(parsed.constraints.noApproval, true)
   }
+})
+
+/* -------- JSON extraction -------- */
+
+test('JSON extractor parses raw object JSON', () => {
+  const out = extractAiReviewCoachingJson('{"executiveSummary":"ok"}')
+  assert.equal(out.executiveSummary, 'ok')
+})
+
+test('JSON extractor parses fenced json block', () => {
+  const out = extractAiReviewCoachingJson('```json\n{"executiveSummary":"ok"}\n```')
+  assert.equal(out.executiveSummary, 'ok')
+})
+
+test('JSON extractor parses generic fenced block', () => {
+  const out = extractAiReviewCoachingJson('```\n{"executiveSummary":"ok"}\n```')
+  assert.equal(out.executiveSummary, 'ok')
+})
+
+test('JSON extractor parses prose-wrapped balanced object', () => {
+  const out = extractAiReviewCoachingJson(
+    'Here is the report:\n{"executiveSummary":"ok","nested":{"x":"brace } inside string"}}\nThanks.'
+  )
+  assert.equal(out.executiveSummary, 'ok')
+})
+
+test('JSON extractor rejects arrays as top-level output', () => {
+  assert.throws(
+    () => extractAiReviewCoachingJson('[{"executiveSummary":"ok"}]'),
+    AiReviewCoachingJsonParseError
+  )
+})
+
+test('JSON extractor rejects empty objects', () => {
+  assert.throws(
+    () => extractAiReviewCoachingJson('{}'),
+    AiReviewCoachingJsonParseError
+  )
+})
+
+test('JSON extractor rejects invalid text with no JSON', () => {
+  assert.throws(
+    () => extractAiReviewCoachingJson('I cannot provide JSON right now.'),
+    AiReviewCoachingJsonParseError
+  )
+})
+
+test('JSON extractor rejects incomplete JSON', () => {
+  assert.throws(
+    () => extractAiReviewCoachingJson('{"executiveSummary":"ok"'),
+    AiReviewCoachingJsonParseError
+  )
 })
 
 /* -------- validator -------- */
@@ -273,6 +345,14 @@ test('safe fallback emits valid shape with the exact safety reminder', () => {
   assert.equal(validated.safetyReminder, AI_REVIEW_COACHING_SAFETY_REMINDER)
   assert.equal(validated.coachingPriorities.length, 0)
   assert.ok(validated.limitations.length >= 1)
+})
+
+test('safe fallback for JSON retry failure emits renderable coaching output', () => {
+  const fb = buildSafeFallback('AI response was not valid JSON after retry.')
+  const validated = validateCoachingOutput(fb)
+  assert.equal(validated.safetyReminder, AI_REVIEW_COACHING_SAFETY_REMINDER)
+  assert.match(validated.limitations.join(' '), /not valid JSON after retry/)
+  assert.equal(validated.coachingPriorities.length, 0)
 })
 
 test('synthesized coaching output validates for each golden fixture', () => {

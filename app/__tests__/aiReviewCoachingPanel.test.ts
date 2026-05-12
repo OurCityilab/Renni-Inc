@@ -27,6 +27,7 @@ import {
   type AiReviewCoachingOutput,
   type AiReviewReportPayload
 } from '../types/aiReviewReports'
+import { buildSafeFallback } from '../../server/utils/aiReviewCoachingValidator'
 import { buildAiReviewCoachingCopyBlock } from '../utils/aiReviewCoachingCopyBlock'
 import {
   earlySemesterCompanyPayload,
@@ -254,6 +255,20 @@ test('copy block skips empty sections gracefully', () => {
   assert.equal(block.includes('Coaching priorities'), false)
   assert.equal(block.includes('Missing evidence'), false)
   assert.ok(block.includes(AI_REVIEW_COACHING_SAFETY_REMINDER))
+})
+
+test('safe fallback renders as copyable coaching output', () => {
+  const fallback = buildSafeFallback('AI response was not valid JSON after retry.')
+  const block = buildAiReviewCoachingCopyBlock(
+    fallback,
+    earlySemesterCompanyPayload
+  )
+  assert.match(block, /^# Company AI Leadership Coaching/m)
+  assert.match(block, /Executive summary/)
+  assert.match(block, /Limitations/)
+  assert.match(block, /not valid JSON after retry/)
+  assert.ok(block.includes(AI_REVIEW_COACHING_SAFETY_REMINDER))
+  assertNoUnsafePhrases(block)
 })
 
 test('copy block never includes raw payload JSON', () => {

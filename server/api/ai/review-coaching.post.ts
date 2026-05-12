@@ -36,15 +36,18 @@ import {
 } from '~~/server/utils/aiRateLimit'
 import {
   callAnthropicMessages,
-  parseModelJson,
-  ProviderError,
-  MalformedResponseError
+  ProviderError
 } from '~~/server/utils/aiProvider'
 import { scanForPersonalJudgment } from '~~/server/utils/executiveAdvisor/aiSafetyScan'
 import {
+  buildAiReviewCoachingJsonRepairUserMessage,
   buildAiReviewCoachingSystemPrompt,
   buildAiReviewCoachingUserMessage
 } from '~~/server/utils/aiReviewCoachingPrompt'
+import {
+  extractAiReviewCoachingJson,
+  AiReviewCoachingJsonParseError
+} from '~~/server/utils/aiReviewCoachingJson'
 import {
   buildSafeFallback,
   validateCoachingOutput,
@@ -96,7 +99,6 @@ function invalidRequest(m: string): never { fail('ai_invalid_request', m, 400) }
 function payloadTooLarge(m: string): never { fail('ai_payload_too_large', m, 413) }
 function rateLimited(m: string): never { fail('ai_rate_limited', m, 429) }
 function providerErrorFn(m: string): never { fail('ai_provider_error', m, 502) }
-function invalidResponse(m: string): never { fail('ai_invalid_response', m, 502) }
 function safetyCheckFailed(m: string): never { fail('ai_safety_check_failed', m, 422) }
 
 // ---- Auth + role lookup ----
@@ -322,28 +324,47 @@ export default defineEventHandler(async (event) => {
     const userMessage = buildAiReviewCoachingUserMessage(payload)
 
     // 8. Provider call.
-    let providerText = ''
-    try {
-      providerText = await callAnthropicMessages({
-        apiKey,
-        baseUrl,
-        model,
-        systemPrompt,
-        userPrompt: userMessage,
-        maxOutputTokens: 1800
-      })
-    } catch (e) {
-      if (e instanceof ProviderError) providerErrorFn(e.message)
-      providerErrorFn('Provider call failed.')
+    async function callProvider(userPrompt: string): Promise<string> {
+      try {
+        return await callAnthropicMessages({
+          apiKey,
+          baseUrl,
+          model,
+          systemPrompt,
+          userPrompt,
+          maxOutputTokens: 1800
+        })
+      } catch (e) {
+        if (e instanceof ProviderError) providerErrorFn(e.message)
+        providerErrorFn('Provider call failed.')
+      }
     }
 
-    // 9. JSON parse.
+    const providerText = await callProvider(userMessage)
+
+    // 9. JSON extraction. Tolerates common model drift
+    //    (markdown fences, surrounding prose, first balanced JSON
+    //    object). If extraction fails, make exactly one repair call
+    //    without logging or exposing the raw bad output. If repair
+    //    fails too, return a safe coaching fallback so the UI is not
+    //    left in a red formatting-error state.
     let raw2: unknown
     try {
-      raw2 = parseModelJson(providerText)
+      raw2 = extractAiReviewCoachingJson(providerText)
     } catch (e) {
-      if (e instanceof MalformedResponseError) invalidResponse(e.message)
-      invalidResponse('AI response was not valid JSON.')
+      if (!(e instanceof AiReviewCoachingJsonParseError)) throw e
+      const repairText = await callProvider(
+        buildAiReviewCoachingJsonRepairUserMessage(payload)
+      )
+      try {
+        raw2 = extractAiReviewCoachingJson(repairText)
+      } catch (repairErr) {
+        if (!(repairErr instanceof AiReviewCoachingJsonParseError)) throw repairErr
+        audit.validationOutcome = 'failed_parse'
+        audit.outcome = 'ai_validation_failed'
+        audit.errorCode = 'ai_validation_failed'
+        return buildSafeFallback('AI response was not valid JSON after retry.')
+      }
     }
 
     // 10. Shape validation. Fall back gracefully on failure rather than
