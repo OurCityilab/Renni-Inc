@@ -24,6 +24,7 @@ import AiReviewReadinessBadge from '~/components/ai-review/AiReviewReadinessBadg
 import AiReviewSummaryPanel from '~/components/ai-review/AiReviewSummaryPanel.vue'
 import AiReviewLimitationsList from '~/components/ai-review/AiReviewLimitationsList.vue'
 import AiReviewDeliverableCard from '~/components/ai-review/AiReviewDeliverableCard.vue'
+import AiReviewCoachingPanel from '~/components/ai-review/AiReviewCoachingPanel.vue'
 
 definePageMeta({ middleware: ['c-suite'] })
 
@@ -157,6 +158,11 @@ async function copyToClipboard() {
         <AiReviewLimitationsList
           :limitations="[...payload.limitations, ...payload.deterministicReadiness.limitations]"
         />
+
+        <!-- AI Leadership Coaching — optional. Renders BELOW the
+             deterministic report. The leader must click Generate;
+             nothing autoruns. Hidden output is harmless. -->
+        <AiReviewCoachingPanel :payload="payload" />
 
         <!-- Risk lanes — three short lists that surface what leadership
              usually wants to act on first. Click-through goes to the

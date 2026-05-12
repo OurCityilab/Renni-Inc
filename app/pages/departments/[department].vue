@@ -22,6 +22,7 @@ import AiReviewLimitationsList from '~/components/ai-review/AiReviewLimitationsL
 import AiReviewDeliverableCard from '~/components/ai-review/AiReviewDeliverableCard.vue'
 import AiReviewTaskList from '~/components/ai-review/AiReviewTaskList.vue'
 import AiReviewGoalList from '~/components/ai-review/AiReviewGoalList.vue'
+import AiReviewCoachingPanel from '~/components/ai-review/AiReviewCoachingPanel.vue'
 
 // Local goal-status label map. Goals are simpler (4 values, single
 // surface) so an inline map is preferred over another shared util.
@@ -398,6 +399,10 @@ function firstReviewSectionHref(d: Deliverable): string | null {
           </section>
           <AiReviewTaskList :tasks="reviewPayload.tasks" />
           <AiReviewGoalList :goals="reviewPayload.goals" />
+
+          <!-- AI Leadership Coaching — optional. Same audience as the
+               deterministic department panel. -->
+          <AiReviewCoachingPanel :payload="reviewPayload" />
         </template>
       </section>
 

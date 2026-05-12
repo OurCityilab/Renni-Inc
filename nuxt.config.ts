@@ -68,6 +68,17 @@ export default defineNuxtConfig({
     // does not call a provider.
     sectionEngineFeedbackEnabled:
       process.env.NUXT_SECTION_ENGINE_FEEDBACK_ENABLED === 'true',
+    // AI Leadership Review Coaching V1 feature flag. The endpoint at
+    // /api/ai/review-coaching is read-only and never approves or
+    // mutates work — it consumes the deterministic
+    // AiReviewReportPayload the in-app review panels already build
+    // and returns coaching language for company / department /
+    // chapter scopes. Default OFF — the endpoint returns ai_disabled
+    // when the flag is missing, false, or the provider API key is
+    // unset. Provider config is shared with the existing AI
+    // endpoints (same API key, base URL, model).
+    aiReviewCoachingEnabled:
+      process.env.NUXT_AI_REVIEW_COACHING_ENABLED === 'true',
     public: {
       // Safe to ship to the browser. Firebase web config is not a secret.
       firebase: {

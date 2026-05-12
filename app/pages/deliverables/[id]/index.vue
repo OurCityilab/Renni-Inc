@@ -18,6 +18,7 @@ import { buildChapterReviewPayload } from '~/utils/aiReviewPayload'
 import AiReviewReadinessBadge from '~/components/ai-review/AiReviewReadinessBadge.vue'
 import AiReviewSectionTable from '~/components/ai-review/AiReviewSectionTable.vue'
 import AiReviewLimitationsList from '~/components/ai-review/AiReviewLimitationsList.vue'
+import AiReviewCoachingPanel from '~/components/ai-review/AiReviewCoachingPanel.vue'
 
 const route = useRoute()
 const auth = useAuthStore()
@@ -462,6 +463,10 @@ async function saveNotes() {
                 ...reviewPayload.deterministicReadiness.limitations
               ]"
             />
+
+            <!-- AI Leadership Coaching — optional. Same audience as
+                 the deterministic Chapter Review panel. -->
+            <AiReviewCoachingPanel :payload="reviewPayload" :compact="true" />
           </section>
 
           <!-- Quick link to the read-only Playbook preview rendered by

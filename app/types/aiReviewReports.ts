@@ -287,3 +287,91 @@ export const AI_REVIEW_CONSTRAINTS_DEFAULT: AiReviewConstraints = {
   noPersonalJudgment: true,
   attributionPolicy: 'assigned_owner_and_last_editor_only'
 }
+
+// ============================================================
+// AI coaching layer (Phase 3)
+// ============================================================
+//
+// The deterministic payload above is the source of truth. The AI
+// coaching layer is OPTIONAL — it consumes the payload and returns
+// leadership coaching language only.
+//
+// Posture (do not relax):
+//   - The coaching output never approves, grades, or judges students.
+//   - It cites payload facts in plain language; it never invents
+//     evidence or authorship.
+//   - The `safetyReminder` is a literal constant the server validator
+//     enforces so the audience cannot mistake coaching for approval.
+
+export type AiReviewCoachingUrgency = 'low' | 'medium' | 'high'
+
+export interface AiReviewCoachingPriority {
+  issue: string
+  evidenceFromPayload: string
+  whyItMatters: string
+  coachingMove: string
+  owner: string
+  urgency: AiReviewCoachingUrgency
+  definitionOfDone: string
+}
+
+export interface AiReviewCoachingStrongArea {
+  area: string
+  evidenceFromPayload: string
+  whyItMatters: string
+}
+
+export interface AiReviewCoachingWeakArea {
+  area: string
+  issue: string
+  recommendedFix: string
+  owner?: string | null
+}
+
+export interface AiReviewCoachingMissingEvidence {
+  sectionOrDeliverable: string
+  issue: string
+  neededEvidence: string
+  owner?: string | null
+}
+
+export interface AiReviewCoachingEscalation {
+  issue: string
+  escalateTo: string
+  reason: string
+  urgency: AiReviewCoachingUrgency
+}
+
+export interface AiReviewCoachingNextAction {
+  action: string
+  owner: string
+  urgency: AiReviewCoachingUrgency
+  definitionOfDone: string
+}
+
+/** Exact safety-reminder literal the server validator enforces.
+ *  Surfacing this string as a constant keeps the client renderer and
+ *  the prompt instruction in lockstep — any drift breaks the test
+ *  suite immediately. */
+export const AI_REVIEW_COACHING_SAFETY_REMINDER =
+  'AI coaching only. Human leaders approve work.' as const
+
+export type AiReviewCoachingSafetyReminder =
+  typeof AI_REVIEW_COACHING_SAFETY_REMINDER
+
+export interface AiReviewCoachingOutput {
+  executiveSummary: string
+  coachingPriorities: AiReviewCoachingPriority[]
+  strongestAreas: AiReviewCoachingStrongArea[]
+  weakestAreas: AiReviewCoachingWeakArea[]
+  missingEvidence: AiReviewCoachingMissingEvidence[]
+  escalationItems: AiReviewCoachingEscalation[]
+  suggestedTalkingPoints: string[]
+  recommendedNextActions: AiReviewCoachingNextAction[]
+  limitations: string[]
+  safetyReminder: AiReviewCoachingSafetyReminder
+}
+
+export interface AiReviewCoachingRequest {
+  payload: AiReviewReportPayload
+}
