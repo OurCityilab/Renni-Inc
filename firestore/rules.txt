@@ -99,6 +99,7 @@ service cloud.firestore {
           && request.resource.data.status in ['draft', 'needs_revision', 'in_review']
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(
                ['status', 'notes', 'linkedDocUrl', 'submittedForReviewAt',
+                'submittedByUid', 'submittedByEmail', 'submittedAt',
                 'statusHistory', 'updatedAt']
              )
         )
@@ -116,7 +117,8 @@ service cloud.firestore {
           && request.resource.data.returnedReason is string
           && request.resource.data.returnedReason.size() > 0
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(
-               ['status', 'returnedReason', 'statusHistory', 'updatedAt']
+               ['status', 'returnedReason', 'reviewedByUid',
+                'reviewedByEmail', 'reviewedAt', 'statusHistory', 'updatedAt']
              )
         )
         // Approver (or admin/coceo override, or matching-department chief):
@@ -134,7 +136,8 @@ service cloud.firestore {
           && request.resource.data.approvedByUid is string
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(
                ['status', 'approvalNotes', 'approvedAt', 'approvedByUid',
-                'approvedByRole', 'statusHistory', 'updatedAt']
+                'approvedByEmail', 'approvedByRole', 'reviewedByUid',
+                'reviewedByEmail', 'reviewedAt', 'statusHistory', 'updatedAt']
              )
         )
         // Admin/coceo: edit due-date fields only; must not change status.
@@ -313,6 +316,14 @@ service cloud.firestore {
     // section excerpts, or private profile data into this
     // collection. See server/utils/aiReviewCoachingInvocations.ts.
     match /aiReviewCoachingInvocations/{invocationId} {
+      allow read, write: if false;
+    }
+
+    // -------- aiReviewSnapshots --------
+    // Metadata-only saved report snapshots. Written and read only
+    // through server endpoints so ordinary clients cannot enumerate
+    // leadership review history or write their own snapshots.
+    match /aiReviewSnapshots/{snapshotId} {
       allow read, write: if false;
     }
 

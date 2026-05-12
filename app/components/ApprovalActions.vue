@@ -92,7 +92,7 @@ function currentActor() {
   // the Firebase email if the profile hasn't hydrated yet.
   const email = auth.profile?.email || auth.user?.email || ''
   const role = auth.profile?.role as Role | undefined
-  return { email, role }
+  return { email, role, uid: auth.user?.uid ?? null }
 }
 
 async function submit() {
@@ -105,7 +105,7 @@ async function submit() {
 
 async function approve() {
   if (!auth.user) return
-  const actor = { uid: auth.user.uid, ...currentActor() }
+  const actor = { ...currentActor(), uid: auth.user.uid }
   await runAction(() =>
     deliverables.approve(
       props.deliverable.id,

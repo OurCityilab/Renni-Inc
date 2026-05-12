@@ -173,6 +173,9 @@ export interface AiReviewTaskSummary {
   dueDate: IsoDate | null
   isOverdue: boolean
   blockedReason: string | null
+  completedByEmail?: string | null
+  completedAt?: IsoTimestamp | null
+  completionStatement?: string
 }
 
 /** Lightweight goal/KPI summary. */

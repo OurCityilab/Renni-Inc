@@ -160,7 +160,21 @@ export function useTasks() {
   async function setStatus(id: string, status: NonBlockedStatus) {
     const ref = doc(db(), 'tasks', id)
     const now = new Date().toISOString()
-    await updateDoc(ref, { status, blockedBy: null, updatedAt: now })
+    const user = useNuxtApp().$firebase.auth.currentUser
+    const completionFields =
+      status === 'done'
+        ? {
+            completedByUid: user?.uid ?? null,
+            completedByEmail: user?.email ?? null,
+            completedAt: now
+          }
+        : {}
+    await updateDoc(ref, {
+      status,
+      blockedBy: null,
+      updatedAt: now,
+      ...completionFields
+    })
   }
 
   // Dedicated blocked transition — `blockedBy` is required so the reason is

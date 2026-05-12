@@ -177,11 +177,18 @@ export interface Deliverable {
   linkedDocUrl?: string | null
   notes?: string | null
   submittedForReviewAt?: IsoTimestamp | null
+  submittedByUid?: string | null
+  submittedByEmail?: string | null
+  submittedAt?: IsoTimestamp | null
   approvalNotes?: string | null
   returnedReason?: string | null
   approvedAt?: IsoTimestamp | null
   approvedByUid?: string | null
+  approvedByEmail?: string | null
   approvedByRole?: Role | null
+  reviewedByUid?: string | null
+  reviewedByEmail?: string | null
+  reviewedAt?: IsoTimestamp | null
   statusHistory?: DeliverableEvent[]
   createdAt: IsoTimestamp
   updatedAt: IsoTimestamp
@@ -216,6 +223,9 @@ export interface Task {
   // future manually-seeded section tasks can use this when the section
   // is known and should not depend on requirement matching heuristics.
   sectionId?: string | null
+  completedByUid?: string | null
+  completedByEmail?: string | null
+  completedAt?: IsoTimestamp | null
   createdAt: IsoTimestamp
   updatedAt: IsoTimestamp
 }
@@ -1066,6 +1076,9 @@ export interface DeliverableOutputSection {
   updatedAt?: IsoTimestamp | null
   updatedByUid?: string | null
   updatedByEmail?: string | null
+  sectionEditedByUid?: string | null
+  sectionEditedByEmail?: string | null
+  sectionEditedAt?: IsoTimestamp | null
 }
 
 export interface SavedBuilderRows {

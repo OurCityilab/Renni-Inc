@@ -8,14 +8,21 @@ import { useGoals } from '~/composables/useGoals'
 import { isChiefForRole, useRoster } from '~/composables/useRoster'
 import { useTasks } from '~/composables/useTasks'
 import { useDeliverableOutputs } from '~/composables/useDeliverableOutputs'
+import { useAiReviewSnapshots } from '~/composables/useAiReviewSnapshots'
 import { DEPARTMENTS } from '~/types/models'
 import type { Deliverable, Department, RosterEntry, Task } from '~/types/models'
+import type { AiReviewCoachingOutput } from '~/types/aiReviewReports'
 import { taskStatusLabel } from '~/utils/taskStatus'
 import { rolesForDepartment } from '~/utils/cSuiteAdvisor'
 import RoleAdvisorCard from '~/components/RoleAdvisorCard.vue'
 import { getTemplateStudioForDeliverable } from '~/data/templateStudios'
 import { deepLinkForTask } from '~/utils/requirementToSection'
 import { buildDepartmentReviewPayload } from '~/utils/aiReviewPayload'
+import {
+  buildDepartmentReviewMarkdown,
+  downloadReviewMarkdown,
+  reviewMarkdownFilename
+} from '~/utils/aiReviewReportExport'
 import AiReviewReadinessBadge from '~/components/ai-review/AiReviewReadinessBadge.vue'
 import AiReviewSummaryPanel from '~/components/ai-review/AiReviewSummaryPanel.vue'
 import AiReviewLimitationsList from '~/components/ai-review/AiReviewLimitationsList.vue'
@@ -44,6 +51,7 @@ const goals = useGoals()
 const roster = useRoster()
 const tasks = useTasks()
 const outputs = useDeliverableOutputs()
+const snapshots = useAiReviewSnapshots()
 
 const dept = computed(() => String(route.params.department) as Department)
 const valid = computed(() => DEPARTMENTS.includes(dept.value))
@@ -103,6 +111,40 @@ const reviewPayload = computed(() => {
     dept.value
   )
 })
+const coachingOutput = ref<AiReviewCoachingOutput | null>(null)
+const reportMarkdown = computed(() =>
+  reviewPayload.value
+    ? buildDepartmentReviewMarkdown(reviewPayload.value, coachingOutput.value)
+    : ''
+)
+const reportCopyState = ref<'idle' | 'copied' | 'failed'>('idle')
+async function copyFullReport() {
+  if (!reportMarkdown.value || typeof navigator === 'undefined' || !navigator.clipboard) {
+    reportCopyState.value = 'failed'
+    return
+  }
+  try {
+    await navigator.clipboard.writeText(reportMarkdown.value)
+    reportCopyState.value = 'copied'
+  } catch {
+    reportCopyState.value = 'failed'
+  }
+  setTimeout(() => {
+    reportCopyState.value = 'idle'
+  }, 2500)
+}
+function downloadFullReport() {
+  if (!reviewPayload.value || !reportMarkdown.value) return
+  downloadReviewMarkdown(reviewMarkdownFilename(reviewPayload.value), reportMarkdown.value)
+}
+function saveSnapshot() {
+  if (!reviewPayload.value) return
+  void snapshots.saveSnapshot({
+    payload: reviewPayload.value,
+    coaching: coachingOutput.value,
+    copyBlock: reportMarkdown.value
+  })
+}
 const advisorLoading = computed(
   () => tasksLoading.value || delLoading.value || outputsLoading.value
 )
@@ -384,6 +426,40 @@ function firstReviewSectionHref(d: Deliverable): string | null {
               ...reviewPayload.deterministicReadiness.limitations
             ]"
           />
+          <div class="flex flex-wrap items-center gap-2 text-xs">
+            <button
+              type="button"
+              class="rounded border border-phoenix-300 bg-white px-2 py-1 text-phoenix-800 hover:bg-phoenix-50"
+              @click="copyFullReport()"
+            >
+              {{
+                reportCopyState === 'copied'
+                  ? 'Copied full report ✓'
+                  : reportCopyState === 'failed'
+                    ? 'Copy failed'
+                    : 'Copy full report'
+              }}
+            </button>
+            <button
+              type="button"
+              class="rounded border border-phoenix-300 bg-white px-2 py-1 text-phoenix-800 hover:bg-phoenix-50"
+              @click="downloadFullReport()"
+            >Download Markdown</button>
+            <button
+              type="button"
+              class="rounded border border-neutral-300 bg-white px-2 py-1 text-neutral-700 hover:bg-neutral-50 disabled:opacity-50"
+              :disabled="snapshots.saving.value"
+              @click="saveSnapshot()"
+            >
+              {{ snapshots.saving.value ? 'Saving snapshot…' : 'Save snapshot' }}
+            </button>
+            <span v-if="snapshots.saved.value" class="text-emerald-700">
+              Snapshot saved
+            </span>
+            <span v-else-if="snapshots.error.value" class="text-rose-700">
+              {{ snapshots.error.value }}
+            </span>
+          </div>
           <section v-if="reviewPayload.deliverables.length" class="space-y-2">
             <p class="text-xs font-semibold uppercase tracking-wide text-neutral-600">
               Deliverables in scope
@@ -402,7 +478,10 @@ function firstReviewSectionHref(d: Deliverable): string | null {
 
           <!-- AI Leadership Coaching — optional. Same audience as the
                deterministic department panel. -->
-          <AiReviewCoachingPanel :payload="reviewPayload" />
+          <AiReviewCoachingPanel
+            :payload="reviewPayload"
+            @coaching-updated="coachingOutput = $event"
+          />
         </template>
       </section>
 

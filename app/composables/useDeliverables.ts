@@ -37,7 +37,7 @@ type DeliverableFilters = {
 // Who acted. actorEmail is always required; actorRole is best-effort since
 // some paths (instructor override on behalf of missing role data) may not have
 // it. The event builder below only persists actorRole when it's present.
-export type Actor = { email: string; role?: Role }
+export type Actor = { email: string; role?: Role; uid?: string | null }
 
 // V1 keeps Firestore queries flat. We filter on a single field and sort
 // client-side rather than building composite indexes for every dashboard cut.
@@ -173,6 +173,9 @@ export function useDeliverables() {
     await updateDoc(ref, {
       status: 'in_review',
       submittedForReviewAt: now,
+      submittedAt: now,
+      submittedByUid: actor.uid ?? null,
+      submittedByEmail: actor.email || null,
       updatedAt: now,
       statusHistory: arrayUnion(event),
       ...(notes ? { notes } : {})
@@ -197,7 +200,11 @@ export function useDeliverables() {
       status: 'approved',
       approvedAt: now,
       approvedByUid: actor.uid,
+      approvedByEmail: actor.email || null,
       approvedByRole: actor.role ?? null,
+      reviewedByUid: actor.uid,
+      reviewedByEmail: actor.email || null,
+      reviewedAt: now,
       approvalNotes: approvalNotes ?? null,
       statusHistory: arrayUnion(event),
       updatedAt: now
@@ -217,6 +224,9 @@ export function useDeliverables() {
     await updateDoc(ref, {
       status: 'needs_revision',
       returnedReason: reason,
+      reviewedByUid: actor.uid ?? null,
+      reviewedByEmail: actor.email || null,
+      reviewedAt: now,
       statusHistory: arrayUnion(event),
       updatedAt: now
     })

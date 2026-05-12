@@ -243,7 +243,8 @@ async function submitForReview(row: DeliverableRow) {
   try {
     const actor = {
       email: auth.profile?.email || auth.user.email || '',
-      role: auth.profile?.role
+      role: auth.profile?.role,
+      uid: auth.user.uid
     }
     await deliverables.submitForReview(row.deliverable.id, actor, from)
   } catch (e) {

@@ -294,7 +294,10 @@ export function useDeliverableOutputs() {
         status: 'empty',
         updatedAt: null,
         updatedByUid: null,
-        updatedByEmail: null
+        updatedByEmail: null,
+        sectionEditedByUid: null,
+        sectionEditedByEmail: null,
+        sectionEditedAt: null
       }
     }
     const payload: DeliverableOutput = {
@@ -359,6 +362,9 @@ export function useDeliverableOutputs() {
       [`sections.${sectionId}.updatedAt`]: now,
       [`sections.${sectionId}.updatedByUid`]: actor.uid,
       [`sections.${sectionId}.updatedByEmail`]: actor.email,
+      [`sections.${sectionId}.sectionEditedAt`]: now,
+      [`sections.${sectionId}.sectionEditedByUid`]: actor.uid,
+      [`sections.${sectionId}.sectionEditedByEmail`]: actor.email,
       // Atomic lock release. deleteField() removes the map entry in
       // the same write that persists the section payload — there is
       // no observable window where the section is saved but the

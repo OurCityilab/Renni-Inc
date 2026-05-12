@@ -6,8 +6,10 @@ import { useDeliverables } from '~/composables/useDeliverables'
 import { useDeliverableOutputs } from '~/composables/useDeliverableOutputs'
 import { useTasks } from '~/composables/useTasks'
 import { useTemplatePreview } from '~/composables/useTemplatePreview'
+import { useAiReviewSnapshots } from '~/composables/useAiReviewSnapshots'
 import { getTemplateStudioForDeliverable } from '~/data/templateStudios'
 import type { DeliverableEvent } from '~/types/models'
+import type { AiReviewCoachingOutput } from '~/types/aiReviewReports'
 import { taskStatusLabel } from '~/utils/taskStatus'
 import { computeRequirementCoverage } from '~/utils/requirementCoverage'
 import {
@@ -15,6 +17,11 @@ import {
   deliverableFilename
 } from '~/utils/playbookExport'
 import { buildChapterReviewPayload } from '~/utils/aiReviewPayload'
+import {
+  buildChapterReviewMarkdown,
+  downloadReviewMarkdown,
+  reviewMarkdownFilename
+} from '~/utils/aiReviewReportExport'
 import AiReviewReadinessBadge from '~/components/ai-review/AiReviewReadinessBadge.vue'
 import AiReviewSectionTable from '~/components/ai-review/AiReviewSectionTable.vue'
 import AiReviewLimitationsList from '~/components/ai-review/AiReviewLimitationsList.vue'
@@ -25,6 +32,7 @@ const auth = useAuthStore()
 const deliverables = useDeliverables()
 const tasks = useTasks()
 const outputs = useDeliverableOutputs()
+const snapshots = useAiReviewSnapshots()
 
 const id = computed(() => String(route.params.id))
 // Pass the computed ref (not id.value) so the helpers rebind when the
@@ -205,6 +213,40 @@ const reviewPayload = computed(() => {
 const reviewDeliverableSummary = computed(
   () => reviewPayload.value?.deliverables[0] ?? null
 )
+const coachingOutput = ref<AiReviewCoachingOutput | null>(null)
+const reportMarkdown = computed(() =>
+  reviewPayload.value
+    ? buildChapterReviewMarkdown(reviewPayload.value, coachingOutput.value)
+    : ''
+)
+const reportCopyState = ref<'idle' | 'copied' | 'failed'>('idle')
+async function copyFullReport() {
+  if (!reportMarkdown.value || typeof navigator === 'undefined' || !navigator.clipboard) {
+    reportCopyState.value = 'failed'
+    return
+  }
+  try {
+    await navigator.clipboard.writeText(reportMarkdown.value)
+    reportCopyState.value = 'copied'
+  } catch {
+    reportCopyState.value = 'failed'
+  }
+  setTimeout(() => {
+    reportCopyState.value = 'idle'
+  }, 2500)
+}
+function downloadFullReport() {
+  if (!reviewPayload.value || !reportMarkdown.value) return
+  downloadReviewMarkdown(reviewMarkdownFilename(reviewPayload.value), reportMarkdown.value)
+}
+function saveSnapshot() {
+  if (!reviewPayload.value) return
+  void snapshots.saveSnapshot({
+    payload: reviewPayload.value,
+    coaching: coachingOutput.value,
+    copyBlock: reportMarkdown.value
+  })
+}
 
 // Reverse-chronological; most recent at top.
 const history = computed<DeliverableEvent[]>(() => {
@@ -463,10 +505,48 @@ async function saveNotes() {
                 ...reviewPayload.deterministicReadiness.limitations
               ]"
             />
+            <div class="flex flex-wrap items-center gap-2 text-xs">
+              <button
+                type="button"
+                class="rounded border border-phoenix-300 bg-white px-2 py-1 text-phoenix-800 hover:bg-phoenix-50"
+                @click="copyFullReport()"
+              >
+                {{
+                  reportCopyState === 'copied'
+                    ? 'Copied full report ✓'
+                    : reportCopyState === 'failed'
+                      ? 'Copy failed'
+                      : 'Copy full report'
+                }}
+              </button>
+              <button
+                type="button"
+                class="rounded border border-phoenix-300 bg-white px-2 py-1 text-phoenix-800 hover:bg-phoenix-50"
+                @click="downloadFullReport()"
+              >Download Markdown</button>
+              <button
+                type="button"
+                class="rounded border border-neutral-300 bg-white px-2 py-1 text-neutral-700 hover:bg-neutral-50 disabled:opacity-50"
+                :disabled="snapshots.saving.value"
+                @click="saveSnapshot()"
+              >
+                {{ snapshots.saving.value ? 'Saving snapshot…' : 'Save snapshot' }}
+              </button>
+              <span v-if="snapshots.saved.value" class="text-emerald-700">
+                Snapshot saved
+              </span>
+              <span v-else-if="snapshots.error.value" class="text-rose-700">
+                {{ snapshots.error.value }}
+              </span>
+            </div>
 
             <!-- AI Leadership Coaching — optional. Same audience as
                  the deterministic Chapter Review panel. -->
-            <AiReviewCoachingPanel :payload="reviewPayload" :compact="true" />
+            <AiReviewCoachingPanel
+              :payload="reviewPayload"
+              :compact="true"
+              @coaching-updated="coachingOutput = $event"
+            />
           </section>
 
           <!-- Quick link to the read-only Playbook preview rendered by

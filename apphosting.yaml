@@ -77,6 +77,11 @@ env:
     value: claude-haiku-4-5-20251001
     availability:
       - RUNTIME
+  - variable: NUXT_AI_REVIEW_COACHING_ENABLED
+    value: "true"
+    availability:
+      - BUILD
+      - RUNTIME
 
   # Customer Profile Builder beta flag. Read at BUILD time by
   # nuxt.config.ts (process.env.NUXT_CUSTOMER_PROFILE_BUILDER_ENABLED)

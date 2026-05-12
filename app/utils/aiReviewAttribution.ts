@@ -109,7 +109,9 @@ export function getSectionAttribution(
 ): AiReviewAttribution {
   const assigned = pickEmail(deliverable.ownerEmail)
   const approver = pickEmail(deliverable.approverEmail)
-  const lastSavedBy = pickEmail(section?.updatedByEmail ?? null)
+  const lastSavedBy = pickEmail(
+    section?.sectionEditedByEmail ?? section?.updatedByEmail ?? null
+  )
   const evidence: string[] = []
   if (section?.evidenceLinks?.length) {
     for (const l of section.evidenceLinks as DeliverableEvidenceLink[]) {
@@ -174,11 +176,18 @@ export function getContributionLimitations(
  *  not record this — so the helper returns the safe fallback for the
  *  done case). */
 export function getSafeCompletionLanguage(
-  task: Pick<Task, 'status' | 'ownerEmail' | 'blockedBy'>
+  task: Pick<
+    Task,
+    'status' | 'ownerEmail' | 'blockedBy' | 'completedByEmail' | 'completedAt'
+  >
 ): string {
   const owner = pickEmail(task.ownerEmail)
+  const completedBy = pickEmail(task.completedByEmail)
   switch (task.status) {
     case 'done':
+      if (completedBy) {
+        return `Completed by ${completedBy}${task.completedAt ? ` on ${task.completedAt}` : ''}.`
+      }
       return owner
         ? `Task marked complete; completion actor unavailable. Assigned to ${owner}.`
         : 'Task marked complete; completion actor unavailable.'

@@ -10,6 +10,7 @@
 //     mutates the payload.
 import { computed, ref } from 'vue'
 import type {
+  AiReviewCoachingOutput,
   AiReviewCoachingUrgency,
   AiReviewReportPayload
 } from '~/types/aiReviewReports'
@@ -23,6 +24,9 @@ const props = defineProps<{
    *  stays vertically lean inside the deliverable detail layout. */
   compact?: boolean
 }>()
+const emit = defineEmits<{
+  (event: 'coaching-updated', value: AiReviewCoachingOutput | null): void
+}>()
 
 const {
   coaching,
@@ -33,11 +37,12 @@ const {
   clearCoaching
 } = useAiReviewCoaching()
 
-function onClickGenerate() {
+async function onClickGenerate() {
   // Clone the payload (defensive) so the composable never sees the
   // reactive proxy directly. The endpoint also re-clones server-side.
   const snapshot = JSON.parse(JSON.stringify(props.payload)) as AiReviewReportPayload
-  void generateCoaching(snapshot)
+  await generateCoaching(snapshot)
+  emit('coaching-updated', coaching.value)
 }
 
 const URGENCY_TONE: Record<AiReviewCoachingUrgency, string> = {
@@ -52,6 +57,10 @@ const errorIsDisabled = computed(() => errorCode.value === 'ai_disabled')
 
 // --- Copy coaching summary ---
 const copyState = ref<'idle' | 'copied' | 'failed'>('idle')
+function onClickClear() {
+  clearCoaching()
+  emit('coaching-updated', null)
+}
 async function copyCoachingSummary() {
   if (!coaching.value) return
   const block = buildAiReviewCoachingCopyBlock(coaching.value, props.payload, {
@@ -117,7 +126,7 @@ async function copyCoachingSummary() {
           v-if="coaching"
           type="button"
           class="rounded border border-neutral-300 bg-white px-3 py-1 text-neutral-700 hover:bg-neutral-50"
-          @click="clearCoaching()"
+          @click="onClickClear()"
         >Clear</button>
       </div>
     </header>

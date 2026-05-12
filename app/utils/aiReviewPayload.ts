@@ -27,6 +27,7 @@ import { normalizeDeliverablePreview } from '~/utils/playbookPreview'
 import { computeRequirementCoverage } from '~/utils/requirementCoverage'
 import {
   getDeliverableAttribution,
+  getSafeCompletionLanguage,
   getSectionAttribution
 } from '~/utils/aiReviewAttribution'
 import { computeDeterministicReadiness } from '~/utils/aiReviewReadiness'
@@ -230,7 +231,10 @@ function summarizeTasks(
       startDate: t.startDate ?? null,
       dueDate: t.dueDate ?? null,
       isOverdue,
-      blockedReason: t.status === 'blocked' ? t.blockedBy ?? null : null
+      blockedReason: t.status === 'blocked' ? t.blockedBy ?? null : null,
+      completedByEmail: t.completedByEmail ?? null,
+      completedAt: t.completedAt ?? null,
+      completionStatement: getSafeCompletionLanguage(t)
     }
   })
 }

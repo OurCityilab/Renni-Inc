@@ -16,10 +16,18 @@
 import { computed, ref } from 'vue'
 import { useAuthStore } from '~/stores/auth'
 import { useAiReviewData } from '~/composables/useAiReviewData'
+import { useAiReviewCoachingMetrics } from '~/composables/useAiReviewCoachingMetrics'
+import { useAiReviewSnapshots } from '~/composables/useAiReviewSnapshots'
 import { buildCompanyReviewPayload } from '~/utils/aiReviewPayload'
 import { buildDeterministicCopyBlock } from '~/utils/aiReviewCopyBlock'
+import {
+  buildCompanyReviewMarkdown,
+  downloadReviewMarkdown,
+  reviewMarkdownFilename
+} from '~/utils/aiReviewReportExport'
 import { DEPARTMENTS } from '~/types/models'
 import type { Department } from '~/types/models'
+import type { AiReviewCoachingOutput } from '~/types/aiReviewReports'
 import AiReviewReadinessBadge from '~/components/ai-review/AiReviewReadinessBadge.vue'
 import AiReviewSummaryPanel from '~/components/ai-review/AiReviewSummaryPanel.vue'
 import AiReviewLimitationsList from '~/components/ai-review/AiReviewLimitationsList.vue'
@@ -29,6 +37,8 @@ import AiReviewCoachingPanel from '~/components/ai-review/AiReviewCoachingPanel.
 definePageMeta({ middleware: ['c-suite'] })
 
 const auth = useAuthStore()
+const snapshots = useAiReviewSnapshots()
+const coachingMetrics = useAiReviewCoachingMetrics()
 
 // Conservative V1 gate. /c-suite middleware already filters
 // chief-or-admin; the company view further narrows to admin / Co-CEO
@@ -85,8 +95,13 @@ const missingContent = computed(() =>
   )
 )
 
+const coachingOutput = ref<AiReviewCoachingOutput | null>(null)
 const copyBlock = computed(() => buildDeterministicCopyBlock(payload.value))
+const fullReportMarkdown = computed(() =>
+  buildCompanyReviewMarkdown(payload.value, coachingOutput.value)
+)
 const copied = ref(false)
+const fullCopied = ref(false)
 async function copyToClipboard() {
   if (typeof navigator === 'undefined' || !navigator.clipboard) return
   try {
@@ -98,6 +113,31 @@ async function copyToClipboard() {
   } catch {
     /* no-op; the textarea below still lets a leader select manually. */
   }
+}
+async function copyFullReport() {
+  if (typeof navigator === 'undefined' || !navigator.clipboard) return
+  try {
+    await navigator.clipboard.writeText(fullReportMarkdown.value)
+    fullCopied.value = true
+    setTimeout(() => {
+      fullCopied.value = false
+    }, 2000)
+  } catch {
+    /* no-op */
+  }
+}
+function downloadFullReport() {
+  downloadReviewMarkdown(reviewMarkdownFilename(payload.value), fullReportMarkdown.value)
+}
+function saveSnapshot() {
+  void snapshots.saveSnapshot({
+    payload: payload.value,
+    coaching: coachingOutput.value,
+    copyBlock: fullReportMarkdown.value
+  })
+}
+function refreshMetrics() {
+  void coachingMetrics.refreshMetrics()
 }
 </script>
 
@@ -151,6 +191,38 @@ async function copyToClipboard() {
             class="w-full rounded border border-neutral-300 bg-neutral-50 p-2 text-xs leading-snug"
             :value="copyBlock"
           />
+          <div class="flex flex-wrap items-center gap-2 text-xs">
+            <button
+              type="button"
+              class="rounded border border-phoenix-300 bg-white px-2 py-1 text-phoenix-800 hover:bg-phoenix-50"
+              @click="copyFullReport()"
+            >
+              {{ fullCopied ? 'Copied full report ✓' : 'Copy full report' }}
+            </button>
+            <button
+              type="button"
+              class="rounded border border-phoenix-300 bg-white px-2 py-1 text-phoenix-800 hover:bg-phoenix-50"
+              @click="downloadFullReport()"
+            >Download Markdown</button>
+            <NuxtLink
+              to="/c-suite/review/print"
+              class="rounded border border-neutral-300 bg-white px-2 py-1 text-neutral-700 hover:bg-neutral-50"
+            >Print view</NuxtLink>
+            <button
+              type="button"
+              class="rounded border border-neutral-300 bg-white px-2 py-1 text-neutral-700 hover:bg-neutral-50 disabled:opacity-50"
+              :disabled="snapshots.saving.value"
+              @click="saveSnapshot()"
+            >
+              {{ snapshots.saving.value ? 'Saving snapshot…' : 'Save snapshot' }}
+            </button>
+            <span v-if="snapshots.saved.value" class="text-emerald-700">
+              Snapshot saved
+            </span>
+            <span v-else-if="snapshots.error.value" class="text-rose-700">
+              {{ snapshots.error.value }}
+            </span>
+          </div>
         </section>
 
         <AiReviewSummaryPanel :summary="payload.deterministicSummary" />
@@ -162,7 +234,63 @@ async function copyToClipboard() {
         <!-- AI Leadership Coaching — optional. Renders BELOW the
              deterministic report. The leader must click Generate;
              nothing autoruns. Hidden output is harmless. -->
-        <AiReviewCoachingPanel :payload="payload" />
+        <AiReviewCoachingPanel
+          :payload="payload"
+          @coaching-updated="coachingOutput = $event"
+        />
+
+        <section class="card space-y-2">
+          <header class="flex flex-wrap items-baseline justify-between gap-2">
+            <div>
+              <p class="text-xs font-semibold uppercase tracking-wide text-neutral-600">
+                AI coaching usage today
+              </p>
+              <p class="text-[11px] italic text-neutral-500">
+                Aggregate metadata only. No payloads or AI output are exposed here.
+              </p>
+            </div>
+            <button
+              type="button"
+              class="rounded border border-neutral-300 bg-white px-2 py-1 text-xs text-neutral-700 hover:bg-neutral-50 disabled:opacity-50"
+              :disabled="coachingMetrics.loading.value"
+              @click="refreshMetrics()"
+            >
+              {{ coachingMetrics.loading.value ? 'Loading…' : 'Refresh metrics' }}
+            </button>
+          </header>
+          <p v-if="coachingMetrics.error.value" class="text-xs text-rose-700">
+            {{ coachingMetrics.error.value }}
+          </p>
+          <dl
+            v-if="coachingMetrics.metrics.value"
+            class="grid gap-2 text-xs sm:grid-cols-3 lg:grid-cols-6"
+          >
+            <div class="rounded border border-neutral-200 bg-neutral-50 p-2">
+              <dt class="text-neutral-500">Calls</dt>
+              <dd class="font-semibold">{{ coachingMetrics.metrics.value.totalToday }}</dd>
+            </div>
+            <div class="rounded border border-neutral-200 bg-neutral-50 p-2">
+              <dt class="text-neutral-500">Success</dt>
+              <dd class="font-semibold">{{ coachingMetrics.metrics.value.successCount }}</dd>
+            </div>
+            <div class="rounded border border-neutral-200 bg-neutral-50 p-2">
+              <dt class="text-neutral-500">Disabled</dt>
+              <dd class="font-semibold">{{ coachingMetrics.metrics.value.disabledCount }}</dd>
+            </div>
+            <div class="rounded border border-neutral-200 bg-neutral-50 p-2">
+              <dt class="text-neutral-500">Forbidden</dt>
+              <dd class="font-semibold">{{ coachingMetrics.metrics.value.forbiddenCount }}</dd>
+            </div>
+            <div class="rounded border border-neutral-200 bg-neutral-50 p-2">
+              <dt class="text-neutral-500">Validation</dt>
+              <dd class="font-semibold">{{ coachingMetrics.metrics.value.validationFailureCount }}</dd>
+            </div>
+            <div class="rounded border border-neutral-200 bg-neutral-50 p-2">
+              <dt class="text-neutral-500">Safety</dt>
+              <dd class="font-semibold">{{ coachingMetrics.metrics.value.safetyFailureCount }}</dd>
+            </div>
+          </dl>
+        </section>
 
         <!-- Risk lanes — three short lists that surface what leadership
              usually wants to act on first. Click-through goes to the
