@@ -95,6 +95,52 @@ const missingContent = computed(() =>
   )
 )
 
+const readinessLabelText = computed(() => {
+  switch (payload.value.deterministicReadiness.label) {
+    case 'high-risk':
+      return 'High Risk'
+    case 'needs-work':
+      return 'Needs Work'
+    case 'near-ready':
+      return 'Near Ready'
+    case 'ready':
+      return 'Ready'
+  }
+})
+
+function plural(count: number, singular: string, pluralLabel = `${singular}s`) {
+  return `${count} ${count === 1 ? singular : pluralLabel}`
+}
+
+const objectiveGaps = computed(() => {
+  const summary = payload.value.deterministicSummary
+  const gaps: string[] = []
+  if (summary.sectionsMissing > 0) {
+    gaps.push(plural(summary.sectionsMissing, 'section with missing content', 'sections with missing content'))
+  }
+  if (summary.overdueDeliverables > 0) {
+    gaps.push(plural(summary.overdueDeliverables, 'overdue deliverable'))
+  }
+  if (summary.needsRevisionDeliverables > 0) {
+    gaps.push(plural(summary.needsRevisionDeliverables, 'deliverable needing revision', 'deliverables needing revision'))
+  }
+  if (summary.structuredEvidenceCount < Math.max(1, Math.floor(summary.totalSections / 2))) {
+    gaps.push('limited structured evidence')
+  }
+  return gaps
+})
+
+const whatThisMeans = computed(() => {
+  const gaps = objectiveGaps.value
+  const gapText = gaps.length
+    ? gaps.join(', ')
+    : 'final review, approval, and handoff checks'
+  const focusText = gaps.length
+    ? 'Focus first on chapters with missing content, overdue work, revision needs, or limited evidence.'
+    : 'Focus on confirming the strongest chapters are ready for human review and final handoff.'
+  return `Renni Inc. is currently in ${readinessLabelText.value} status. The biggest objective gaps are ${gapText}. ${focusText}`
+})
+
 const coachingOutput = ref<AiReviewCoachingOutput | null>(null)
 const copyBlock = computed(() => buildDeterministicCopyBlock(payload.value))
 const fullReportMarkdown = computed(() =>
@@ -166,6 +212,15 @@ function refreshMetrics() {
 
       <template v-else>
         <AiReviewReadinessBadge :readiness="payload.deterministicReadiness" />
+
+        <section class="card border-phoenix-200 bg-phoenix-50/40">
+          <p class="text-xs font-semibold uppercase tracking-wide text-phoenix-900">
+            What this means
+          </p>
+          <p class="mt-1 text-sm leading-relaxed text-neutral-800">
+            {{ whatThisMeans }}
+          </p>
+        </section>
 
         <section class="card space-y-2">
           <header class="flex flex-wrap items-baseline justify-between gap-2">
@@ -239,77 +294,6 @@ function refreshMetrics() {
           @coaching-updated="coachingOutput = $event"
         />
 
-        <section class="card space-y-2">
-          <header class="flex flex-wrap items-baseline justify-between gap-2">
-            <div>
-              <p class="text-xs font-semibold uppercase tracking-wide text-neutral-600">
-                AI coaching usage today
-              </p>
-              <p class="text-[11px] italic text-neutral-500">
-                Aggregate metadata only. No payloads or AI output are exposed here.
-              </p>
-            </div>
-            <button
-              type="button"
-              class="rounded border border-neutral-300 bg-white px-2 py-1 text-xs text-neutral-700 hover:bg-neutral-50 disabled:opacity-50"
-              :disabled="coachingMetrics.loading.value"
-              @click="refreshMetrics()"
-            >
-              {{ coachingMetrics.loading.value ? 'Loading…' : 'Refresh metrics' }}
-            </button>
-          </header>
-          <p v-if="coachingMetrics.error.value" class="text-xs text-rose-700">
-            {{ coachingMetrics.error.value }}
-          </p>
-          <dl
-            v-if="coachingMetrics.metrics.value"
-            class="grid gap-2 text-xs sm:grid-cols-3 lg:grid-cols-6"
-          >
-            <div class="rounded border border-neutral-200 bg-neutral-50 p-2">
-              <dt class="text-neutral-500">Calls</dt>
-              <dd class="font-semibold">{{ coachingMetrics.metrics.value.totalToday }}</dd>
-              <p class="mt-1 text-[10px] leading-tight text-neutral-500">
-                Total coaching attempts today.
-              </p>
-            </div>
-            <div class="rounded border border-neutral-200 bg-neutral-50 p-2">
-              <dt class="text-neutral-500">Success</dt>
-              <dd class="font-semibold">{{ coachingMetrics.metrics.value.successCount }}</dd>
-              <p class="mt-1 text-[10px] leading-tight text-neutral-500">
-                Validated coaching outputs.
-              </p>
-            </div>
-            <div class="rounded border border-neutral-200 bg-neutral-50 p-2">
-              <dt class="text-neutral-500">Disabled</dt>
-              <dd class="font-semibold">{{ coachingMetrics.metrics.value.disabledCount }}</dd>
-              <p class="mt-1 text-[10px] leading-tight text-neutral-500">
-                Blocked by config.
-              </p>
-            </div>
-            <div class="rounded border border-neutral-200 bg-neutral-50 p-2">
-              <dt class="text-neutral-500">Forbidden</dt>
-              <dd class="font-semibold">{{ coachingMetrics.metrics.value.forbiddenCount }}</dd>
-              <p class="mt-1 text-[10px] leading-tight text-neutral-500">
-                Blocked by permissions.
-              </p>
-            </div>
-            <div class="rounded border border-neutral-200 bg-neutral-50 p-2">
-              <dt class="text-neutral-500">Validation</dt>
-              <dd class="font-semibold">{{ coachingMetrics.metrics.value.validationFailureCount }}</dd>
-              <p class="mt-1 text-[10px] leading-tight text-neutral-500">
-                Provider responded but output failed format/schema validation.
-              </p>
-            </div>
-            <div class="rounded border border-neutral-200 bg-neutral-50 p-2">
-              <dt class="text-neutral-500">Safety</dt>
-              <dd class="font-semibold">{{ coachingMetrics.metrics.value.safetyFailureCount }}</dd>
-              <p class="mt-1 text-[10px] leading-tight text-neutral-500">
-                Provider output was blocked by safety rules.
-              </p>
-            </div>
-          </dl>
-        </section>
-
         <!-- Risk lanes — three short lists that surface what leadership
              usually wants to act on first. Click-through goes to the
              deliverable detail page. -->
@@ -360,6 +344,82 @@ function refreshMetrics() {
             </ul>
           </div>
         </section>
+
+        <details class="card space-y-2 border-neutral-200 bg-neutral-50/50">
+          <summary class="cursor-pointer list-none">
+            <div class="flex flex-wrap items-baseline justify-between gap-2">
+              <div>
+                <p class="text-xs font-semibold uppercase tracking-wide text-neutral-600">
+                  Admin diagnostics
+                </p>
+                <h2 class="text-sm font-semibold text-neutral-900">
+                  AI System Diagnostics
+                </h2>
+                <p class="text-[11px] italic text-neutral-500">
+                  Admin-only technical health check. These numbers describe the AI coaching system, not student performance or company readiness.
+                </p>
+              </div>
+              <button
+                type="button"
+                class="rounded border border-neutral-300 bg-white px-2 py-1 text-xs text-neutral-700 hover:bg-neutral-50 disabled:opacity-50"
+                :disabled="coachingMetrics.loading.value"
+                @click.prevent="refreshMetrics()"
+              >
+                {{ coachingMetrics.loading.value ? 'Loading…' : 'Refresh metrics' }}
+              </button>
+            </div>
+          </summary>
+          <p v-if="coachingMetrics.error.value" class="pt-2 text-xs text-rose-700">
+            {{ coachingMetrics.error.value }}
+          </p>
+          <dl
+            v-if="coachingMetrics.metrics.value"
+            class="grid gap-2 pt-2 text-xs sm:grid-cols-3 lg:grid-cols-6"
+          >
+            <div class="rounded border border-neutral-200 bg-white p-2">
+              <dt class="text-neutral-500">AI requests sent</dt>
+              <dd class="font-semibold">{{ coachingMetrics.metrics.value.totalToday }}</dd>
+              <p class="mt-1 text-[10px] leading-tight text-neutral-500">
+                Total coaching attempts today.
+              </p>
+            </div>
+            <div class="rounded border border-neutral-200 bg-white p-2">
+              <dt class="text-neutral-500">Coaching responses generated</dt>
+              <dd class="font-semibold">{{ coachingMetrics.metrics.value.successCount }}</dd>
+              <p class="mt-1 text-[10px] leading-tight text-neutral-500">
+                Requests that returned usable coaching.
+              </p>
+            </div>
+            <div class="rounded border border-neutral-200 bg-white p-2">
+              <dt class="text-neutral-500">Blocked by config</dt>
+              <dd class="font-semibold">{{ coachingMetrics.metrics.value.disabledCount }}</dd>
+              <p class="mt-1 text-[10px] leading-tight text-neutral-500">
+                AI is turned off or missing required setup.
+              </p>
+            </div>
+            <div class="rounded border border-neutral-200 bg-white p-2">
+              <dt class="text-neutral-500">Blocked by permissions</dt>
+              <dd class="font-semibold">{{ coachingMetrics.metrics.value.forbiddenCount }}</dd>
+              <p class="mt-1 text-[10px] leading-tight text-neutral-500">
+                User role was not allowed.
+              </p>
+            </div>
+            <div class="rounded border border-neutral-200 bg-white p-2">
+              <dt class="text-neutral-500">AI format failures</dt>
+              <dd class="font-semibold">{{ coachingMetrics.metrics.value.validationFailureCount }}</dd>
+              <p class="mt-1 text-[10px] leading-tight text-neutral-500">
+                The AI responded but did not match the required safe format.
+              </p>
+            </div>
+            <div class="rounded border border-neutral-200 bg-white p-2">
+              <dt class="text-neutral-500">Safety blocks</dt>
+              <dd class="font-semibold">{{ coachingMetrics.metrics.value.safetyFailureCount }}</dd>
+              <p class="mt-1 text-[10px] leading-tight text-neutral-500">
+                The AI response was blocked by safety rules.
+              </p>
+            </div>
+          </dl>
+        </details>
 
         <section class="space-y-3">
           <header class="flex flex-wrap items-baseline justify-between gap-2">

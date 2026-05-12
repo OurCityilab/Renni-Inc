@@ -275,15 +275,31 @@ test('safe fallback renders as copyable coaching output', () => {
   assertNoUnsafePhrases(block)
 })
 
-test('metrics card copy explains validation and safety counts', () => {
+test('diagnostics card copy is clearly technical, not student performance', () => {
   const source = readFileSync('app/pages/c-suite/review.vue', 'utf8')
+  assert.equal(/AI coaching usage today/i.test(source), false)
+  assert.match(source, /AI System Diagnostics/)
   assert.match(
     source,
-    /Provider responded but output failed format\/schema validation/
+    /These numbers describe the AI coaching system, not student performance or company readiness/
   )
-  assert.match(source, /Provider output was blocked by safety rules/)
-  assert.match(source, /Total coaching attempts today/)
-  assert.match(source, /Validated coaching outputs/)
+  assert.match(source, /AI requests sent/)
+  assert.match(source, /Coaching responses generated/)
+  assert.match(source, /Blocked by config/)
+  assert.match(source, /Blocked by permissions/)
+  assert.match(source, /AI format failures/)
+  assert.match(source, /Safety blocks/)
+  assert.match(source, /The AI responded but did not match the required safe format/)
+  assert.match(source, /The AI response was blocked by safety rules/)
+})
+
+test('company review page includes deterministic what-this-means copy', () => {
+  const source = readFileSync('app/pages/c-suite/review.vue', 'utf8')
+  assert.match(source, /What this means/)
+  assert.match(source, /Renni Inc\. is currently in/)
+  assert.match(source, /The biggest objective gaps are/)
+  assert.match(source, /Focus first on chapters with missing content/)
+  assert.equal(/AI approved/i.test(source), false)
 })
 
 test('copy block never includes raw payload JSON', () => {
