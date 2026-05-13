@@ -22,6 +22,10 @@ import {
   isRateableDirectWork,
   ratingHasExtremeScore
 } from '~/utils/teamPulseRubric'
+import {
+  isTeamPulseAdminTakeUser,
+  resolveTeamPulseTakeTargets
+} from '~/utils/teamPulseTargets'
 
 type LocalForm = {
   directWorkLevel: DirectWorkLevel
@@ -101,21 +105,37 @@ const currentUserProfile = computed<AppUser | null>(() => {
 
 const visibleRatees = computed(() => {
   const profile = currentUserProfile.value
-  if (!profile || !cycle.value) return []
-  const allowedDepts = new Set(cycle.value.departmentsIncluded)
-  const inIncludedDepartment = (u: AppUser) =>
-    allowedDepts.size === 0 || allowedDepts.has(u.department)
-  const sameDepartment = users.value.filter(
-    (u) => inIncludedDepartment(u) && u.department === profile.department
-  )
-  const hasSelf = sameDepartment.some((u) => u.uid === profile.uid)
-  const list = hasSelf && inIncludedDepartment(profile)
-    ? sameDepartment
-    : inIncludedDepartment(profile)
-      ? [profile, ...sameDepartment]
-      : sameDepartment
-  return list
+  return resolveTeamPulseTakeTargets({
+    cycle: cycle.value,
+    currentUser: profile,
+    users: users.value
+  }).targets
 })
+
+const targetDiagnostics = computed(() =>
+  resolveTeamPulseTakeTargets({
+    cycle: cycle.value,
+    currentUser: currentUserProfile.value,
+    users: users.value
+  })
+)
+
+const isAdminTakeUser = computed(() => isTeamPulseAdminTakeUser(currentUserProfile.value))
+
+const cycleDepartmentLabel = computed(() => {
+  const departments = cycle.value?.departmentsIncluded ?? []
+  return departments.length ? departments.join(', ') : 'All departments'
+})
+
+const noLeaderFound = computed(() =>
+  Boolean(
+    cycle.value?.includeLeaderRatings &&
+      currentUserProfile.value &&
+      !currentUserProfile.value.isChief &&
+      targetDiagnostics.value.currentUserDepartmentIncluded &&
+      targetDiagnostics.value.leaderCount === 0
+  )
+)
 
 watch(
   () => [visibleRatees.value.map((u) => u.uid).join('|'), myResponses.value.length],
@@ -222,7 +242,7 @@ async function saveFor(ratee: AppUser) {
     </header>
 
     <p v-if="cycleLoading || usersLoading" class="text-sm text-neutral-500">
-      Loading pulse form...
+      Loading Team Pulse form...
     </p>
     <p v-else-if="!cycle" class="card text-sm text-rose-700">
       Team Pulse cycle not found.
@@ -230,6 +250,24 @@ async function saveFor(ratee: AppUser) {
     <p v-else-if="cycle.status !== 'open'" class="card text-sm text-amber-800">
       This Team Pulse cycle is {{ cycle.status }}. Responses can only be edited while the cycle is open.
     </p>
+    <template v-else-if="isAdminTakeUser">
+      <section class="card space-y-4">
+        <div class="space-y-2">
+          <h2 class="text-sm font-semibold text-neutral-900">Instructor/admin view</h2>
+          <p class="text-sm text-neutral-700">
+            You are logged in as an instructor/admin. Use the Team Pulse admin page to monitor responses, generate summaries, and review results. To test the student form, log in as a student account.
+          </p>
+        </div>
+        <div class="flex flex-wrap gap-2">
+          <NuxtLink to="/team-pulse" class="btn-secondary">
+            Back to Team Pulse
+          </NuxtLink>
+          <NuxtLink to="/team-pulse/admin" class="btn-primary">
+            Open Team Pulse Admin
+          </NuxtLink>
+        </div>
+      </section>
+    </template>
     <template v-else>
       <section class="card space-y-2">
         <h2 class="text-sm font-semibold">How to answer</h2>
@@ -237,7 +275,47 @@ async function saveFor(ratee: AppUser) {
           <li>Start with direct-work confidence. If you did not work closely with someone, choose not enough direct work to rate.</li>
           <li>Use examples from behavior and work products. Do not judge personality or intent.</li>
           <li>A score of 1 or 5 requires a specific evidence/example comment.</li>
+          <li>V1 uses same-department teammate ratings only.</li>
         </ul>
+      </section>
+
+      <p v-if="noLeaderFound" class="card text-sm text-amber-800">
+        No department leader was found for your roster department.
+      </p>
+
+      <section v-if="visibleRatees.length === 0" class="card space-y-3">
+        <div class="space-y-1">
+          <h2 class="text-sm font-semibold text-neutral-900">No teammates available</h2>
+          <p class="text-sm text-neutral-700">
+            No teammates are available to rate yet. This usually means the roster department or Team Pulse cycle departments need to be checked.
+          </p>
+        </div>
+        <dl class="grid gap-2 text-sm sm:grid-cols-2">
+          <div class="rounded border border-neutral-200 p-2">
+            <dt class="text-xs font-semibold uppercase tracking-wide text-neutral-500">Your department</dt>
+            <dd class="mt-1 text-neutral-800">{{ currentUserProfile?.department || 'Unknown' }}</dd>
+          </div>
+          <div class="rounded border border-neutral-200 p-2">
+            <dt class="text-xs font-semibold uppercase tracking-wide text-neutral-500">Cycle departments</dt>
+            <dd class="mt-1 text-neutral-800">{{ cycleDepartmentLabel }}</dd>
+          </div>
+          <div class="rounded border border-neutral-200 p-2">
+            <dt class="text-xs font-semibold uppercase tracking-wide text-neutral-500">Self-rating enabled</dt>
+            <dd class="mt-1 text-neutral-800">{{ cycle.includeSelfRatings ? 'Yes' : 'No' }}</dd>
+          </div>
+          <div class="rounded border border-neutral-200 p-2">
+            <dt class="text-xs font-semibold uppercase tracking-wide text-neutral-500">Peer-rating enabled</dt>
+            <dd class="mt-1 text-neutral-800">{{ cycle.includePeerRatings ? 'Yes' : 'No' }}</dd>
+          </div>
+          <div class="rounded border border-neutral-200 p-2">
+            <dt class="text-xs font-semibold uppercase tracking-wide text-neutral-500">Leader-rating enabled</dt>
+            <dd class="mt-1 text-neutral-800">{{ cycle.includeLeaderRatings ? 'Yes' : 'No' }}</dd>
+          </div>
+          <div class="rounded border border-neutral-200 p-2">
+            <dt class="text-xs font-semibold uppercase tracking-wide text-neutral-500">Your department included</dt>
+            <dd class="mt-1 text-neutral-800">{{ targetDiagnostics.currentUserDepartmentIncluded ? 'Yes' : 'No' }}</dd>
+          </div>
+        </dl>
       </section>
 
       <article
