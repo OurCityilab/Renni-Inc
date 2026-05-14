@@ -1,8 +1,10 @@
 import { strict as assert } from 'node:assert'
 import type { TeamPulseResponse } from '../types/models'
 import {
+  averageTeamPulseResponseRatings,
   buildRaterPatternFlags,
   buildTeamPulseStudentSummary,
+  canGenerateTeamPulseSummaries,
   summaryHidesRawPeerIdentity
 } from '../utils/teamPulseSummary'
 
@@ -192,6 +194,62 @@ test('student summary helper does not expose raw peer identity fields', () => {
   })
   assert.equal(summaryHidesRawPeerIdentity(summary), true)
   assert.equal(JSON.stringify(summary).includes('peer-a@example.com'), false)
+})
+
+test('admin response average helper averages available core ratings', () => {
+  assert.equal(
+    averageTeamPulseResponseRatings(
+      response({
+        ratings: {
+          contribution: 5,
+          reliability: 4,
+          communication: 3,
+          qualityStandard: 2,
+          teamSupportLeadership: 1
+        }
+      })
+    ),
+    3
+  )
+})
+
+test('admin response average helper averages leadership ratings', () => {
+  assert.equal(
+    averageTeamPulseResponseRatings(
+      response({
+        ratings: undefined,
+        leadershipRatings: {
+          clearDirection: 5,
+          fairDelegation: 4,
+          followUpAccountability: 4,
+          respectfulCommunication: 3,
+          helpWhenStuck: 4
+        }
+      })
+    ),
+    4
+  )
+})
+
+test('admin response average helper returns null with no numeric ratings', () => {
+  assert.equal(
+    averageTeamPulseResponseRatings(
+      response({
+        directWorkLevel: 'none',
+        ratings: undefined,
+        leadershipRatings: undefined
+      })
+    ),
+    null
+  )
+})
+
+test('summary generation eligibility is closed-cycle only', () => {
+  assert.equal(canGenerateTeamPulseSummaries({ status: 'draft' }), false)
+  assert.equal(canGenerateTeamPulseSummaries({ status: 'open' }), false)
+  assert.equal(canGenerateTeamPulseSummaries({ status: 'closed' }), true)
+  assert.equal(canGenerateTeamPulseSummaries({ status: 'summarized' }), false)
+  assert.equal(canGenerateTeamPulseSummaries(null), false)
 })
 
 let failed = 0

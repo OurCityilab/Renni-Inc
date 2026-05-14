@@ -3,14 +3,24 @@ import { collection, getDocs } from 'firebase/firestore'
 import { computed, onMounted, ref, watch } from 'vue'
 import { useAuthStore } from '~/stores/auth'
 import { useTeamPulse } from '~/composables/useTeamPulse'
-import { DEPARTMENTS, type AppUser, type Department } from '~/types/models'
 import {
+  DEPARTMENTS,
+  type AppUser,
+  type Department,
+  type TeamPulseResponse
+} from '~/types/models'
+import {
+  averageTeamPulseResponseRatings,
   buildRaterPatternFlags,
   buildTeamPulseCompanySummary,
   buildTeamPulseDepartmentSummary,
-  buildTeamPulseStudentSummary
+  buildTeamPulseStudentSummary,
+  canGenerateTeamPulseSummaries
 } from '~/utils/teamPulseSummary'
-import { TEAM_PULSE_CALIBRATION_COPY } from '~/utils/teamPulseRubric'
+import {
+  TEAM_PULSE_CALIBRATION_COPY,
+  TEAM_PULSE_DIRECT_WORK_LABELS
+} from '~/utils/teamPulseRubric'
 
 definePageMeta({ middleware: ['admin'] })
 
@@ -82,6 +92,51 @@ const completion = computed(() => {
 })
 
 const raterFlags = computed(() => buildRaterPatternFlags(responses.value))
+const canGenerateSummaries = computed(() =>
+  canGenerateTeamPulseSummaries(selectedCycle.value)
+)
+const summaryGenerationCopy = computed(() => {
+  if (!selectedCycle.value) return ''
+  if (selectedCycle.value.status === 'summarized') {
+    return 'Summaries have already been generated.'
+  }
+  if (selectedCycle.value.status === 'closed') {
+    return 'Generate summaries after the cycle closes so results reflect the full response set.'
+  }
+  return 'Close the cycle before generating summaries. This prevents partial results while students are still responding.'
+})
+
+function scoreLabel(value: number | undefined): string {
+  return typeof value === 'number' ? String(value) : 'N/A'
+}
+
+function averageLabel(response: TeamPulseResponse): string {
+  const avg = averageTeamPulseResponseRatings(response)
+  return avg === null ? 'N/A' : avg.toFixed(1)
+}
+
+function directWorkLabel(response: TeamPulseResponse): string {
+  return TEAM_PULSE_DIRECT_WORK_LABELS[response.directWorkLevel]
+}
+
+function relationshipLabel(response: TeamPulseResponse): string {
+  switch (response.relationship) {
+    case 'self':
+      return 'Self'
+    case 'direct_report':
+      return 'Leader'
+    case 'leader':
+      return 'Direct report'
+    case 'peer':
+    default:
+      return 'Peer'
+  }
+}
+
+function timeLabel(value: string | null | undefined): string {
+  const match = value?.match(/^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2})/)
+  return match ? `${match[1]} ${match[2]} UTC` : value || 'N/A'
+}
 
 async function createCycle() {
   error.value = ''
@@ -118,6 +173,10 @@ async function closeSelectedCycle() {
 async function generateSummaries() {
   const cycle = selectedCycle.value
   if (!cycle) return
+  if (!canGenerateSummaries.value) {
+    error.value = summaryGenerationCopy.value
+    return
+  }
   saveState.value = 'saving'
   error.value = ''
   try {
@@ -237,13 +296,21 @@ async function generateSummaries() {
             <button type="button" class="btn-secondary" @click="closeSelectedCycle()">
               Close cycle
             </button>
-            <button type="button" class="btn-primary" @click="generateSummaries()">
+            <button
+              type="button"
+              class="btn-primary disabled:cursor-not-allowed disabled:opacity-50"
+              :disabled="!canGenerateSummaries || saveState === 'saving'"
+              @click="generateSummaries()"
+            >
               {{ saveState === 'saving' ? 'Generating...' : 'Generate summaries' }}
             </button>
             <NuxtLink :to="`/team-pulse/${selectedCycle.id}/summary`" class="btn-secondary">
               View summary
             </NuxtLink>
           </div>
+          <p v-if="selectedCycle" class="text-xs text-neutral-600">
+            {{ summaryGenerationCopy }}
+          </p>
         </template>
       </section>
 
@@ -287,10 +354,13 @@ async function generateSummaries() {
       <section class="card space-y-2">
         <h2 class="text-sm font-semibold">Raw responses</h2>
         <p class="text-xs text-neutral-500">
-          Admin-only intervention view. Students and chiefs do not see this table.
+          Raw scores are visible to instructor/admin only. Students see privacy-safe summaries after the cycle closes and summaries are generated.
         </p>
         <p v-if="responsesLoading || usersLoading" class="text-sm text-neutral-500">
           Loading responses...
+        </p>
+        <p v-else-if="responses.length === 0" class="rounded border border-neutral-200 bg-neutral-50 p-3 text-sm text-neutral-600">
+          No raw responses yet.
         </p>
         <div v-else class="overflow-x-auto">
           <table class="min-w-full text-left text-xs">
@@ -300,7 +370,20 @@ async function generateSummaries() {
                 <th class="py-2 pr-3">Ratee</th>
                 <th class="py-2 pr-3">Relationship</th>
                 <th class="py-2 pr-3">Direct work</th>
+                <th class="py-2 pr-3">Contribution</th>
+                <th class="py-2 pr-3">Reliability</th>
+                <th class="py-2 pr-3">Communication</th>
+                <th class="py-2 pr-3">Quality standard</th>
+                <th class="py-2 pr-3">Team support / leadership</th>
+                <th class="py-2 pr-3">Clear direction</th>
+                <th class="py-2 pr-3">Fair delegation</th>
+                <th class="py-2 pr-3">Follow-up / accountability</th>
+                <th class="py-2 pr-3">Respectful communication</th>
+                <th class="py-2 pr-3">Help when stuck</th>
+                <th class="py-2 pr-3">Average</th>
                 <th class="py-2 pr-3">Evidence/example</th>
+                <th class="py-2 pr-3">Submitted</th>
+                <th class="py-2 pr-3">Updated</th>
               </tr>
             </thead>
             <tbody>
@@ -311,9 +394,22 @@ async function generateSummaries() {
               >
                 <td class="py-2 pr-3">{{ response.raterEmail }}</td>
                 <td class="py-2 pr-3">{{ response.rateeEmail }}</td>
-                <td class="py-2 pr-3">{{ response.relationship }}</td>
-                <td class="py-2 pr-3">{{ response.directWorkLevel }}</td>
+                <td class="py-2 pr-3">{{ relationshipLabel(response) }}</td>
+                <td class="py-2 pr-3">{{ directWorkLabel(response) }}</td>
+                <td class="py-2 pr-3">{{ scoreLabel(response.ratings?.contribution) }}</td>
+                <td class="py-2 pr-3">{{ scoreLabel(response.ratings?.reliability) }}</td>
+                <td class="py-2 pr-3">{{ scoreLabel(response.ratings?.communication) }}</td>
+                <td class="py-2 pr-3">{{ scoreLabel(response.ratings?.qualityStandard) }}</td>
+                <td class="py-2 pr-3">{{ scoreLabel(response.ratings?.teamSupportLeadership) }}</td>
+                <td class="py-2 pr-3">{{ scoreLabel(response.leadershipRatings?.clearDirection) }}</td>
+                <td class="py-2 pr-3">{{ scoreLabel(response.leadershipRatings?.fairDelegation) }}</td>
+                <td class="py-2 pr-3">{{ scoreLabel(response.leadershipRatings?.followUpAccountability) }}</td>
+                <td class="py-2 pr-3">{{ scoreLabel(response.leadershipRatings?.respectfulCommunication) }}</td>
+                <td class="py-2 pr-3">{{ scoreLabel(response.leadershipRatings?.helpWhenStuck) }}</td>
+                <td class="py-2 pr-3 font-medium text-neutral-900">{{ averageLabel(response) }}</td>
                 <td class="max-w-sm py-2 pr-3">{{ response.comments.evidenceExample || 'None' }}</td>
+                <td class="py-2 pr-3 whitespace-nowrap">{{ timeLabel(response.submittedAt) }}</td>
+                <td class="py-2 pr-3 whitespace-nowrap">{{ timeLabel(response.updatedAt) }}</td>
               </tr>
             </tbody>
           </table>

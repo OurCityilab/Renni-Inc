@@ -4,6 +4,7 @@ import type {
   TeamPulseFlag,
   TeamPulseFlagType,
   TeamPulseLeadershipRatings,
+  TeamPulseCycle,
   TeamPulseRatings,
   TeamPulseResponse,
   TeamPulseSummary
@@ -41,6 +42,10 @@ function flag(
 function average(values: number[]): number | undefined {
   if (!values.length) return undefined
   return round(values.reduce((sum, v) => sum + v, 0) / values.length)
+}
+
+function numericValues(values: Array<number | undefined>): number[] {
+  return values.filter((v): v is number => typeof v === 'number')
 }
 
 function weightedAverage(
@@ -93,6 +98,31 @@ function averageLeadershipRatings(
     if (avg !== undefined) out[dim.key] = avg
   }
   return out
+}
+
+export type TeamPulseResponseAverageScope = 'core' | 'leadership' | 'all'
+
+export function averageTeamPulseResponseRatings(
+  response: TeamPulseResponse,
+  scope: TeamPulseResponseAverageScope = 'all'
+): number | null {
+  const coreValues =
+    scope === 'leadership'
+      ? []
+      : numericValues(TEAM_PULSE_DIMENSIONS.map((dim) => response.ratings?.[dim.key]))
+  const leadershipValues =
+    scope === 'core'
+      ? []
+      : numericValues(
+          TEAM_PULSE_LEADERSHIP_DIMENSIONS.map((dim) => response.leadershipRatings?.[dim.key])
+        )
+  return average([...coreValues, ...leadershipValues]) ?? null
+}
+
+export function canGenerateTeamPulseSummaries(
+  cycle: Pick<TeamPulseCycle, 'status'> | null | undefined
+): boolean {
+  return cycle?.status === 'closed'
 }
 
 function overallCoreAverage(ratings: Partial<TeamPulseRatings>): number | null {
