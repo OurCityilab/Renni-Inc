@@ -395,5 +395,206 @@ service cloud.firestore {
         || resource.data.capturedByUid == request.auth.uid;
       allow delete: if isAdmin();
     }
+
+    // ============================================================
+    // Our City Studio
+    //
+    // Deliberately independent permission system from the Renni
+    // Command Center rules above. Studio identity lives in
+    // `studentProfiles/{uid}` (doc id == Firebase Auth uid), never
+    // in `users/{uid}`. A Renni role (admin/coceo/etc.) grants
+    // nothing here; only a `studentProfiles` doc with a matching
+    // studioRole does. See app/types/studio/models.ts and
+    // server/api/studio/auth/provision.post.ts.
+    //
+    // Only Core entities (08_DATA_MODEL.md) are covered so far —
+    // Game entities (gameSessions, properties, studentBusinesses,
+    // etc.) get their own rules when Rose City Marketplace / Market
+    // Day are built (Phase 3/4).
+    // ============================================================
+
+    function studentProfileDoc() {
+      return get(/databases/$(database)/documents/studentProfiles/$(request.auth.uid)).data;
+    }
+    function isStudioEnrolled() {
+      return isSignedIn()
+        && exists(/databases/$(database)/documents/studentProfiles/$(request.auth.uid));
+    }
+    function studioRoleOf() {
+      return studentProfileDoc().studioRole;
+    }
+    function isStudioStudent() {
+      return isStudioEnrolled() && studioRoleOf() == 'student';
+    }
+    function isStudioCoach() {
+      return isStudioEnrolled() && studioRoleOf() == 'coach';
+    }
+    function isStudioAdmin() {
+      return isStudioEnrolled() && studioRoleOf() == 'admin';
+    }
+    function isStudioCoachOrAdmin() {
+      return isStudioCoach() || isStudioAdmin();
+    }
+    function isOwnStudioDoc(uid) {
+      return isSignedIn() && request.auth.uid == uid;
+    }
+    // A coach only sees students who share at least one cohort with
+    // them — never the whole program.
+    function targetStudentCohortIds(studentUid) {
+      return get(/databases/$(database)/documents/studentProfiles/$(studentUid)).data.studioCohortIds;
+    }
+    function isCoachForStudent(studentUid) {
+      return isStudioCoach()
+        && targetStudentCohortIds(studentUid).hasAny(studentProfileDoc().studioCohortIds);
+    }
+
+    // -------- studioRoster --------
+    // Seed-populated enrollment registry, mirrors /roster. Only
+    // coach/admin need to read it (enrollment lookup UI); students
+    // never do. Provisioning itself runs server-side via the Admin
+    // SDK and bypasses these rules.
+    match /studioRoster/{email} {
+      allow read: if isStudioCoachOrAdmin();
+      allow write: if isStudioAdmin();
+    }
+
+    // -------- studentProfiles --------
+    match /studentProfiles/{uid} {
+      allow read: if isOwnStudioDoc(uid) || isStudioAdmin() || isCoachForStudent(uid);
+      // Self-serve edits are limited to non-privileged fields.
+      // studioRole and studioCohortIds are enrollment decisions and
+      // change only through admin action — a privilege-escalation
+      // guard, since a student rewriting their own studioRole to
+      // 'admin' must never be possible via a client write.
+      allow update: if isStudioAdmin()
+        || (
+          isOwnStudioDoc(uid)
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(
+               ['gradeLevel', 'school', 'worksite', 'interests', 'goals',
+                'profileStatus', 'activeStudioCohortId', 'updatedAt']
+             )
+          && request.resource.data.activeStudioCohortId in resource.data.studioCohortIds
+        );
+      // Created only by the provisioning endpoint via the Admin SDK
+      // (which bypasses rules entirely) — no client-side create.
+      allow create, delete: if false;
+    }
+
+    // -------- cohorts --------
+    // Settings (takeHomePayFactor, landlordIncomeMultiplier, etc.)
+    // are admin-adjustable only, per the confirmed build decision.
+    match /cohorts/{cohortId} {
+      allow read: if isStudioAdmin()
+        || (isStudioEnrolled() && studentProfileDoc().studioCohortIds.hasAny([cohortId]));
+      allow write: if isStudioAdmin();
+    }
+
+    // -------- missions --------
+    // Seeded content, admin-editable, readable by anyone enrolled.
+    match /missions/{id} {
+      allow read: if isStudioEnrolled();
+      allow write: if isStudioAdmin();
+    }
+
+    // -------- studentMissionProgress --------
+    match /studentMissionProgress/{id} {
+      allow read: if isSignedIn() && (
+        resource.data.studentUid == request.auth.uid
+        || isStudioAdmin()
+        || isCoachForStudent(resource.data.studentUid)
+      );
+      allow create: if isSignedIn() && isStudioEnrolled()
+        && request.resource.data.studentUid == request.auth.uid;
+      allow update: if isStudioAdmin()
+        || (
+          isSignedIn() && resource.data.studentUid == request.auth.uid
+          && request.resource.data.studentUid == resource.data.studentUid
+          && request.resource.data.missionId == resource.data.missionId
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(
+               ['status', 'startedAt', 'submittedAt', 'updatedAt']
+             )
+        )
+        || (
+          isCoachForStudent(resource.data.studentUid)
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(
+               ['coachFeedback', 'reviewedAt', 'status', 'updatedAt']
+             )
+        );
+      allow delete: if isStudioAdmin();
+    }
+
+    // -------- worksheetResponses --------
+    match /worksheetResponses/{id} {
+      allow read: if isSignedIn() && (
+        resource.data.studentUid == request.auth.uid
+        || isStudioAdmin()
+        || isCoachForStudent(resource.data.studentUid)
+      );
+      allow create: if isSignedIn() && isStudioEnrolled()
+        && request.resource.data.studentUid == request.auth.uid;
+      // Students may edit their own answers and AI-derived fields, but
+      // not the identity/lineage fields (studentUid, missionId,
+      // worksheetType, createdAt) that tie the doc to its owner and mission.
+      allow update: if isStudioAdmin()
+        || (
+          isSignedIn() && resource.data.studentUid == request.auth.uid
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(
+               ['rawInputs', 'aiQuestions', 'aiOutputs', 'selectedOutput',
+                'version', 'updatedAt']
+             )
+        );
+      allow delete: if isStudioAdmin()
+        || (isSignedIn() && resource.data.studentUid == request.auth.uid);
+    }
+
+    // -------- portfolioArtifacts --------
+    match /portfolioArtifacts/{id} {
+      allow read: if isSignedIn() && (
+        resource.data.studentUid == request.auth.uid
+        || isStudioAdmin()
+        || isCoachForStudent(resource.data.studentUid)
+      );
+      allow create: if isSignedIn() && isStudioEnrolled()
+        && request.resource.data.studentUid == request.auth.uid
+        && request.resource.data.coachStatus == 'draft';
+      allow update: if isStudioAdmin()
+        || (
+          isSignedIn() && resource.data.studentUid == request.auth.uid
+          && request.resource.data.studentUid == resource.data.studentUid
+          && resource.data.coachStatus in ['draft', 'needs_review']
+          // A student may only move their own artifact between the two
+          // student-owned statuses — never write 'approved' themselves,
+          // even though 'coachStatus' is in the allowed affectedKeys
+          // below (which only guards *which* fields change, not the
+          // values they're changed to).
+          && request.resource.data.coachStatus in ['draft', 'needs_review']
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(
+               ['title', 'content', 'coachStatus', 'exportedAt', 'version', 'updatedAt']
+             )
+        )
+        || (
+          isCoachForStudent(resource.data.studentUid)
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(
+               ['coachStatus', 'coachFeedback', 'updatedAt']
+             )
+        );
+      allow delete: if isStudioAdmin()
+        || (
+          isSignedIn() && resource.data.studentUid == request.auth.uid
+          && resource.data.coachStatus == 'draft'
+        );
+    }
+
+    // -------- aiSessions --------
+    // Audit log written by the /api/studio/ai/sherpa endpoint via
+    // the Admin SDK. No client write path.
+    match /aiSessions/{id} {
+      allow read: if isSignedIn() && (
+        resource.data.studentUid == request.auth.uid
+        || isStudioAdmin()
+        || isCoachForStudent(resource.data.studentUid)
+      );
+      allow write: if false;
+    }
   }
 }
