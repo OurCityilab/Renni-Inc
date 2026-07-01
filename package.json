@@ -11,7 +11,7 @@
     "generate": "nuxt generate",
     "postinstall": "nuxt prepare",
     "typecheck": "nuxt typecheck",
-    "check:release": "npm run typecheck && npm run test:classifier && npm run test:approval && npm run test:progress && npm run test:preview && npm run test:export && npm run test:csv && npm run test:readiness && npm run test:aireview && npm run test:aireview-coaching && npm run test:aireview-coaching-panel && npm run test:aireview-snapshots && npm run test:aireview-export && npm run test:aireview-attribution && npm run test:aireview-metrics && npm run test:team-pulse && NITRO_PRESET=node-server npm run build",
+    "check:release": "npm run typecheck && npm run test:classifier && npm run test:approval && npm run test:progress && npm run test:preview && npm run test:export && npm run test:csv && npm run test:readiness && npm run test:aireview && npm run test:aireview-coaching && npm run test:aireview-coaching-panel && npm run test:aireview-snapshots && npm run test:aireview-export && npm run test:aireview-attribution && npm run test:aireview-metrics && npm run test:team-pulse && npm run test:studio-calculators && npm run test:studio-brand-sherpa && npm run test:studio-ai-rate-limit && NITRO_PRESET=node-server npm run build",
     "seed": "tsx scripts/seed-all.ts",
     "seed:users": "tsx scripts/seed-users.ts",
     "seed:deliverables": "tsx scripts/seed-deliverables.ts",
@@ -42,6 +42,9 @@
     "test:aireview-attribution": "tsx app/__tests__/aiReviewAttribution.test.ts",
     "test:aireview-metrics": "tsx app/__tests__/aiReviewMetrics.test.ts",
     "test:team-pulse": "tsx app/__tests__/teamPulseRubric.test.ts && tsx app/__tests__/teamPulseSummary.test.ts",
+    "test:studio-calculators": "tsx app/__tests__/studio/calculators.test.ts",
+    "test:studio-brand-sherpa": "tsx app/__tests__/studio/brandSherpa.test.ts",
+    "test:studio-ai-rate-limit": "tsx app/__tests__/studio/studioAiRateLimit.test.ts",
     "backfill:tasks": "tsx scripts/backfill-task-alignment.ts",
     "sync:users": "tsx scripts/sync-users-from-roster.ts"
   },

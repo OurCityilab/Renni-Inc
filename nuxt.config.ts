@@ -79,6 +79,15 @@ export default defineNuxtConfig({
     // endpoints (same API key, base URL, model).
     aiReviewCoachingEnabled:
       process.env.NUXT_AI_REVIEW_COACHING_ENABLED === 'true',
+    // Our City Studio AI Sherpa V1 — server-only. Reuses the same
+    // Anthropic provider config as the Renni AI endpoints above
+    // (aiCritiqueApiKey/BaseUrl/Model); Studio gets its own daily
+    // call limit so a busy Studio cohort day never eats into Renni's
+    // budget or vice versa. Parsed (with a safe default) by
+    // server/utils/studioAiRateLimit.ts's resolveStudioAiDailyLimit —
+    // kept as a raw string here so the parsing itself stays testable
+    // without booting Nuxt.
+    studioAiDailyLimit: process.env.NUXT_STUDIO_AI_DAILY_LIMIT || '',
     public: {
       // Safe to ship to the browser. Firebase web config is not a secret.
       firebase: {
