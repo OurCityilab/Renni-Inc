@@ -24,6 +24,7 @@ interface StudioAuthState {
   status: StudioAuthStatus
   error: string | null
   _initPromise: Promise<void> | null
+  _syncedUid: string | null
   _profileUnsub: Unsubscribe | null
   _watchStarted: boolean
 }
@@ -34,6 +35,7 @@ export const useStudioAuthStore = defineStore('studioAuth', {
     status: 'loading',
     error: null,
     _initPromise: null,
+    _syncedUid: null,
     _profileUnsub: null,
     _watchStarted: false
   }),
@@ -49,16 +51,29 @@ export const useStudioAuthStore = defineStore('studioAuth', {
   actions: {
     // Waits on the Renni auth store's Firebase listener (shared
     // sign-in) to settle, then runs Studio-specific enrollment.
-    // Resolves once per app load; safe to call from multiple
-    // components/middleware.
+    // Safe to call from multiple components/middleware; only re-runs
+    // the enrollment sync when the signed-in uid has changed since the
+    // last sync, so repeat calls for the same user are cheap.
+    //
+    // That uid check matters for the post-sign-in flow specifically:
+    // a Studio visitor who first hits studio.global.ts while signed
+    // out gets a cached, resolved `_initPromise` from that signed-out
+    // sync. After they complete the Google popup on /login and get
+    // bounced back into /studio/..., a naive `if (this._initPromise)
+    // return this._initPromise` would hand back that stale promise —
+    // so the middleware's `switch (studioAuth.status)` would still see
+    // 'signed_out' and redirect back to /login, even though Renni's
+    // auth store already has the new user. Comparing against
+    // `_syncedUid` forces a fresh sync whenever the uid moves on.
     init() {
-      if (this._initPromise) return this._initPromise
       const authStore = useAuthStore()
-      this._initPromise = authStore.init().then(() => {
+      return authStore.init().then(() => {
         this._watchAuthUser()
-        return this._syncFromAuthUser()
+        const uid = authStore.user?.uid ?? null
+        if (this._initPromise && this._syncedUid === uid) return this._initPromise
+        this._initPromise = this._syncFromAuthUser()
+        return this._initPromise
       })
-      return this._initPromise
     },
 
     _watchAuthUser() {
@@ -76,6 +91,7 @@ export const useStudioAuthStore = defineStore('studioAuth', {
     async _syncFromAuthUser() {
       const authStore = useAuthStore()
       const user = authStore.user
+      this._syncedUid = user?.uid ?? null
       if (!user) {
         this._stopProfileSubscription()
         this.profile = null

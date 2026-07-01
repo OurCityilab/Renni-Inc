@@ -74,6 +74,14 @@ export default defineEventHandler(async (event) => {
   const existing = await profileRef.get()
   const existingData = existing.exists ? (existing.data() as StudentProfile) : null
 
+  // Enrollment, role, and cohort access are roster-controlled and
+  // refresh on every sign-in — an admin edit to studioRoster should
+  // take effect immediately. gradeLevel/school/worksite/interests/
+  // goals are student-editable profile fields: once set (by the
+  // roster on first provision, or by the student themselves via
+  // studentProfiles update), they must NOT be reset back to the
+  // roster's value on every subsequent login, or a student's own
+  // edits would be silently clobbered the next time they sign in.
   const profile: StudentProfile = {
     uid: decoded.uid,
     email,
@@ -82,9 +90,9 @@ export default defineEventHandler(async (event) => {
     studioCohortIds: roster.cohortIds || [],
     activeStudioCohortId:
       existingData?.activeStudioCohortId ?? roster.cohortIds?.[0] ?? null,
-    gradeLevel: roster.gradeLevel,
-    school: roster.school,
-    worksite: roster.worksite,
+    gradeLevel: existingData?.gradeLevel ?? roster.gradeLevel,
+    school: existingData?.school ?? roster.school,
+    worksite: existingData?.worksite ?? roster.worksite,
     interests: existingData?.interests,
     goals: existingData?.goals,
     profileStatus: existingData?.profileStatus ?? 'new',
@@ -92,7 +100,26 @@ export default defineEventHandler(async (event) => {
     updatedAt: now
   }
 
-  await profileRef.set(profile, { merge: true })
+  // Firestore's Admin SDK rejects `undefined` field values in set()
+  // unless ignoreUndefinedProperties is enabled on the whole Firestore
+  // instance — which we deliberately do NOT do globally, since that
+  // setting is shared with every other adminDb() caller (Renni's
+  // endpoints included) and could silently change their behavior too.
+  // Optional profile fields (gradeLevel, school, worksite, interests,
+  // goals) are legitimately absent for a brand-new profile with no
+  // roster value yet, so strip undefined keys here instead, scoped to
+  // just this write.
+  const cleanedProfile = withoutUndefined(profile)
 
-  return { studioEnrolled: true, profile, alternateLoginUsed }
+  await profileRef.set(cleanedProfile, { merge: true })
+
+  return { studioEnrolled: true, profile: cleanedProfile, alternateLoginUsed }
 })
+
+function withoutUndefined<T extends object>(obj: T): Partial<T> {
+  const out: Partial<T> = {}
+  for (const key of Object.keys(obj) as (keyof T)[]) {
+    if (obj[key] !== undefined) out[key] = obj[key]
+  }
+  return out
+}

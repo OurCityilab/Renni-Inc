@@ -503,7 +503,8 @@ service cloud.firestore {
         || isStudioAdmin()
         || isCoachForStudent(resource.data.studentUid)
       );
-      allow create: if isSignedIn() && request.resource.data.studentUid == request.auth.uid;
+      allow create: if isSignedIn() && isStudioEnrolled()
+        && request.resource.data.studentUid == request.auth.uid;
       allow update: if isStudioAdmin()
         || (
           isSignedIn() && resource.data.studentUid == request.auth.uid
@@ -529,8 +530,20 @@ service cloud.firestore {
         || isStudioAdmin()
         || isCoachForStudent(resource.data.studentUid)
       );
-      allow create: if isSignedIn() && request.resource.data.studentUid == request.auth.uid;
-      allow update, delete: if isStudioAdmin()
+      allow create: if isSignedIn() && isStudioEnrolled()
+        && request.resource.data.studentUid == request.auth.uid;
+      // Students may edit their own answers and AI-derived fields, but
+      // not the identity/lineage fields (studentUid, missionId,
+      // worksheetType, createdAt) that tie the doc to its owner and mission.
+      allow update: if isStudioAdmin()
+        || (
+          isSignedIn() && resource.data.studentUid == request.auth.uid
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(
+               ['rawInputs', 'aiQuestions', 'aiOutputs', 'selectedOutput',
+                'version', 'updatedAt']
+             )
+        );
+      allow delete: if isStudioAdmin()
         || (isSignedIn() && resource.data.studentUid == request.auth.uid);
     }
 
@@ -541,7 +554,7 @@ service cloud.firestore {
         || isStudioAdmin()
         || isCoachForStudent(resource.data.studentUid)
       );
-      allow create: if isSignedIn()
+      allow create: if isSignedIn() && isStudioEnrolled()
         && request.resource.data.studentUid == request.auth.uid
         && request.resource.data.coachStatus == 'draft';
       allow update: if isStudioAdmin()
@@ -549,6 +562,12 @@ service cloud.firestore {
           isSignedIn() && resource.data.studentUid == request.auth.uid
           && request.resource.data.studentUid == resource.data.studentUid
           && resource.data.coachStatus in ['draft', 'needs_review']
+          // A student may only move their own artifact between the two
+          // student-owned statuses — never write 'approved' themselves,
+          // even though 'coachStatus' is in the allowed affectedKeys
+          // below (which only guards *which* fields change, not the
+          // values they're changed to).
+          && request.resource.data.coachStatus in ['draft', 'needs_review']
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(
                ['title', 'content', 'coachStatus', 'exportedAt', 'version', 'updatedAt']
              )
