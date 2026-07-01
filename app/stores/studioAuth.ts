@@ -83,7 +83,7 @@ export const useStudioAuthStore = defineStore('studioAuth', {
       watch(
         () => authStore.user?.uid ?? null,
         () => {
-          void this._syncFromAuthUser()
+          this._initPromise = this._syncFromAuthUser()
         }
       )
     },
