@@ -51,7 +51,9 @@ const artifactTypeByOutput: Record<SherpaOutputType, PortfolioArtifactType> = {
   pitch_30s: 'intro_pitch',
   pitch_1min_tmay: 'intro_pitch',
   star_story: 'star_answer',
-  resume_bullets: 'resume_bullet'
+  resume_bullets: 'resume_bullet',
+  resume_draft: 'resume_bullet',
+  linkedin_profile: 'linkedin_section'
 }
 
 const defaultTitleByOutput: Record<SherpaOutputType, string> = {
@@ -60,7 +62,9 @@ const defaultTitleByOutput: Record<SherpaOutputType, string> = {
   pitch_30s: 'My 30-Second Pitch',
   pitch_1min_tmay: 'My 1-Minute TMAY',
   star_story: 'My STAR Story',
-  resume_bullets: 'My Resume Bullets'
+  resume_bullets: 'My Resume Bullets',
+  resume_draft: 'My Resume Draft',
+  linkedin_profile: 'My LinkedIn Profile'
 }
 
 interface WorksheetStep {

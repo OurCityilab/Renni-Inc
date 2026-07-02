@@ -38,10 +38,19 @@ const POP_UP_PAYLOAD: BrandCoachPayload = {
 
 // ---------- output type contract ----------
 
-test('output types: all six dropdown values are accepted by the server', () => {
+test('output types: all eight dropdown values are accepted by the server', () => {
   assert.deepEqual(
     [...BRAND_COACH_OUTPUT_TYPES].sort(),
-    ['pitch_1min_tmay', 'pitch_30s', 'pitch_3s', 'resume_bullets', 'star_story', 'word_choice'].sort()
+    [
+      'pitch_1min_tmay',
+      'pitch_30s',
+      'pitch_3s',
+      'resume_bullets',
+      'resume_draft',
+      'linkedin_profile',
+      'star_story',
+      'word_choice'
+    ].sort()
   )
 })
 

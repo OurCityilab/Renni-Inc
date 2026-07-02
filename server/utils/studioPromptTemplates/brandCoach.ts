@@ -51,7 +51,9 @@ export const BRAND_COACH_OUTPUT_TYPES: readonly SherpaOutputType[] = Object.free
   'pitch_30s',
   'pitch_1min_tmay',
   'star_story',
-  'resume_bullets'
+  'resume_bullets',
+  'resume_draft',
+  'linkedin_profile'
 ])
 
 const MAX_INPUT_CHARS = 16_000
@@ -83,7 +85,11 @@ const OUTPUT_GUIDANCE: Record<SherpaOutputType, string> = {
   star_story:
     'A STAR story with each part labeled: Situation (is the context clear?), Task (is their responsibility clear?), Action (what did they PERSONALLY do?), Result (an outcome, number, lesson, or change). If the Result is missing or weak, insert [add result] and push for it in followUpQuestions with questions like "What changed because of what you did?", "How many people were affected?", "What was better after your action?", or "What would a teacher, coach, employer, or teammate say you contributed?"',
   resume_bullets:
-    'Resume bullets in a standard student / early-career, recruiter-ready format — never claim this is an official university or company template. Produce 2–4 bullets. Rules: (1) start with a strong action verb; (2) make the action specific; (3) name the skill or business function when possible; (4) include the audience, customer, team, or context; (5) include a result, metric, or lesson — or a bracketed prompt if missing; (6) never invent facts, titles, numbers, awards, or outcomes; (7) missing details become bracketed prompts: [add number], [add timeframe], [add result], [add audience], [add tool/system]; (8) keep bullets age-appropriate and credible for a high-school student; (9) translate informal work into professional language without exaggerating. Examples of the expected translation — raw: "I helped with the pop-up shop and sold sweatshirts" becomes "Supported student-led pop-up retail operations by engaging customers, explaining product value, and contributing to sweatshirt sales during a school-based entrepreneurship event," or with missing metrics, "Supported student-led pop-up retail operations, helping sell [add number] sweatshirts and track customer interest to inform future product decisions." Raw: "I made products with Body Krave" becomes "Assisted with product development and small-batch production by preparing materials, following quality standards, and documenting customer feedback for a student-led brand project."'
+    'Resume bullets in a standard student / early-career, recruiter-ready format — never claim this is an official university or company template. Produce 2–4 bullets. Rules: (1) start with a strong action verb; (2) make the action specific; (3) name the skill or business function when possible; (4) include the audience, customer, team, or context; (5) include a result, metric, or lesson — or a bracketed prompt if missing; (6) never invent facts, titles, numbers, awards, or outcomes; (7) missing details become bracketed prompts: [add number], [add timeframe], [add result], [add audience], [add tool/system]; (8) keep bullets age-appropriate and credible for a high-school student; (9) translate informal work into professional language without exaggerating. Examples of the expected translation — raw: "I helped with the pop-up shop and sold sweatshirts" becomes "Supported student-led pop-up retail operations by engaging customers, explaining product value, and contributing to sweatshirt sales during a school-based entrepreneurship event," or with missing metrics, "Supported student-led pop-up retail operations, helping sell [add number] sweatshirts and track customer interest to inform future product decisions." Raw: "I made products with Body Krave" becomes "Assisted with product development and small-batch production by preparing materials, following quality standards, and documenting customer feedback for a student-led brand project."',
+  resume_draft:
+    'A full resume draft for a high-school student, organized into clearly headed sections in this order (skip a section entirely if the student gave nothing for it): PROFILE / SUMMARY (2–3 credible sentences); EDUCATION (school, expected graduation year, GPA only if provided, coursework, honors); EXPERIENCE (2–4 bullets per entry); PROJECTS; VOLUNTEER & COMMUNITY; LEADERSHIP, ACTIVITIES & SPORTS; SKILLS (grouped: technical, communication/teamwork, creative/business, tools/software); AWARDS & CERTIFICATIONS; INTERESTS. Every bullet follows the resume-bullet rules: strong action verb first, specific action, name the skill or business function, include the audience/customer/team/context, include a result or metric — or a bracketed prompt ([add number], [add timeframe], [add result], [add audience], [add tool/system]) when missing. Never invent facts, titles, numbers, awards, or outcomes. Age-appropriate and credible for a high-school student; translate informal work into professional language without exaggerating. This is a clean resume structure the student can paste into any school, internship, scholarship, or job template — never claim it is an official school or company resume.',
+  linkedin_profile:
+    'A LinkedIn starter kit for a high-school student, in labeled blocks: "Headline:" using the formula Student | Aspiring [role/field] | Interested in [topic], [topic], and [topic] (adapt naturally if their material suggests a variant like "Student Entrepreneur | Interested in Marketing, Fashion, and Community Development" — keep it age-appropriate and credible, never inflated); "About:" 3–5 first-person sentences built from their brand sentence, story, and interests; "Experience:" 1–2 short descriptions of their strongest project or experience; "Skills:" a comma-separated list drawn only from skills they actually named; "Connection intro:" a 2–3 sentence polite message they could send when connecting with a professional. Use bracketed prompts for anything missing. Never invent schools, roles, numbers, or achievements.'
 }
 
 function buildSystemPrompt(): string {
@@ -352,6 +358,128 @@ function stripSectionLabels(text: string): string {
   )
 }
 
+// The Resume/LinkedIn Builders compose their forms into single-line
+// labeled entries ("Experience 1 — What you did: …"). Collect the
+// values whose label matches, so the mock builds sections from ONLY
+// the student's own words.
+function lineValues(text: string, labelPattern: RegExp): string[] {
+  const out: string[] = []
+  for (const line of text.split('\n')) {
+    const idx = line.indexOf(':')
+    if (idx === -1) continue
+    const label = line.slice(0, idx).trim()
+    if (!labelPattern.test(label)) continue
+    const value = clean(line.slice(idx + 1))
+    if (value) out.push(value)
+  }
+  return out
+}
+
+// Resume-bullet treatment for one student sentence: action-verb
+// reminder plus bracketed prompts for whatever is missing — never an
+// invented number or outcome.
+function mockResumeBullet(s: string): string {
+  let b = `• ${s} [start with an action verb: led, organized, built, supported]`
+  if (!/\d/.test(s)) b += ' [add number]'
+  if (!hasResultSignal(s)) b += ' [add result]'
+  return b
+}
+
+function mockResumeDraft(worksheet: string): string {
+  const values = (re: RegExp) => lineValues(worksheet, re)
+  const sections: string[] = []
+
+  const profileSeed =
+    values(/^Worksheet language$/i)[0] ||
+    values(/^Career interests — Fields\/roles$/i)[0] ||
+    ''
+  sections.push(
+    `PROFILE / SUMMARY\n${
+      profileSeed || '[2–3 sentences: who you are, what you are building, and what you want next]'
+    }`
+  )
+
+  const education = values(/^Education — /i)
+  const educationLabels = worksheet
+    .split('\n')
+    .filter((l) => /^Education — /i.test(l.trim()) && clean(l.slice(l.indexOf(':') + 1)))
+    .map((l) => clean(l.trim().replace(/^Education — /i, '')))
+  sections.push(
+    `EDUCATION\n${
+      education.length ? educationLabels.join('\n') : '[add school] — [add expected graduation year]'
+    }`
+  )
+
+  const experience = values(/^Experience \d+ — What you did$/i).map(mockResumeBullet)
+  sections.push(
+    `EXPERIENCE\n${
+      experience.length
+        ? experience.join('\n')
+        : '• [Action verb] + [what you did] + [for whom] + [add number] [add result]'
+    }`
+  )
+
+  const projects = values(/^Project \d+ — What you personally did$/i).map(mockResumeBullet)
+  if (projects.length) sections.push(`PROJECTS\n${projects.join('\n')}`)
+
+  const volunteer = values(/^Volunteer \d+ — What you did$/i).map(mockResumeBullet)
+  if (volunteer.length) sections.push(`VOLUNTEER & COMMUNITY\n${volunteer.join('\n')}`)
+
+  const leadership = values(/^Leadership \d+ — Responsibilities$/i).map(mockResumeBullet)
+  if (leadership.length) sections.push(`LEADERSHIP, ACTIVITIES & SPORTS\n${leadership.join('\n')}`)
+
+  const skills = values(/^Skills — /i)
+  sections.push(`SKILLS\n${skills.length ? skills.join('; ') : '[add tool/system]'}`)
+
+  const interests = values(/^Career interests — /i)
+  if (interests.length) sections.push(`CAREER INTERESTS\n${interests.join('; ')}`)
+
+  return sections.join('\n\n')
+}
+
+function mockLinkedinProfile(worksheet: string): string {
+  const first = (re: RegExp) => lineValues(worksheet, re)[0] ?? ''
+
+  const role = clean((first(/^Career interests$/i) || first(/^Role\/identity$/i)).split(/[,\n]/)[0] ?? '')
+  const topicsRaw = first(/^Topics$/i)
+    .split(/[,;]/)
+    .map(clean)
+    .filter(Boolean)
+    .slice(0, 3)
+  const topics =
+    topicsRaw.length === 3
+      ? `${topicsRaw[0]}, ${topicsRaw[1]}, and ${topicsRaw[2]}`
+      : topicsRaw.length
+        ? `${topicsRaw.join(', ')}, and [topic]`
+        : '[topic], [topic], and [topic]'
+
+  const headline = `Student | Aspiring ${role || '[add role/field]'} | Interested in ${topics}`
+
+  const aboutSeeds = [
+    first(/^Brand sentence$/i),
+    first(/^3-second intro$/i),
+    first(/^Remember$/i)
+  ].filter(Boolean)
+  const about = aboutSeeds.length
+    ? `${aboutSeeds.join(' ')} [add what you are working on right now]`
+    : '[3–5 first-person sentences: your brand sentence, what you are working on, and what you want people to remember]'
+
+  const experienceSeed = first(/^Projects\/experience$/i)
+  const skills = first(/^Skills$/i)
+  const name = first(/^Name$/i)
+  const school = first(/^School\/program$/i)
+
+  return [
+    `Headline: ${headline}`,
+    `About: ${about}`,
+    `Experience: ${experienceSeed ? mockResumeBullet(experienceSeed) : '• [your strongest project or experience, described in one line] [add result]'}`,
+    `Skills: ${skills || '[add tool/system]'}`,
+    `Connection intro: Hi, I'm ${name || '[your name]'} — a student at ${
+      school || '[your school/program]'
+    } interested in ${topicsRaw[0] || '[topic]'}. I'd love to connect and learn from your work.`
+  ].join('\n\n')
+}
+
 function mockPolished(payload: BrandCoachPayload, combined: string): string {
   const seed = firstSentences(
     stripSectionLabels(payload.worksheet || payload.selfWords || payload.starExample),
@@ -405,6 +533,10 @@ function mockPolished(payload: BrandCoachPayload, combined: string): string {
             .map((s) => `• ${s} [start with an action verb: led, organized, built, supported] [add number] [add result]`)
             .join('\n')
         : '• [Action verb] + [what you did] + [for whom] + [add number] [add result]'
+    case 'resume_draft':
+      return mockResumeDraft(payload.worksheet)
+    case 'linkedin_profile':
+      return mockLinkedinProfile(payload.worksheet)
   }
 }
 
@@ -451,7 +583,7 @@ export function generateMockBrandCoachResponse(payload: BrandCoachPayload): Bran
 
 export const brandCoachTemplate: StudioPromptTemplate<BrandCoachPayload, BrandCoachResponse> = {
   mode: 'brand-coach',
-  templateVersion: 'brand-coach.v1.2.0',
+  templateVersion: 'brand-coach.v1.3.0',
   systemPrompt: buildSystemPrompt,
   userPromptBuilder: buildUserPrompt,
   responseSchema: validateResponse,

@@ -157,7 +157,10 @@ function validateBrandSherpaRequest(raw: unknown): BrandSherpaPayload {
 
 // Worksheet-driven Brand Coach mode: pasted worksheet material plus
 // an audience and desired output type.
-const MAX_WORKSHEET_CHARS = 8_000
+// Room for the Resume Builder's full composed form (contact,
+// education, repeated experience/project/volunteer/leadership
+// entries) — still well under the template's 16k input cap.
+const MAX_WORKSHEET_CHARS = 12_000
 const MAX_STAR_CHARS = 4_000
 
 function validateBrandCoachRequest(raw: unknown): BrandCoachPayload {

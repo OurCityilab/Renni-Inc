@@ -37,7 +37,9 @@ const outputLabels: Record<SherpaOutputType, string> = {
   pitch_30s: '30-second pitch',
   pitch_1min_tmay: '1-minute / TMAY pitch',
   star_story: 'STAR story',
-  resume_bullets: 'Resume bullets'
+  resume_bullets: 'Resume bullets',
+  resume_draft: 'Resume draft',
+  linkedin_profile: 'LinkedIn profile'
 }
 
 const answers = reactive<Record<string, string>>({})

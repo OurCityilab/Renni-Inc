@@ -212,6 +212,8 @@ export type SherpaOutputType =
   | 'pitch_1min_tmay'
   | 'star_story'
   | 'resume_bullets'
+  | 'resume_draft'
+  | 'linkedin_profile'
 
 export interface WordChoiceFlag {
   word: string
