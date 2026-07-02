@@ -74,5 +74,11 @@ async function signOutCompletely() {
     <p v-if="auth.error" class="mt-3 text-center text-sm text-rose-600">
       {{ auth.error }}
     </p>
+    <p class="mt-5 border-t border-neutral-200 pt-4 text-center text-xs text-neutral-500">
+      Looking for <span class="font-medium">Our City Studio</span>? It uses its own
+      roster — head to
+      <NuxtLink to="/studio/today" class="font-medium text-studio-700">Our City Studio</NuxtLink>
+      instead.
+    </p>
   </div>
 </template>

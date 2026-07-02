@@ -2,7 +2,7 @@
 import { computed, ref } from 'vue'
 import { useStudioAuthStore } from '~/stores/studioAuth'
 import { useStudioMission } from '~/composables/useStudioMission'
-import type { MissionProgressStatus, StudentMissionProgress } from '~/types/studio/models'
+import type { MissionProgressStatus, StudentMissionProgress, StudioModule } from '~/types/studio/models'
 import {
   missionStatusChipClass,
   missionStatusLabels,
@@ -21,6 +21,7 @@ const missionApi = useStudioMission()
 const missions = missionApi.watchActiveMissions()
 const progress = missionApi.watchProgress(studentUid)
 const submitting = ref(false)
+const actionError = ref<string | null>(null)
 
 const progressByMissionId = computed(() => {
   const map = new Map<string, StudentMissionProgress>()
@@ -47,6 +48,16 @@ const currentStatus = computed<MissionProgressStatus>(
   () => currentProgress.value?.status ?? 'not_started'
 )
 
+// Missions whose module has a live Lab tool deep-link straight into
+// it — "Start" should drop the student inside the tool, not just
+// flip a status chip.
+const labToolRoutes: Partial<Record<StudioModule, string>> = {
+  'brand-builder': '/studio/lab/brand-builder'
+}
+const currentToolRoute = computed(() =>
+  currentMission.value ? (labToolRoutes[currentMission.value.module] ?? null) : null
+)
+
 const allCaughtUp = computed(
   () => !missions.loading.value && !progress.loading.value && missions.data.value.length > 0 && !currentMission.value
 )
@@ -54,6 +65,8 @@ const allCaughtUp = computed(
 async function startMission() {
   if (!currentMission.value || submitting.value) return
   submitting.value = true
+  actionError.value = null
+  const toolRoute = currentToolRoute.value
   try {
     await missionApi.setMissionStatus(
       currentProgress.value,
@@ -61,14 +74,19 @@ async function startMission() {
       currentMission.value.id,
       'in_progress'
     )
+  } catch {
+    actionError.value = "Couldn't start the mission. Check your connection and try again."
+    return
   } finally {
     submitting.value = false
   }
+  if (toolRoute) await navigateTo(toolRoute)
 }
 
 async function completeMission() {
   if (!currentMission.value || submitting.value) return
   submitting.value = true
+  actionError.value = null
   try {
     await missionApi.setMissionStatus(
       currentProgress.value,
@@ -76,6 +94,8 @@ async function completeMission() {
       currentMission.value.id,
       'complete'
     )
+  } catch {
+    actionError.value = "Couldn't mark the mission complete. Check your connection and try again."
   } finally {
     submitting.value = false
   }
@@ -134,19 +154,22 @@ async function completeMission() {
           :disabled="submitting"
           @click="startMission"
         >
-          Start mission
+          {{ currentToolRoute ? `Start: ${studioModuleLabels[currentMission.module]}` : 'Start mission' }}
         </button>
-        <button
-          v-else-if="currentStatus === 'in_progress' || currentStatus === 'needs_revision'"
-          class="btn-primary"
-          :disabled="submitting"
-          @click="completeMission"
-        >
-          Mark complete
-        </button>
-        <button class="btn-secondary" disabled title="Coming soon">Ask AI</button>
-        <button class="btn-secondary" disabled title="Coming soon">Ask coach</button>
+        <template v-else-if="currentStatus === 'in_progress' || currentStatus === 'needs_revision'">
+          <NuxtLink v-if="currentToolRoute" :to="currentToolRoute" class="btn-primary">
+            Open {{ studioModuleLabels[currentMission.module] }}
+          </NuxtLink>
+          <button
+            :class="currentToolRoute ? 'btn-secondary' : 'btn-primary'"
+            :disabled="submitting"
+            @click="completeMission"
+          >
+            Mark complete
+          </button>
+        </template>
       </div>
+      <p v-if="actionError" class="text-sm text-rose-700">{{ actionError }}</p>
     </div>
   </div>
 </template>

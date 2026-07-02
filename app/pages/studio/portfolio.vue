@@ -33,14 +33,19 @@ const newForm = reactive({
 })
 const savingNew = ref(false)
 
+const writeError = ref<string | null>(null)
+
 async function saveNewArtifact() {
   if (!newForm.title.trim() || !newForm.content.trim() || savingNew.value) return
   savingNew.value = true
+  writeError.value = null
   try {
     await artifactApi.create(studentUid, newForm.artifactType, newForm.title, newForm.content)
     newForm.title = ''
     newForm.content = ''
     showNewForm.value = false
+  } catch {
+    writeError.value = "Couldn't save the artifact. Check your connection and try again."
   } finally {
     savingNew.value = false
   }
@@ -65,21 +70,34 @@ function cancelEdit() {
 async function saveEdit(artifact: PortfolioArtifact) {
   if (!editForm.title.trim() || savingEditId.value) return
   savingEditId.value = artifact.id
+  writeError.value = null
   try {
     await artifactApi.updateContent(artifact.id, editForm.title, editForm.content)
     editingId.value = null
+  } catch {
+    writeError.value = "Couldn't save your changes. Check your connection and try again."
   } finally {
     savingEditId.value = null
   }
 }
 
 async function submitForReview(artifact: PortfolioArtifact) {
-  await artifactApi.submitForReview(artifact.id)
+  writeError.value = null
+  try {
+    await artifactApi.submitForReview(artifact.id)
+  } catch {
+    writeError.value = "Couldn't submit for review. Check your connection and try again."
+  }
 }
 
 async function removeArtifact(artifact: PortfolioArtifact) {
   if (!confirm(`Delete "${artifact.title}"? This can't be undone.`)) return
-  await artifactApi.remove(artifact.id)
+  writeError.value = null
+  try {
+    await artifactApi.remove(artifact.id)
+  } catch {
+    writeError.value = "Couldn't delete the artifact. Check your connection and try again."
+  }
 }
 
 async function copyArtifact(artifact: PortfolioArtifact) {
@@ -108,6 +126,8 @@ async function copyArtifact(artifact: PortfolioArtifact) {
         {{ showNewForm ? 'Cancel' : '+ New artifact' }}
       </button>
     </div>
+
+    <p v-if="writeError" class="text-sm text-rose-700">{{ writeError }}</p>
 
     <div v-if="showNewForm" class="card space-y-3">
       <label class="block text-sm">

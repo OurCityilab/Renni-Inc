@@ -36,6 +36,10 @@ async function askSherpa() {
     const res = await sherpaApi.askBrandSherpa(form)
     result.value = res.sherpa
     wasMock.value = res.mock
+    // Each new Sherpa version is saveable on its own — without this
+    // reset, a student who iterates can never save the improved version.
+    saved.value = false
+    saveError.value = null
   } catch (e: unknown) {
     askError.value = e instanceof Error ? e.message : 'Something went wrong asking the Sherpa. Try again.'
   } finally {
@@ -46,13 +50,17 @@ async function askSherpa() {
 const saveTitle = ref('My Personal Brand Statement')
 const saving = ref(false)
 const saved = ref(false)
+const saveError = ref<string | null>(null)
 
 async function saveToPortfolio() {
   if (!result.value || saving.value) return
   saving.value = true
+  saveError.value = null
   try {
     await artifactApi.create(studentUid, 'brand_sentence', saveTitle.value, result.value.professionalVersion)
     saved.value = true
+  } catch {
+    saveError.value = "Couldn't save to your Portfolio. Check your connection and try again."
   } finally {
     saving.value = false
   }
@@ -161,6 +169,19 @@ async function saveToPortfolio() {
         >
           {{ saved ? 'Saved to Portfolio ✓' : (saving ? 'Saving…' : 'Save to My Portfolio') }}
         </button>
+        <p v-if="saveError" class="text-sm text-rose-700">{{ saveError }}</p>
+        <div v-if="saved" class="space-y-1 text-sm">
+          <p>
+            <NuxtLink to="/studio/portfolio" class="font-medium text-studio-700">
+              View it in My Portfolio →
+            </NuxtLink>
+          </p>
+          <p class="text-neutral-600">
+            Happy with it? Go back to
+            <NuxtLink to="/studio/today" class="font-medium text-studio-700">Today</NuxtLink>
+            and tap "Mark complete" to finish this mission.
+          </p>
+        </div>
       </div>
     </div>
   </div>

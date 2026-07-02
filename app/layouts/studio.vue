@@ -3,6 +3,14 @@ import { useStudioAuthStore } from '~/stores/studioAuth'
 
 const studioAuth = useStudioAuthStore()
 
+// Navigate after sign-out — on shared classroom devices the next
+// student needs the login screen, not a signed-out page with dead
+// Firestore listeners. The redirect keeps the Studio-branded login.
+async function handleSignOut() {
+  await studioAuth.signOut()
+  await navigateTo('/login?redirect=/studio/today')
+}
+
 type TabItem = { to: string; label: string; icon: string }
 
 const tabs: TabItem[] = [
@@ -30,7 +38,7 @@ const tabs: TabItem[] = [
           >OC</span>
           <span class="truncate font-semibold">Our City Studio</span>
         </NuxtLink>
-        <button v-if="studioAuth.profile" class="btn-secondary" @click="studioAuth.signOut()">
+        <button v-if="studioAuth.profile" class="btn-secondary" @click="handleSignOut">
           Sign out
         </button>
       </div>
