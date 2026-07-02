@@ -96,6 +96,24 @@ test('compose: structured fields flow into the Sherpa user prompt', () => {
   assert.ok(prompt.includes('scholarship committee'))
 })
 
+test('per-worksheet coaching focus appears in the user prompt when provided', () => {
+  const base = {
+    worksheet: 'I enjoy organizing events.',
+    selfWords: '',
+    starExample: '',
+    audience: 'general' as const,
+    outputType: 'word_choice' as const
+  }
+  const withFocus = brandCoachTemplate.userPromptBuilder({
+    ...base,
+    focus: 'Help the student find patterns across their raw material.'
+  })
+  assert.ok(withFocus.includes('Coaching focus for this worksheet:'))
+  assert.ok(withFocus.includes('find patterns across their raw material'))
+  const withoutFocus = brandCoachTemplate.userPromptBuilder(base)
+  assert.ok(!withoutFocus.includes('Coaching focus for this worksheet:'))
+})
+
 // ---------- word flag mock behavior ----------
 
 test('mock flags "philanthropist" with the audience-risk explanation', () => {

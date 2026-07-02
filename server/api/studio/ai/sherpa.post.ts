@@ -192,7 +192,8 @@ function validateBrandCoachRequest(raw: unknown): BrandCoachPayload {
     selfWords: asField(body.selfWords, 'selfWords'),
     starExample: asField(body.starExample, 'starExample', MAX_STAR_CHARS),
     audience: audience as SherpaAudience,
-    outputType: outputType as SherpaOutputType
+    outputType: outputType as SherpaOutputType,
+    focus: asField(body.focus ?? '', 'focus', 600)
   }
   if (!payload.worksheet && !payload.selfWords && !payload.starExample) {
     badRequest(

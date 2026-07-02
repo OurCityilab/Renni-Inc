@@ -32,6 +32,8 @@ export interface BrandCoachPayload {
   starExample: string
   audience: SherpaAudience
   outputType: SherpaOutputType
+  /** Optional per-worksheet coaching focus from the Lab modules. */
+  focus?: string
 }
 
 export const BRAND_COACH_AUDIENCES: readonly SherpaAudience[] = Object.freeze([
@@ -119,7 +121,7 @@ function buildUserPrompt(payload: BrandCoachPayload): string {
 
 Audience they are writing for: ${AUDIENCE_DESCRIPTIONS[payload.audience]}.
 Output they want: ${OUTPUT_GUIDANCE[payload.outputType]}
-
+${payload.focus ? `Coaching focus for this worksheet: ${payload.focus}\n` : ''}
 Their worksheet material (their own words):
 ${payload.worksheet || '(nothing pasted)'}
 
@@ -449,7 +451,7 @@ export function generateMockBrandCoachResponse(payload: BrandCoachPayload): Bran
 
 export const brandCoachTemplate: StudioPromptTemplate<BrandCoachPayload, BrandCoachResponse> = {
   mode: 'brand-coach',
-  templateVersion: 'brand-coach.v1.1.0',
+  templateVersion: 'brand-coach.v1.2.0',
   systemPrompt: buildSystemPrompt,
   userPromptBuilder: buildUserPrompt,
   responseSchema: validateResponse,

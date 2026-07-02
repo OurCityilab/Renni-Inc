@@ -137,7 +137,8 @@ export interface StudentMissionProgress {
 export interface WorksheetResponse {
   id: string
   studentUid: string
-  worksheetType: StudioModule
+  // StudioModule values plus Lab worksheet drafts ('personal-brand-<slug>').
+  worksheetType: string
   missionId?: string | null
   rawInputs: Record<string, unknown>
   aiQuestions?: string[]

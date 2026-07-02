@@ -30,6 +30,8 @@ export interface BrandCoachInput {
   starExample: string
   audience: SherpaAudience
   outputType: SherpaOutputType
+  /** Optional per-worksheet coaching focus (sherpaFocus from the Lab). */
+  focus?: string
 }
 
 export interface BrandCoachApiResponse {
