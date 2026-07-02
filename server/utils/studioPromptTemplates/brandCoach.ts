@@ -77,7 +77,7 @@ const OUTPUT_GUIDANCE: Record<SherpaOutputType, string> = {
   star_story:
     'A STAR story with each part labeled: Situation (is the context clear?), Task (is their responsibility clear?), Action (what did they PERSONALLY do?), Result (an outcome, number, lesson, or change). If the Result is missing or weak, insert [add result] and push for it in followUpQuestions with questions like "What changed because of what you did?", "How many people were affected?", "What was better after your action?", or "What would a teacher, coach, employer, or teammate say you contributed?"',
   resume_bullets:
-    'Resume bullets: 2–4 bullets, each starting with a strong action verb, specific, credible, and age-appropriate for a high-school student. Optimize wording for admissions readers, recruiters, and ATS-style keyword scanning. Where a metric or detail is missing, insert bracketed prompts like [add number], [add timeframe], [add result] — never invent one. Example of the expected translation: raw "I helped with the pop-up shop and sold sweatshirts" becomes "Supported pop-up retail operations by engaging customers, explaining product value, and contributing to sweatshirt sales during a student-led entrepreneurship event," or with details available, "Supported student-led pop-up retail operations, helping sell [number] sweatshirts and track customer interest for future product decisions."'
+    'Resume bullets in a standard student / early-career, recruiter-ready format — never claim this is an official university or company template. Produce 2–4 bullets. Rules: (1) start with a strong action verb; (2) make the action specific; (3) name the skill or business function when possible; (4) include the audience, customer, team, or context; (5) include a result, metric, or lesson — or a bracketed prompt if missing; (6) never invent facts, titles, numbers, awards, or outcomes; (7) missing details become bracketed prompts: [add number], [add timeframe], [add result], [add audience], [add tool/system]; (8) keep bullets age-appropriate and credible for a high-school student; (9) translate informal work into professional language without exaggerating. Examples of the expected translation — raw: "I helped with the pop-up shop and sold sweatshirts" becomes "Supported student-led pop-up retail operations by engaging customers, explaining product value, and contributing to sweatshirt sales during a school-based entrepreneurship event," or with missing metrics, "Supported student-led pop-up retail operations, helping sell [add number] sweatshirts and track customer interest to inform future product decisions." Raw: "I made products with Body Krave" becomes "Assisted with product development and small-batch production by preparing materials, following quality standards, and documenting customer feedback for a student-led brand project."'
 }
 
 function buildSystemPrompt(): string {
@@ -95,7 +95,7 @@ Every response you give MUST be a single JSON object with exactly these five fie
 
 Field guidance:
 - "strengths": 1–3 sentences naming what is genuinely strong in the student's raw material — real evidence, a specific story, a distinctive detail. Be honest and specific, never generic praise.
-- "wordChoiceFlags": 0–4 flags. Flag words that overclaim, undersell, or land differently than the student intends. For each: "word" is the student's word or phrase, "howItMayLand" explains how this audience may actually hear it, "alternatives" gives 2–6 more precise options, "why" explains which alternative fits depending on the student's actual evidence. Example of the expected depth: if a student calls himself a "philanthropist," respond along the lines of — philanthropist can be a powerful word, but some audiences may hear it as someone with major financial means, a foundation, or a long giving record; if the evidence is service, mentoring, organizing, fundraising, or giving time, a more precise phrase may be community builder, service-minded leader, youth advocate, volunteer organizer, mutual aid leader, or emerging social entrepreneur — then explain which fits their evidence. Empty array only if nothing needs flagging.
+- "wordChoiceFlags": 0–4 flags. Flag words that overclaim, undersell, or land differently than the student intends. For each: "word" is the student's word or phrase, "howItMayLand" explains how this audience may actually hear it, "alternatives" gives 2–6 more precise options, "why" explains which alternative fits depending on the student's actual evidence. Example of the expected depth: if a student calls himself a "philanthropist," respond along the lines of — philanthropist may sound like someone with significant financial resources, a foundation, or a long public giving record; if the evidence is service, mentoring, organizing, volunteering, or helping their community, consider more precise language such as community builder, service-minded leader, youth advocate, volunteer organizer, mutual aid participant, or emerging social entrepreneur — then explain which fits their evidence. Empty array only if nothing needs flagging.
 - "audienceRead": 1–3 sentences describing how the selected audience will likely read this student's material as written — what will land well and what may be misread or skimmed past.
 - "polishedVersion": the selected output type, built ONLY from what the student gave you, following the output guidance in the user message. Keep the student's real experience and recognizable voice, but make it sound professional.
 - "followUpQuestions": 1–2 specific, answerable questions that would make the material stronger — push for the missing number, outcome, or concrete moment. Never a vague "tell me more."
@@ -194,16 +194,16 @@ const WORD_FLAG_RULES: FlagRule[] = [
     pattern: /\bphilanthropists?\b/i,
     word: 'philanthropist',
     howItMayLand:
-      'Philanthropist can be a powerful word, but some audiences may hear it as someone with major financial means, a foundation, or a long giving record.',
+      'Philanthropist may sound like someone with significant financial resources, a foundation, or a long public giving record.',
     alternatives: [
       'community builder',
       'service-minded leader',
       'youth advocate',
       'volunteer organizer',
-      'mutual aid leader',
+      'mutual aid participant',
       'emerging social entrepreneur'
     ],
-    why: 'If your evidence is service, mentoring, organizing, fundraising, or giving time, a more precise phrase keeps you credible. Pick the one your evidence supports: "volunteer organizer" if you organize, "youth advocate" if you speak up for younger people, "community builder" if you bring people together.'
+    why: 'If your evidence is service, mentoring, organizing, volunteering, or helping your community, more precise language keeps you credible. Pick the one your evidence supports: "volunteer organizer" if you organize, "youth advocate" if you speak up for younger people, "community builder" if you bring people together.'
   },
   {
     pattern: /\bpassionate\b/i,

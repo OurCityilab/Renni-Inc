@@ -30,7 +30,7 @@ const outputOptions: Array<{ value: SherpaOutputType; label: string }> = [
   { value: 'word_choice', label: 'Word choice feedback' },
   { value: 'pitch_3s', label: '3-second pitch' },
   { value: 'pitch_30s', label: '30-second pitch' },
-  { value: 'pitch_1min_tmay', label: '1-minute "Tell me about yourself"' },
+  { value: 'pitch_1min_tmay', label: '1-minute / TMAY pitch' },
   { value: 'star_story', label: 'STAR story' },
   { value: 'resume_bullets', label: 'Resume bullets' }
 ]
@@ -179,6 +179,10 @@ async function saveToPortfolio() {
               {{ opt.label }}
             </option>
           </select>
+          <span v-if="form.outputType === 'resume_bullets'" class="mt-1 block text-xs text-neutral-500">
+            These bullets are meant to help you get the wording right. You can paste them into
+            your school, scholarship, internship, or job resume template later.
+          </span>
         </label>
       </div>
 
@@ -232,6 +236,10 @@ async function saveToPortfolio() {
         <p class="mt-1 text-xs text-neutral-500">
           Anything in [brackets] is yours to fill in — the Sherpa never makes up a number or result
           for you.
+        </p>
+        <p v-if="resultOutputType === 'resume_bullets'" class="mt-1 text-xs text-neutral-500">
+          These bullets are meant to help you get the wording right. You can paste them into your
+          school, scholarship, internship, or job resume template later.
         </p>
       </div>
 
