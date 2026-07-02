@@ -38,7 +38,8 @@ const EXPECTED_PILOT_EMAILS = [
   'mylesjdavis1@outlook.com',
   'blaisework99@gmail.com',
   'jacobdilworth127@gmail.com',
-  'alorythomas569@gmail.com'
+  'alorythomas569@gmail.com',
+  'the.myra.simone@gmail.com'
 ]
 
 test('script is hard-locked to the staging project', () => {
@@ -53,8 +54,8 @@ test('normalizeEmail lowercases and trims', () => {
   assert.equal(normalizeEmail('  MIXED@Case.COM '), 'mixed@case.com')
 })
 
-test('all 14 pilot student emails are present, lowercase', () => {
-  assert.equal(PILOT_STUDENT_EMAILS.length, 14)
+test('all 15 pilot student emails are present, lowercase', () => {
+  assert.equal(PILOT_STUDENT_EMAILS.length, 15)
   for (const email of EXPECTED_PILOT_EMAILS) {
     assert.ok(PILOT_STUDENT_EMAILS.includes(email), `missing pilot email: ${email}`)
   }
@@ -66,7 +67,7 @@ test('all 14 pilot student emails are present, lowercase', () => {
 test('plan covers pilots + existing accounts with correct roles and cohort', () => {
   const now = new Date().toISOString()
   const plan = buildRosterPlan(now)
-  assert.equal(plan.length, 16)
+  assert.equal(plan.length, 17)
 
   const byId = new Map(plan.map((e) => [e.docId, e]))
 

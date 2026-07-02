@@ -42,7 +42,8 @@ export const PILOT_STUDENT_EMAILS: string[] = [
   'mylesjdavis1@outlook.com',
   'blaisework99@gmail.com',
   'jacobdilworth127@gmail.com',
-  'alorythomas569@gmail.com'
+  'alorythomas569@gmail.com',
+  'the.myra.simone@gmail.com'
 ].map(normalizeEmail)
 
 export interface RosterSeedEntry {
