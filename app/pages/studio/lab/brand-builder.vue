@@ -10,6 +10,7 @@ import {
   type BrandWorksheetForm
 } from '~/utils/studioBrandWorksheet'
 import { studioTemplateDownloads } from '~/data/studio/templates/worksheetPrompts'
+import { personalBrandWorksheets } from '~/data/studio/worksheets/personalBrandPitchLab'
 import type {
   BrandCoachResponse,
   PortfolioArtifactType,
@@ -423,7 +424,15 @@ function printResult() {
         You don't need these to use the Brand Builder — the worksheet above is the whole flow.
         Printable copies if you want to draft on paper first:
       </p>
-      <ul class="flex flex-wrap gap-x-4 gap-y-1 pt-1">
+      <ul class="space-y-1 pt-1">
+        <li v-for="ws in personalBrandWorksheets" :key="ws.pdfHref" class="text-xs">
+          <a
+            :href="ws.pdfHref"
+            target="_blank"
+            rel="noopener"
+            class="text-studio-700 underline"
+          >Worksheet {{ ws.number }}: {{ ws.title }} (PDF)</a>
+        </li>
         <li v-for="tpl in studioTemplateDownloads" :key="tpl.href" class="text-xs">
           <a
             :href="tpl.href"

@@ -7,12 +7,10 @@ export interface StudioTemplateDownload {
   description: string
 }
 
+// The official Personal Brand & Pitch Lab worksheet PDFs live in
+// app/data/studio/worksheets/personalBrandPitchLab.ts. These are the
+// remaining extra text templates that have no PDF equivalent.
 export const studioTemplateDownloads: StudioTemplateDownload[] = [
-  {
-    label: 'Personal Brand Worksheet',
-    href: '/studio/templates/personal-brand-worksheet.md',
-    description: 'Prompts to draft what you care about, your words, and your evidence.'
-  },
   {
     label: 'STAR Story Worksheet',
     href: '/studio/templates/star-story-worksheet.md',
@@ -22,11 +20,6 @@ export const studioTemplateDownloads: StudioTemplateDownload[] = [
     label: 'Resume Template (standard student format)',
     href: '/studio/templates/resume-template.md',
     description: 'A clean early-career layout — not an official school or company template.'
-  },
-  {
-    label: 'Pitch Builder Guide',
-    href: '/studio/templates/pitch-builder-guide.md',
-    description: 'How to build your 3-second, 30-second, and 1-minute / TMAY pitches.'
   }
 ]
 
