@@ -3,6 +3,7 @@ import { reactive, ref } from 'vue'
 import { useStudioAuthStore } from '~/stores/studioAuth'
 import { usePortfolioArtifact } from '~/composables/usePortfolioArtifact'
 import { useAiSherpa, type BrandCoachInput } from '~/composables/useAiSherpa'
+import { studioTemplateDownloads } from '~/data/studio/templates/worksheetPrompts'
 import type {
   BrandCoachResponse,
   PortfolioArtifactType,
@@ -127,6 +128,21 @@ async function saveToPortfolio() {
       hear them, and turn your real experience into pitches and resume-ready language. It never
       invents facts or numbers you didn't give it.
     </p>
+
+    <div class="card space-y-2">
+      <h2 class="text-sm font-semibold text-neutral-500">Helpful templates</h2>
+      <ul class="space-y-2">
+        <li v-for="tpl in studioTemplateDownloads" :key="tpl.href" class="text-sm">
+          <a
+            :href="tpl.href"
+            target="_blank"
+            rel="noopener"
+            class="font-medium text-studio-700 underline"
+          >{{ tpl.label }}</a>
+          <span class="block text-xs text-neutral-600">{{ tpl.description }}</span>
+        </li>
+      </ul>
+    </div>
 
     <div class="card space-y-3">
       <label class="block text-sm">
