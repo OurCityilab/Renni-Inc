@@ -1,0 +1,48 @@
+# Firebase App Hosting overrides for the STAGING backend
+# (environment name "staging" on the backend activates this file;
+# everything not listed here inherits from apphosting.yaml).
+#
+# Points the app at the renni-cc-staging Firebase project instead of
+# production (renni-command-center). NUXT_PUBLIC_* values are the
+# staging web app's config — safe to embed in the client bundle, but
+# they must be present at BUILD time so Nuxt inlines them.
+
+env:
+  - variable: NUXT_PUBLIC_FIREBASE_API_KEY
+    value: AIzaSyBctA5g65jRhq0-x5bQr35JG80BmivNlaE
+    availability:
+      - BUILD
+      - RUNTIME
+  - variable: NUXT_PUBLIC_FIREBASE_AUTH_DOMAIN
+    value: renni-cc-staging.firebaseapp.com
+    availability:
+      - BUILD
+      - RUNTIME
+  - variable: NUXT_PUBLIC_FIREBASE_PROJECT_ID
+    value: renni-cc-staging
+    availability:
+      - BUILD
+      - RUNTIME
+  - variable: NUXT_PUBLIC_FIREBASE_STORAGE_BUCKET
+    value: renni-cc-staging.firebasestorage.app
+    availability:
+      - BUILD
+      - RUNTIME
+  - variable: NUXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID
+    value: "472805945200"
+    availability:
+      - BUILD
+      - RUNTIME
+  - variable: NUXT_PUBLIC_FIREBASE_APP_ID
+    value: 1:472805945200:web:ad41b8ce7fe9d1017469b5
+    availability:
+      - BUILD
+      - RUNTIME
+
+  # Server-side projectId fallback read by server/utils/admin.ts when
+  # NUXT_PUBLIC_FIREBASE_PROJECT_ID isn't available. Must match the
+  # staging project so the Admin SDK (ADC) talks to staging Firestore.
+  - variable: FIREBASE_PROJECT_ID
+    value: renni-cc-staging
+    availability:
+      - RUNTIME
