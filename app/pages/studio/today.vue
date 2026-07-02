@@ -106,6 +106,26 @@ async function completeMission() {
   <div class="space-y-4">
     <h1 class="text-lg font-semibold">Today</h1>
 
+    <!-- Featured Lab tool — always visible, above the mission list,
+         regardless of mission progress. This week's classes run
+         through the Brand Builder. -->
+    <div class="card space-y-3 border-2 border-studio-300 bg-studio-50">
+      <span class="chip bg-studio-100 text-studio-800">The Lab</span>
+      <div>
+        <h2 class="text-base font-semibold">Personal Brand Builder</h2>
+        <p class="mt-1 text-sm text-neutral-700">
+          Paste in your worksheet work. The AI Sherpa will help you sharpen your words, explain
+          how your audience may hear them, and turn your experience into pitches and
+          resume-ready language.
+        </p>
+      </div>
+      <NuxtLink to="/studio/lab/brand-builder" class="btn-primary inline-block w-full text-center sm:w-auto">
+        Start Brand Builder
+      </NuxtLink>
+    </div>
+
+    <h2 class="pt-1 text-sm font-semibold text-neutral-500">Your missions</h2>
+
     <div v-if="missions.loading.value || progress.loading.value" class="card text-sm text-neutral-500">
       Loading today's mission…
     </div>

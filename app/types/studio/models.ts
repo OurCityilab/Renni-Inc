@@ -192,6 +192,40 @@ export interface SherpaResponse {
   tryAgainQuestion: string
 }
 
+// -------- Brand Coach contract (mode: brand-coach) --------
+// Worksheet-driven coaching response: teaches word choice and
+// audience awareness rather than just rewriting. Used by the
+// Personal Brand Builder's "Get Sherpa Feedback" flow.
+export type SherpaAudience =
+  | 'admissions'
+  | 'recruiter'
+  | 'employer'
+  | 'customer'
+  | 'general'
+
+export type SherpaOutputType =
+  | 'word_choice'
+  | 'pitch_3s'
+  | 'pitch_30s'
+  | 'pitch_1min_tmay'
+  | 'star_story'
+  | 'resume_bullets'
+
+export interface WordChoiceFlag {
+  word: string
+  howItMayLand: string
+  alternatives: string[]
+  why: string
+}
+
+export interface BrandCoachResponse {
+  strengths: string
+  wordChoiceFlags: WordChoiceFlag[]
+  audienceRead: string
+  polishedVersion: string
+  followUpQuestions: string[]
+}
+
 // -------- aiSessions/{id} --------
 export interface AISession {
   id: string

@@ -39,11 +39,21 @@ import { adminAuth, adminDb } from '~~/server/utils/admin'
 import { resolveStudioPromptTemplate } from '~~/server/utils/studioPromptTemplates'
 import type { BrandSherpaPayload } from '~~/server/utils/studioPromptTemplates/brandSherpa'
 import {
+  BRAND_COACH_AUDIENCES,
+  BRAND_COACH_OUTPUT_TYPES,
+  type BrandCoachPayload
+} from '~~/server/utils/studioPromptTemplates/brandCoach'
+import {
   resolveStudioAiDailyLimit,
   recordSuccessfulStudioCall,
   withinStudioDailyLimit
 } from '~~/server/utils/studioAiRateLimit'
-import type { SherpaResponse } from '~~/app/types/studio/models'
+import type {
+  BrandCoachResponse,
+  SherpaAudience,
+  SherpaOutputType,
+  SherpaResponse
+} from '~~/app/types/studio/models'
 
 const DEFAULT_MODE = 'brand-sherpa'
 const MAX_FIELD_CHARS = 1_500
@@ -108,15 +118,15 @@ function readBearerToken(event: Parameters<typeof getHeader>[0]): string {
   return token
 }
 
-function asField(value: unknown, field: string): string {
+function asField(value: unknown, field: string, maxChars: number = MAX_FIELD_CHARS): string {
   if (typeof value !== 'string') {
     badRequest('sherpa_invalid_request', `${field} must be a string`)
   }
   const trimmed = value.trim()
-  if (trimmed.length > MAX_FIELD_CHARS) {
+  if (trimmed.length > maxChars) {
     badRequest(
       'sherpa_payload_too_large',
-      `${field} is too long. Keep each answer under ${MAX_FIELD_CHARS} characters.`
+      `${field} is too long. Keep each answer under ${maxChars} characters.`
     )
   }
   return trimmed
@@ -141,6 +151,54 @@ function validateBrandSherpaRequest(raw: unknown): BrandSherpaPayload {
   const hasAnyAnswer = Object.values(payload).some((v) => v.length > 0)
   if (!hasAnyAnswer) {
     badRequest('sherpa_invalid_request', 'Answer at least one question before asking the Sherpa.')
+  }
+  return payload
+}
+
+// Worksheet-driven Brand Coach mode: pasted worksheet material plus
+// an audience and desired output type.
+const MAX_WORKSHEET_CHARS = 8_000
+const MAX_STAR_CHARS = 4_000
+
+function validateBrandCoachRequest(raw: unknown): BrandCoachPayload {
+  if (!raw || typeof raw !== 'object') {
+    badRequest('sherpa_invalid_request', 'Request body must be a JSON object.')
+  }
+  const body = raw as Record<string, unknown>
+
+  const audience = body.audience
+  if (
+    typeof audience !== 'string' ||
+    !BRAND_COACH_AUDIENCES.includes(audience as SherpaAudience)
+  ) {
+    badRequest(
+      'sherpa_invalid_request',
+      `audience must be one of: ${BRAND_COACH_AUDIENCES.join(', ')}.`
+    )
+  }
+  const outputType = body.outputType
+  if (
+    typeof outputType !== 'string' ||
+    !BRAND_COACH_OUTPUT_TYPES.includes(outputType as SherpaOutputType)
+  ) {
+    badRequest(
+      'sherpa_invalid_request',
+      `outputType must be one of: ${BRAND_COACH_OUTPUT_TYPES.join(', ')}.`
+    )
+  }
+
+  const payload: BrandCoachPayload = {
+    worksheet: asField(body.worksheet, 'worksheet', MAX_WORKSHEET_CHARS),
+    selfWords: asField(body.selfWords, 'selfWords'),
+    starExample: asField(body.starExample, 'starExample', MAX_STAR_CHARS),
+    audience: audience as SherpaAudience,
+    outputType: outputType as SherpaOutputType
+  }
+  if (!payload.worksheet && !payload.selfWords && !payload.starExample) {
+    badRequest(
+      'sherpa_invalid_request',
+      'Paste in some worksheet work before asking for Sherpa feedback.'
+    )
   }
   return payload
 }
@@ -259,14 +317,15 @@ export default defineEventHandler(async (event) => {
   }
 
   const template = resolveStudioPromptTemplate(mode)
-  if (!template || mode !== 'brand-sherpa') {
+  if (!template || (mode !== 'brand-sherpa' && mode !== 'brand-coach')) {
     badRequest(
       'sherpa_invalid_request',
-      `Unsupported Sherpa mode "${mode}". Supported modes: brand-sherpa.`
+      `Unsupported Sherpa mode "${mode}". Supported modes: brand-sherpa, brand-coach.`
     )
   }
 
-  const validated = validateBrandSherpaRequest(raw)
+  const validated: BrandSherpaPayload | BrandCoachPayload =
+    mode === 'brand-coach' ? validateBrandCoachRequest(raw) : validateBrandSherpaRequest(raw)
 
   const apiKey = (config.aiCritiqueApiKey as string | undefined) || ''
   const baseUrl =
@@ -274,12 +333,12 @@ export default defineEventHandler(async (event) => {
   const model =
     (config.aiCritiqueModel as string | undefined) || 'claude-haiku-4-5-20251001'
 
-  let sherpa: SherpaResponse
+  let sherpa: SherpaResponse | BrandCoachResponse
   let mock: boolean
 
   if (!apiKey) {
     // Deterministic mock mode — no provider configured. Never
-    // invents facts or numbers; see brandSherpa.ts.
+    // invents facts or numbers; see brandSherpa.ts / brandCoach.ts.
     sherpa = template.mockResponse(validated)
     mock = true
   } else {
@@ -302,7 +361,7 @@ export default defineEventHandler(async (event) => {
     })
     const parsed = parseModelJson(text)
     try {
-      sherpa = template.responseSchema(parsed) as SherpaResponse
+      sherpa = template.responseSchema(parsed) as SherpaResponse | BrandCoachResponse
     } catch (e) {
       malformedResponse(e instanceof Error ? e.message : 'Sherpa response failed validation.')
     }
@@ -313,13 +372,23 @@ export default defineEventHandler(async (event) => {
   recordSuccessfulStudioCall(uid)
 
   // 5. Audit log — Admin-SDK-only write, no client write path.
-  const inputText = [
-    validated.whatYouCareAbout,
-    validated.whyItMatters,
-    validated.whoYouWantToHelp,
-    validated.whatPeopleAskYouFor,
-    validated.futureYouAreBuilding
-  ]
+  const inputText = (
+    'worksheet' in validated
+      ? [
+          `audience: ${validated.audience}`,
+          `outputType: ${validated.outputType}`,
+          validated.worksheet,
+          validated.selfWords,
+          validated.starExample
+        ]
+      : [
+          validated.whatYouCareAbout,
+          validated.whyItMatters,
+          validated.whoYouWantToHelp,
+          validated.whatPeopleAskYouFor,
+          validated.futureYouAreBuilding
+        ]
+  )
     .filter(Boolean)
     .join('\n')
   await db.collection('aiSessions').add({

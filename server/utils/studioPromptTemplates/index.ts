@@ -55,16 +55,17 @@ export interface StudioPromptTemplate<TPayload, TResponse> {
 }
 
 import { brandSherpaTemplate } from './brandSherpa'
+import { brandCoachTemplate } from './brandCoach'
 
 /**
- * Registry of supported Studio AI modes. V1 declares one mode
- * (`brand-sherpa`). Future Sherpa tools (STAR/TMAY, resume,
- * LinkedIn, Markets coaching) register here without forking the
- * endpoint.
+ * Registry of supported Studio AI modes. Future Sherpa tools
+ * (STAR/TMAY, resume, LinkedIn, Markets coaching) register here
+ * without forking the endpoint.
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const REGISTRY: Record<string, StudioPromptTemplate<any, any>> = {
-  'brand-sherpa': brandSherpaTemplate
+  'brand-sherpa': brandSherpaTemplate,
+  'brand-coach': brandCoachTemplate
 }
 
 /**
