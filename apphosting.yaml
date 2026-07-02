@@ -61,14 +61,16 @@ env:
     availability:
       - RUNTIME
 
-  # AI Critique V1 — Anthropic Messages API. The key is stored as a
-  # Secret Manager secret named NUXT_AI_CRITIQUE_API_KEY and only
-  # exposed to the running server (no BUILD availability, no public
-  # bundle exposure). BASE_URL and MODEL are non-secret tunables.
-  - variable: NUXT_AI_CRITIQUE_API_KEY
-    secret: NUXT_AI_CRITIQUE_API_KEY
-    availability:
-      - RUNTIME
+  # AI Critique V1 — Anthropic Messages API. STAGING BRANCH ONLY:
+  # the NUXT_AI_CRITIQUE_API_KEY secret mapping is intentionally
+  # absent here (the secret doesn't exist in renni-cc-staging, and a
+  # secret reference fails the rollout even when overridden with a
+  # plain value in apphosting.staging.yaml). With no key configured,
+  # the Renni critique and Studio Sherpa endpoints run in
+  # deterministic mock mode. The production branch (renni-app-clean)
+  # keeps the secret mapping — when refreshing this branch from
+  # production, do NOT let a merge reintroduce it here.
+  # BASE_URL and MODEL are non-secret tunables.
   - variable: NUXT_AI_CRITIQUE_BASE_URL
     value: https://api.anthropic.com
     availability:
