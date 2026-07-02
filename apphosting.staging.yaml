@@ -46,3 +46,15 @@ env:
     value: renni-cc-staging
     availability:
       - RUNTIME
+
+  # Override the base apphosting.yaml's Secret Manager mapping — the
+  # NUXT_AI_CRITIQUE_API_KEY secret does not exist in renni-cc-staging,
+  # so inheriting the secret reference fails the rollout. An empty
+  # value is falsy to both the Renni critique endpoint and the Studio
+  # Sherpa endpoint (sherpa.post.ts), which then run in deterministic
+  # mock mode — the intended staging posture until a staging-scoped
+  # key is provisioned.
+  - variable: NUXT_AI_CRITIQUE_API_KEY
+    value: ""
+    availability:
+      - RUNTIME
