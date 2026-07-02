@@ -200,6 +200,7 @@ export type SherpaAudience =
   | 'admissions'
   | 'recruiter'
   | 'employer'
+  | 'scholarship'
   | 'customer'
   | 'general'
 

@@ -38,6 +38,7 @@ export const BRAND_COACH_AUDIENCES: readonly SherpaAudience[] = Object.freeze([
   'admissions',
   'recruiter',
   'employer',
+  'scholarship',
   'customer',
   'general'
 ])
@@ -56,12 +57,15 @@ const MAX_OUTPUT_TOKENS = 1_400
 
 const AUDIENCE_DESCRIPTIONS: Record<SherpaAudience, string> = {
   admissions:
-    'a college admissions reader looking for authentic voice, growth, and evidence of character',
+    'a college admissions reader looking for growth, reflection, contribution, and readiness',
   recruiter:
-    'a recruiter scanning quickly, often through ATS software that matches keywords and action verbs',
+    'a recruiter scanning quickly (often through ATS software) for skills, responsibility, teamwork, communication, reliability, and measurable impact',
   employer:
     'a hiring manager or employer who wants to know what this person can reliably do for them',
-  customer: 'a customer or client deciding whether to trust and buy from this person',
+  scholarship:
+    'a scholarship committee looking for character, persistence, service, and potential',
+  customer:
+    'a customer or client looking for trust, value, clarity, and credibility before they buy',
   general: 'a general professional audience meeting this person for the first time'
 }
 
@@ -95,7 +99,7 @@ Every response you give MUST be a single JSON object with exactly these five fie
 
 Field guidance:
 - "strengths": 1–3 sentences naming what is genuinely strong in the student's raw material — real evidence, a specific story, a distinctive detail. Be honest and specific, never generic praise.
-- "wordChoiceFlags": 0–4 flags. Flag words that overclaim, undersell, or land differently than the student intends. For each: "word" is the student's word or phrase, "howItMayLand" explains how this audience may actually hear it, "alternatives" gives 2–6 more precise options, "why" explains which alternative fits depending on the student's actual evidence. Example of the expected depth: if a student calls himself a "philanthropist," respond along the lines of — philanthropist may sound like someone with significant financial resources, a foundation, or a long public giving record; if the evidence is service, mentoring, organizing, volunteering, or helping their community, consider more precise language such as community builder, service-minded leader, youth advocate, volunteer organizer, mutual aid participant, or emerging social entrepreneur — then explain which fits their evidence. Empty array only if nothing needs flagging.
+- "wordChoiceFlags": 0–4 flags. Flag words that overclaim, undersell, or land differently than the student intends. For each: "word" is the student's word or phrase, "howItMayLand" explains how this audience may actually hear it, "alternatives" gives 2–6 more precise options, "why" explains which alternative fits depending on the student's actual evidence. Example of the expected depth: if a student calls himself a "philanthropist," respond along the lines of — philanthropist may sound like someone with significant financial resources, a foundation, or a long public giving record; if the evidence is service, mentoring, organizing, volunteering, or helping their community, consider more precise language such as community builder, service-minded leader, youth advocate, volunteer organizer, mutual aid participant, or emerging social entrepreneur — then explain which fits their evidence. Other words that usually deserve a flag when unsupported: helped, hard worker, people person, creative, a lot, responsible, good leader, entrepreneur. Never just call a word wrong — show how to make it specific. Empty array only if nothing needs flagging.
 - "audienceRead": 1–3 sentences describing how the selected audience will likely read this student's material as written — what will land well and what may be misread or skimmed past.
 - "polishedVersion": the selected output type, built ONLY from what the student gave you, following the output guidance in the user message. Keep the student's real experience and recognizable voice, but make it sound professional.
 - "followUpQuestions": 1–2 specific, answerable questions that would make the material stronger — push for the missing number, outcome, or concrete moment. Never a vague "tell me more."
@@ -255,6 +259,40 @@ const WORD_FLAG_RULES: FlagRule[] = [
     howItMayLand: '"A lot" invites the question: how much, exactly?',
     alternatives: ['[add number]', 'a specific count, frequency, or timeframe'],
     why: 'If you know the number, use it. If not, keep a placeholder like [add number] until you can check.'
+  },
+  {
+    pattern: /\bcreatives?\b|\bcreativity\b/i,
+    word: 'creative',
+    howItMayLand: 'Creative is claimed so often that readers need to see it, not just hear it.',
+    alternatives: ['designed', 'built', 'came up with [the specific idea]', 'made [the specific thing]'],
+    why: 'Name one thing you made, designed, or figured out — the example proves the adjective.'
+  },
+  {
+    pattern: /\bresponsible\b/i,
+    word: 'responsible',
+    howItMayLand:
+      '"Responsible for" tells the reader a duty existed — not that you delivered on it.',
+    alternatives: ['managed', 'ran', 'owned', 'delivered', 'kept [X] running'],
+    why: 'Say what you did with the responsibility: "managed the cash box for our pop-up" is stronger than "responsible for money."'
+  },
+  {
+    pattern: /\bgood leader\b|\bleadership skills\b/i,
+    word: 'good leader',
+    howItMayLand: 'Calling yourself a good leader asks the reader to take your word for it.',
+    alternatives: ['led a team of [add number]', 'organized [the event]', 'trained new members', 'captained'],
+    why: 'Show the leading: who followed you, and what got done because you led. The result convinces more than the title.'
+  },
+  {
+    pattern: /\bentrepreneurs?\b/i,
+    word: 'entrepreneur',
+    howItMayLand:
+      'Entrepreneur can land as a big claim when the business is early — some readers will ask what you have actually sold or built.',
+    alternatives: [
+      'founder of a student-run brand',
+      'started a small business selling [product]',
+      'building a business idea into its first sales'
+    ],
+    why: 'Anchor it to what exists: real products, real sales, or say honestly that you are building it. Credible beats impressive.'
   }
 ]
 
@@ -265,6 +303,8 @@ const MOCK_AUDIENCE_READ: Record<SherpaAudience, string> = {
     'A recruiter scans in seconds, often through software that matches action verbs and keywords — lead with strong verbs and concrete nouns, because vague phrasing gets skipped.',
   employer:
     'An employer reads for reliability: what did you actually do, and would you do it again for them? Specific responsibilities and outcomes matter more than adjectives.',
+  scholarship:
+    'A scholarship committee reads for character, persistence, service, and potential — honest reflection and evidence of follow-through count more than polished-sounding claims.',
   customer:
     'A customer decides on trust: clear plain language about what you offer and proof someone has valued it beats impressive-sounding words.',
   general:
@@ -287,8 +327,34 @@ function hasResultSignal(text: string): boolean {
   return /\d/.test(text) || /\b(result|increased|raised|grew|improved|led to|so that|which meant|learned)\b/i.test(text)
 }
 
+// The Brand Builder form composes its four STAR fields into a
+// labeled block ("Situation: …\nTask: …"). Pull one labeled section
+// back out so the mock can coach each part individually; returns ''
+// for unlabeled raw pastes.
+function starPart(text: string, label: 'Situation' | 'Task' | 'Action' | 'Result'): string {
+  const re = new RegExp(
+    `\\b${label}\\s*:\\s*([\\s\\S]*?)(?=\\n\\s*(?:Situation|Task|Action|Result)\\s*:|$)`,
+    'i'
+  )
+  const match = re.exec(text)
+  return match ? clean(match[1]) : ''
+}
+
+// The composed form labels its sections ("Raw material:", "Task:" …).
+// Strip the labels before seeding polished output so a label never
+// shows up as if it were the student's own sentence.
+function stripSectionLabels(text: string): string {
+  return text.replace(
+    /^(Raw material|What I care about|Why it matters|Who I want to help|What people come to me for|My evidence for my words|Situation|Task|Action|Result)\s*:\s*/gim,
+    ''
+  )
+}
+
 function mockPolished(payload: BrandCoachPayload, combined: string): string {
-  const seed = firstSentences(payload.worksheet || payload.selfWords || payload.starExample, 3)
+  const seed = firstSentences(
+    stripSectionLabels(payload.worksheet || payload.selfWords || payload.starExample),
+    3
+  )
   switch (payload.outputType) {
     case 'word_choice': {
       const hits = WORD_FLAG_RULES.filter((r) => r.pattern.test(combined))
@@ -309,16 +375,28 @@ function mockPolished(payload: BrandCoachPayload, combined: string): string {
     case 'pitch_1min_tmay':
       return [
         `Present: ${seed[0] ?? '[who you are right now]'}`,
-        `Past: ${payload.starExample ? clean(payload.starExample) : '[one or two concrete experiences that prove it]'} [add result]`,
+        `Past: ${payload.starExample ? clean(stripSectionLabels(payload.starExample)) : '[one or two concrete experiences that prove it]'} [add result]`,
         'Future: [what you are working toward next]'
       ].join('\n')
-    case 'star_story':
+    case 'star_story': {
+      const situation = starPart(payload.starExample, 'Situation')
+      const task = starPart(payload.starExample, 'Task')
+      const result = starPart(payload.starExample, 'Result')
+      const action =
+        starPart(payload.starExample, 'Action') ||
+        (payload.starExample && !situation && !task && !result ? clean(payload.starExample) : '')
       return [
-        'Situation: [set the scene — where, when, and what was going on]',
-        'Task: [what YOU were responsible for]',
-        `Action: ${payload.starExample ? clean(payload.starExample) : '[what you personally did — "I", not "we"]'}`,
-        `Result: ${hasResultSignal(payload.starExample) ? '[pull your outcome into one clear line]' : '[add result — what changed, how many people, what was better after?]'}`
+        `Situation: ${situation || '[set the scene — where, when, and what was going on]'}`,
+        `Task: ${task || '[what YOU were responsible for]'}`,
+        `Action: ${action || '[what you personally did — "I", not "we"]'}`,
+        `Result: ${
+          result ||
+          (hasResultSignal(payload.starExample)
+            ? '[pull your outcome into one clear line]'
+            : '[add result — what changed, how many people, what was better after?]')
+        }`
       ].join('\n')
+    }
     case 'resume_bullets':
       return seed.length
         ? seed
@@ -343,7 +421,14 @@ export function generateMockBrandCoachResponse(payload: BrandCoachPayload): Bran
   }. Practice mode can only apply fixed coaching rules; the sections below show you where to push.`
 
   const followUpQuestions: string[] = []
-  if (payload.starExample && !hasResultSignal(payload.starExample)) {
+  // For labeled STAR input, judge the Result section itself — the
+  // "Result:" label would otherwise satisfy hasResultSignal.
+  const labeledResult = starPart(payload.starExample, 'Result')
+  const isLabeledStar = /\b(Situation|Task|Action|Result)\s*:/i.test(payload.starExample)
+  const resultIsWeak = isLabeledStar
+    ? !hasResultSignal(labeledResult)
+    : !hasResultSignal(payload.starExample)
+  if (payload.starExample && resultIsWeak) {
     followUpQuestions.push('What changed because of what you did — how many people were affected, or what was better after your action?')
   }
   if (!/\d/.test(combined)) {
@@ -364,7 +449,7 @@ export function generateMockBrandCoachResponse(payload: BrandCoachPayload): Bran
 
 export const brandCoachTemplate: StudioPromptTemplate<BrandCoachPayload, BrandCoachResponse> = {
   mode: 'brand-coach',
-  templateVersion: 'brand-coach.v1.0.0',
+  templateVersion: 'brand-coach.v1.1.0',
   systemPrompt: buildSystemPrompt,
   userPromptBuilder: buildUserPrompt,
   responseSchema: validateResponse,
