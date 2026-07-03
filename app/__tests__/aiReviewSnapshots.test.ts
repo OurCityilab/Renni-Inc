@@ -22,7 +22,27 @@ test('apphosting enables AI review coaching without hardcoding the secret', () =
   const yaml = readFileSync('apphosting.yaml', 'utf8')
   assert.match(yaml, /NUXT_AI_REVIEW_COACHING_ENABLED/)
   assert.match(yaml, /value:\s+"true"/)
-  assert.match(yaml, /NUXT_AI_CRITIQUE_API_KEY\s*\n\s*secret: NUXT_AI_CRITIQUE_API_KEY/)
+
+  // Safety invariant — never weaken: the AI key may only ever be wired
+  // as a Secret Manager reference, never a plaintext value.
+  assert.doesNotMatch(yaml, /NUXT_AI_CRITIQUE_API_KEY\s*\n\s*value:\s*\S/)
+
+  // Two valid postures:
+  //  - post-secret: NUXT_AI_CRITIQUE_API_KEY is mapped from Secret
+  //    Manager (production branch, or staging once the secret exists
+  //    in renni-cc-staging and the backend has access)
+  //  - pre-secret staging: the mapping is intentionally absent so the
+  //    rollout doesn't fail on a nonexistent secret; AI endpoints run
+  //    in deterministic mock mode. The yaml must say so explicitly.
+  const hasSecretMapping = /NUXT_AI_CRITIQUE_API_KEY\s*\n\s*secret: NUXT_AI_CRITIQUE_API_KEY/.test(
+    yaml
+  )
+  const documentsPreSecretPosture =
+    /NUXT_AI_CRITIQUE_API_KEY secret mapping is intentionally\s*(?:#\s*)?absent/.test(yaml)
+  assert.ok(
+    hasSecretMapping || documentsPreSecretPosture,
+    'apphosting.yaml must either map NUXT_AI_CRITIQUE_API_KEY from Secret Manager or document the intentional pre-secret staging posture'
+  )
 })
 
 test('snapshot doc stores metadata only', () => {

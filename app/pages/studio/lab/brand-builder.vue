@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { reactive, ref } from 'vue'
 import { useStudioAuthStore } from '~/stores/studioAuth'
-import { usePortfolioArtifact } from '~/composables/usePortfolioArtifact'
 import { useAiSherpa } from '~/composables/useAiSherpa'
 import {
   composeBrandCoachFields,
@@ -23,7 +22,6 @@ definePageMeta({ layout: 'studio' })
 const studioAuth = useStudioAuthStore()
 const studentUid = studioAuth.profile?.uid ?? ''
 
-const artifactApi = usePortfolioArtifact()
 const sherpaApi = useAiSherpa()
 
 const audienceOptions: Array<{ value: SherpaAudience; label: string }> = [
@@ -181,62 +179,12 @@ async function getFeedback() {
     result.value = res.sherpa
     resultOutputType.value = outputType.value
     wasMock.value = res.mock
-    // Each new Sherpa version is saveable on its own — without this
-    // reset, a student who iterates can never save the improved version.
-    saved.value = false
-    saveError.value = null
-    copied.value = false
-    copyError.value = null
-    saveTitle.value = defaultTitleByOutput[outputType.value]
   } catch (e: unknown) {
     askError.value =
       e instanceof Error ? e.message : 'Something went wrong asking the Sherpa. Try again.'
   } finally {
     asking.value = false
   }
-}
-
-const saveTitle = ref(defaultTitleByOutput.word_choice)
-const saving = ref(false)
-const saved = ref(false)
-const saveError = ref<string | null>(null)
-
-async function saveToPortfolio() {
-  if (!result.value || saving.value) return
-  saving.value = true
-  saveError.value = null
-  try {
-    await artifactApi.create(
-      studentUid,
-      artifactTypeByOutput[resultOutputType.value],
-      saveTitle.value,
-      result.value.polishedVersion
-    )
-    saved.value = true
-  } catch {
-    saveError.value = "Couldn't save to your Portfolio. Check your connection and try again."
-  } finally {
-    saving.value = false
-  }
-}
-
-const copied = ref(false)
-const copyError = ref<string | null>(null)
-
-async function copyPolished() {
-  if (!result.value) return
-  copied.value = false
-  copyError.value = null
-  try {
-    await navigator.clipboard.writeText(result.value.polishedVersion)
-    copied.value = true
-  } catch {
-    copyError.value = "Couldn't copy automatically. Select the polished text and copy it manually."
-  }
-}
-
-function printResult() {
-  window.print()
 }
 </script>
 
@@ -324,103 +272,21 @@ function printResult() {
       </button>
     </div>
 
-    <div v-if="result" class="card space-y-4">
-      <div id="sherpa-print-area" class="space-y-4">
-        <span v-if="wasMock" class="chip-draft">Practice mode — no AI call was made</span>
-
-        <div>
-          <h2 class="text-sm font-semibold text-neutral-500">What's strong</h2>
-          <p class="mt-1 whitespace-pre-wrap text-sm text-neutral-700">{{ result.strengths }}</p>
-        </div>
-
-        <div v-if="result.wordChoiceFlags.length">
-          <h2 class="text-sm font-semibold text-neutral-500">Word choice check</h2>
-          <div
-            v-for="(flag, i) in result.wordChoiceFlags"
-            :key="i"
-            class="mt-2 rounded-md bg-amber-50 p-3 text-sm text-neutral-800"
-          >
-            <p class="font-medium">"{{ flag.word }}"</p>
-            <p class="mt-1">{{ flag.howItMayLand }}</p>
-            <p class="mt-1">
-              <span class="font-medium">Try instead:</span> {{ flag.alternatives.join(', ') }}
-            </p>
-            <p class="mt-1 text-neutral-600">{{ flag.why }}</p>
-          </div>
-        </div>
-
-        <div>
-          <h2 class="text-sm font-semibold text-neutral-500">How your audience may hear it</h2>
-          <p class="mt-1 whitespace-pre-wrap text-sm text-neutral-700">{{ result.audienceRead }}</p>
-        </div>
-
-        <div>
-          <h2 class="text-sm font-semibold text-neutral-500">
-            Polished version — {{ outputOptions.find((o) => o.value === resultOutputType)?.label }}
-          </h2>
-          <p class="mt-1 whitespace-pre-wrap rounded-md bg-studio-50 p-3 text-sm font-medium text-neutral-900">
-            {{ result.polishedVersion }}
-          </p>
-          <p class="mt-1 text-xs text-neutral-500">
-            Anything in [brackets] is yours to fill in — the Sherpa never makes up a number or
-            result for you.
-          </p>
-          <p v-if="resultOutputType === 'resume_bullets'" class="mt-1 text-xs text-neutral-500">
-            These bullets are meant to help you get the wording right. You can paste them into
-            your school, scholarship, internship, or job resume template later.
-          </p>
-        </div>
-
-        <div v-if="result.followUpQuestions.length">
-          <h2 class="text-sm font-semibold text-neutral-500">Make it stronger</h2>
-          <ul class="mt-1 list-inside list-disc text-sm text-neutral-700">
-            <li v-for="(q, i) in result.followUpQuestions" :key="i">{{ q }}</li>
-          </ul>
-          <p class="mt-1 text-xs text-neutral-500">
-            Answer these in the worksheet above, then tap "Get Sherpa Feedback" again.
-          </p>
-        </div>
-      </div>
-
-      <div class="space-y-2 border-t border-neutral-200 pt-3">
-        <div class="flex flex-wrap gap-2">
-          <button class="btn-secondary" @click="copyPolished">
-            {{ copied ? 'Copied.' : 'Copy polished version' }}
-          </button>
-          <button class="btn-secondary" @click="printResult">Print / Save as PDF</button>
-        </div>
-        <p v-if="copyError" class="text-sm text-rose-700">{{ copyError }}</p>
-
-        <label class="block text-sm">
-          <span class="font-medium text-neutral-700">Save the polished version to My Portfolio as</span>
-          <input
-            v-model="saveTitle"
-            type="text"
-            class="mt-1 w-full rounded-md border border-neutral-300 px-3 py-2 text-sm"
-          >
-        </label>
-        <button
-          class="btn-primary w-full"
-          :disabled="saving || saved || !saveTitle.trim()"
-          @click="saveToPortfolio"
-        >
-          {{ saved ? 'Saved to Portfolio ✓' : (saving ? 'Saving…' : 'Save to My Portfolio') }}
-        </button>
-        <p v-if="saveError" class="text-sm text-rose-700">{{ saveError }}</p>
-        <div v-if="saved" class="space-y-1 text-sm">
-          <p>
-            <NuxtLink to="/studio/portfolio" class="font-medium text-studio-700">
-              View it in My Portfolio →
-            </NuxtLink>
-          </p>
-          <p class="text-neutral-600">
-            Happy with it? Go back to
-            <NuxtLink to="/studio/today" class="font-medium text-studio-700">Today</NuxtLink>
-            and tap "Mark complete" to finish this mission.
-          </p>
-        </div>
-      </div>
-    </div>
+    <template v-if="result">
+      <StudioSherpaFeedbackPanel
+        :result="result"
+        :was-mock="wasMock"
+        :output-label="outputOptions.find((o) => o.value === resultOutputType)?.label ?? ''"
+        :artifact-type="artifactTypeByOutput[resultOutputType]"
+        :default-title="defaultTitleByOutput[resultOutputType]"
+        :student-uid="studentUid"
+      />
+      <p class="text-sm text-neutral-600">
+        Happy with your final draft? Save it to your Portfolio above, then go back to
+        <NuxtLink to="/studio/today" class="font-medium text-studio-700">Today</NuxtLink>
+        and tap "Mark complete" to finish this mission.
+      </p>
+    </template>
 
     <div class="card space-y-1">
       <h2 class="text-xs font-semibold text-neutral-500">Optional backup templates</h2>
@@ -449,23 +315,3 @@ function printResult() {
     </div>
   </div>
 </template>
-
-<style>
-/* Print / Save as PDF: show only the Sherpa result. */
-@media print {
-  body * {
-    visibility: hidden;
-  }
-  #sherpa-print-area,
-  #sherpa-print-area * {
-    visibility: visible;
-  }
-  #sherpa-print-area {
-    position: absolute;
-    left: 0;
-    top: 0;
-    width: 100%;
-    padding: 1rem;
-  }
-}
-</style>

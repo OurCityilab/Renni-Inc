@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { usePortfolioArtifact } from '~/composables/usePortfolioArtifact'
 import type { BrandCoachResponse, PortfolioArtifactType } from '~/types/studio/models'
 
@@ -14,6 +14,10 @@ const props = defineProps<{
 
 const artifactApi = usePortfolioArtifact()
 
+// Editable final draft — students revise the Sherpa's polished
+// version here before copying, saving, or printing it.
+const finalDraft = ref(props.result.polishedVersion)
+
 const saveTitle = ref(props.defaultTitle)
 const saving = ref(false)
 const saved = ref(false)
@@ -26,6 +30,7 @@ const copyError = ref<string | null>(null)
 watch(
   () => props.result,
   () => {
+    finalDraft.value = props.result.polishedVersion
     saved.value = false
     saveError.value = null
     copied.value = false
@@ -34,18 +39,23 @@ watch(
   }
 )
 
-async function copyPolished() {
+const draftRows = computed(() => {
+  const lines = finalDraft.value.split('\n').length
+  return Math.min(28, Math.max(6, lines + 1))
+})
+
+async function copyFinalDraft() {
   copied.value = false
   copyError.value = null
   try {
-    await navigator.clipboard.writeText(props.result.polishedVersion)
+    await navigator.clipboard.writeText(finalDraft.value)
     copied.value = true
   } catch {
-    copyError.value = "Couldn't copy automatically. Select the polished text and copy it manually."
+    copyError.value = "Couldn't copy automatically. Select the final draft text and copy it manually."
   }
 }
 
-function printResult() {
+function printFinalDraft() {
   window.print()
 }
 
@@ -58,7 +68,7 @@ async function saveToPortfolio() {
       props.studentUid,
       props.artifactType,
       saveTitle.value,
-      props.result.polishedVersion
+      finalDraft.value
     )
     saved.value = true
   } catch {
@@ -71,70 +81,73 @@ async function saveToPortfolio() {
 
 <template>
   <div class="card space-y-4">
-    <div id="sherpa-print-area" class="space-y-4">
-      <span v-if="wasMock" class="chip-draft">Practice mode — no AI call was made</span>
+    <span v-if="wasMock" class="chip-draft">Practice mode — no AI call was made</span>
 
-      <div>
-        <h2 class="text-sm font-semibold text-neutral-500">What's strong</h2>
-        <p class="mt-1 whitespace-pre-wrap text-sm text-neutral-700">{{ result.strengths }}</p>
-      </div>
+    <div>
+      <h2 class="text-sm font-semibold text-neutral-500">What's strong</h2>
+      <p class="mt-1 whitespace-pre-wrap text-sm text-neutral-700">{{ result.strengths }}</p>
+    </div>
 
-      <div v-if="result.wordChoiceFlags.length">
-        <h2 class="text-sm font-semibold text-neutral-500">Word choice check</h2>
-        <div
-          v-for="(flag, i) in result.wordChoiceFlags"
-          :key="i"
-          class="mt-2 rounded-md bg-amber-50 p-3 text-sm text-neutral-800"
-        >
-          <p class="font-medium">"{{ flag.word }}"</p>
-          <p class="mt-1">{{ flag.howItMayLand }}</p>
-          <p class="mt-1">
-            <span class="font-medium">Try instead:</span> {{ flag.alternatives.join(', ') }}
-          </p>
-          <p class="mt-1 text-neutral-600">{{ flag.why }}</p>
-        </div>
-      </div>
-
-      <div>
-        <h2 class="text-sm font-semibold text-neutral-500">How your audience may hear it</h2>
-        <p class="mt-1 whitespace-pre-wrap text-sm text-neutral-700">{{ result.audienceRead }}</p>
-      </div>
-
-      <div>
-        <h2 class="text-sm font-semibold text-neutral-500">
-          Polished version — {{ outputLabel }}
-        </h2>
-        <p class="mt-1 whitespace-pre-wrap rounded-md bg-studio-50 p-3 text-sm font-medium text-neutral-900">
-          {{ result.polishedVersion }}
+    <div v-if="result.wordChoiceFlags.length">
+      <h2 class="text-sm font-semibold text-neutral-500">Word choice check</h2>
+      <div
+        v-for="(flag, i) in result.wordChoiceFlags"
+        :key="i"
+        class="mt-2 rounded-md bg-amber-50 p-3 text-sm text-neutral-800"
+      >
+        <p class="font-medium">"{{ flag.word }}"</p>
+        <p class="mt-1">{{ flag.howItMayLand }}</p>
+        <p class="mt-1">
+          <span class="font-medium">Try instead:</span> {{ flag.alternatives.join(', ') }}
         </p>
-        <p class="mt-1 text-xs text-neutral-500">
-          Anything in [brackets] is yours to fill in — the Sherpa never makes up a number or
-          result for you.
-        </p>
+        <p class="mt-1 text-neutral-600">{{ flag.why }}</p>
       </div>
+    </div>
 
-      <div v-if="result.followUpQuestions.length">
-        <h2 class="text-sm font-semibold text-neutral-500">Make it stronger</h2>
-        <ul class="mt-1 list-inside list-disc text-sm text-neutral-700">
-          <li v-for="(q, i) in result.followUpQuestions" :key="i">{{ q }}</li>
-        </ul>
-        <p class="mt-1 text-xs text-neutral-500">
-          Answer these in the worksheet above, then tap "Ask Sherpa" again.
-        </p>
-      </div>
+    <div>
+      <h2 class="text-sm font-semibold text-neutral-500">How your audience may hear it</h2>
+      <p class="mt-1 whitespace-pre-wrap text-sm text-neutral-700">{{ result.audienceRead }}</p>
+    </div>
+
+    <div>
+      <h2 class="text-sm font-semibold text-neutral-500">
+        Final Draft / Preview — {{ outputLabel }}
+      </h2>
+      <textarea
+        v-model="finalDraft"
+        :rows="draftRows"
+        class="mt-1 w-full rounded-md bg-studio-50 border border-neutral-300 p-3 text-sm font-medium text-neutral-900"
+      />
+      <p class="mt-1 text-xs text-neutral-500">
+        This is yours to edit. Anything in [brackets] is yours to fill in — the Sherpa never
+        makes up a number or result for you. Your edits here are what gets copied, saved, and
+        printed.
+      </p>
+    </div>
+
+    <div v-if="result.followUpQuestions.length">
+      <h2 class="text-sm font-semibold text-neutral-500">Make it stronger</h2>
+      <ul class="mt-1 list-inside list-disc text-sm text-neutral-700">
+        <li v-for="(q, i) in result.followUpQuestions" :key="i">{{ q }}</li>
+      </ul>
+      <p class="mt-1 text-xs text-neutral-500">
+        Answer these in the worksheet above, then ask the Sherpa again for a stronger version.
+      </p>
     </div>
 
     <div class="space-y-2 border-t border-neutral-200 pt-3">
       <div class="flex flex-wrap gap-2">
-        <button class="btn-secondary" @click="copyPolished">
-          {{ copied ? 'Copied.' : 'Copy polished version' }}
+        <button class="btn-secondary" @click="copyFinalDraft">
+          {{ copied ? 'Copied.' : 'Copy full final draft' }}
         </button>
-        <button class="btn-secondary" @click="printResult">Print / Save as PDF</button>
+        <button class="btn-secondary" @click="printFinalDraft">
+          Print / Save full preview as PDF
+        </button>
       </div>
       <p v-if="copyError" class="text-sm text-rose-700">{{ copyError }}</p>
 
       <label class="block text-sm">
-        <span class="font-medium text-neutral-700">Save the polished version to My Portfolio as</span>
+        <span class="font-medium text-neutral-700">Save the final draft to My Portfolio as</span>
         <input
           v-model="saveTitle"
           type="text"
@@ -146,7 +159,7 @@ async function saveToPortfolio() {
         :disabled="saving || saved || !saveTitle.trim()"
         @click="saveToPortfolio"
       >
-        {{ saved ? 'Saved to Portfolio ✓' : (saving ? 'Saving…' : 'Save to My Portfolio') }}
+        {{ saved ? 'Saved to Portfolio ✓' : (saving ? 'Saving…' : 'Save final draft to Portfolio') }}
       </button>
       <p v-if="saveError" class="text-sm text-rose-700">{{ saveError }}</p>
       <p v-if="saved" class="text-sm">
@@ -155,11 +168,23 @@ async function saveToPortfolio() {
         </NuxtLink>
       </p>
     </div>
+
+    <!-- Print-only preview: textareas print poorly (clipped to their
+         visible box), so the printable page renders the full edited
+         final draft with preserved line breaks. -->
+    <div id="sherpa-print-area" aria-hidden="true">
+      <h1>{{ saveTitle || outputLabel }}</h1>
+      <div class="sherpa-print-draft">{{ finalDraft }}</div>
+    </div>
   </div>
 </template>
 
 <style>
-/* Print / Save as PDF: show only the Sherpa result. */
+/* Screen: the print block stays hidden. Print / Save as PDF: show
+   ONLY the final draft preview, full width, with line breaks kept. */
+#sherpa-print-area {
+  display: none;
+}
 @media print {
   body * {
     visibility: hidden;
@@ -169,11 +194,22 @@ async function saveToPortfolio() {
     visibility: visible;
   }
   #sherpa-print-area {
+    display: block;
     position: absolute;
     left: 0;
     top: 0;
     width: 100%;
     padding: 1rem;
+  }
+  #sherpa-print-area h1 {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin-bottom: 0.75rem;
+  }
+  #sherpa-print-area .sherpa-print-draft {
+    white-space: pre-wrap;
+    font-size: 0.9rem;
+    line-height: 1.4;
   }
 }
 </style>

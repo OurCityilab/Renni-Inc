@@ -139,7 +139,7 @@ async function copyPart(label: 'Headline' | 'About') {
   copyPartError.value = null
   const text = extractBlock(label)
   if (!text) {
-    copyPartError.value = `Couldn't find a ${label} section in the Sherpa's response — use "Copy polished version" instead.`
+    copyPartError.value = `Couldn't find a ${label} section in the Sherpa's response — use "Copy full final draft" instead.`
     return
   }
   try {
