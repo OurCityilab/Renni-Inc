@@ -123,9 +123,45 @@ test('per-worksheet coaching focus appears in the user prompt when provided', ()
   assert.ok(!withoutFocus.includes('Coaching focus for this worksheet:'))
 })
 
+// ---------- student-voice coaching guardrails ----------
+
+test('system prompt locks the student-voice coaching guardrails', () => {
+  const prompt = brandCoachTemplate.systemPrompt()
+  // Natural voice, never over-polished beyond evidence.
+  assert.ok(prompt.includes("Preserve the student's natural voice"))
+  assert.ok(prompt.includes('never make them sound more polished than their evidence supports'))
+  // No role upgrades without evidence; bracketed prompts instead.
+  assert.ok(prompt.includes('Never upgrade roles'))
+  assert.ok(prompt.includes('do not rewrite it as led, organized, coordinated, mentored, or managed'))
+  assert.ok(prompt.includes('[describe your role]'))
+  assert.ok(prompt.includes('[name what you organized]'))
+  // Political/sensitive language: neutral coaching, never erased.
+  assert.ok(prompt.includes('political or sensitive'))
+  assert.ok(prompt.includes("Do not erase the student's concern"))
+  // Early-stage work stays a raw-material summary, not an essay/bio.
+  assert.ok(prompt.includes('refined raw-material summary'))
+  assert.ok(prompt.includes('not a finished college essay or an adult bio'))
+  // Student-safe labels for problems.
+  assert.ok(prompt.includes('"too general," "hard to picture," "unsupported," or "needs evidence."'))
+  assert.ok(prompt.includes('Avoid harsh labels like "defensive"'))
+})
+
+test('system prompt teaches the seven-part flag structure, categories, and the 3–5 cap', () => {
+  const prompt = brandCoachTemplate.systemPrompt()
+  assert.ok(prompt.includes('"category": "too_vague" | "too_inflated" | "too_casual"'))
+  assert.ok(prompt.includes('never more than 5'))
+  assert.ok(prompt.includes('not a vocabulary lesson'))
+  for (const field of ['"definition"', '"evidenceFit"', '"bestFit"', '"inYourVoice"']) {
+    assert.ok(prompt.includes(field), field)
+  }
+  // Worked example for charged political phrasing keeps the concern.
+  assert.ok(prompt.includes('our president the orange man'))
+  assert.ok(prompt.includes('Do not erase the political concern'))
+})
+
 // ---------- word flag mock behavior ----------
 
-test('mock flags "philanthropist" with the audience-risk explanation', () => {
+test('mock flags "philanthropist" as a full mini-lesson: definition, audience read, evidence fit, best fit, in-your-voice', () => {
   const result = generateMockBrandCoachResponse({
     worksheet: '',
     selfWords: 'I am a philanthropist',
@@ -135,9 +171,89 @@ test('mock flags "philanthropist" with the audience-risk explanation', () => {
   })
   const flag = result.wordChoiceFlags.find((f) => f.word === 'philanthropist')
   assert.ok(flag)
-  assert.ok(/significant financial resources/.test(flag.howItMayLand))
-  assert.ok(flag.alternatives.includes('community builder'))
-  assert.ok(flag.alternatives.includes('mutual aid participant'))
+  assert.equal(flag.category, 'too_inflated')
+  assert.ok(/significant money/.test(flag.definition))
+  assert.ok(/financial resources/.test(flag.howItMayLand))
+  assert.ok(/overstate/.test(flag.evidenceFit))
+  assert.ok(flag.alternatives.some((a) => a.startsWith('community builder')))
+  assert.ok(flag.alternatives.some((a) => a.startsWith('volunteer organizer')))
+  assert.ok(flag.alternatives.length >= 3 && flag.alternatives.length <= 6)
+  assert.ok(/evidence supports/.test(flag.bestFit))
+  assert.ok(/community builder/.test(flag.inYourVoice))
+})
+
+test('every mock flag rule fills the complete seven-part teaching structure', () => {
+  const result = generateMockBrandCoachResponse({
+    worksheet: 'I am a passionate hard worker and a people person',
+    selfWords: 'expert, creative',
+    starExample: '',
+    audience: 'recruiter',
+    outputType: 'word_choice'
+  })
+  assert.ok(result.wordChoiceFlags.length > 0)
+  for (const flag of result.wordChoiceFlags) {
+    assert.ok(['too_vague', 'too_inflated', 'too_casual'].includes(flag.category), flag.word)
+    assert.ok(flag.definition.length > 0, flag.word)
+    assert.ok(flag.howItMayLand.length > 0, flag.word)
+    assert.ok(flag.evidenceFit.length > 0, flag.word)
+    assert.ok(flag.alternatives.length >= 1, flag.word)
+    assert.ok(flag.bestFit.length > 0, flag.word)
+    assert.ok(flag.inYourVoice.length > 0, flag.word)
+  }
+})
+
+test('mock caps flags at 5 so coaching never becomes a vocabulary lesson', () => {
+  const result = generateMockBrandCoachResponse({
+    worksheet:
+      'I am a passionate hardworking people person, a creative expert entrepreneur, a good leader, responsible for a lot of stuff, and I helped everyone',
+    selfWords: '',
+    starExample: '',
+    audience: 'general',
+    outputType: 'word_choice'
+  })
+  assert.ok(result.wordChoiceFlags.length <= 5)
+})
+
+test('mock coaches casual political phrasing ("orange man") without erasing the concern', () => {
+  const result = generateMockBrandCoachResponse({
+    worksheet: 'I do not like what our president the orange man is doing to my community',
+    selfWords: '',
+    starExample: '',
+    audience: 'admissions',
+    outputType: 'word_choice'
+  })
+  const flag = result.wordChoiceFlags.find((f) => f.word === 'orange man')
+  assert.ok(flag)
+  assert.equal(flag.category, 'too_casual')
+  assert.ok(/casual and insulting/.test(flag.howItMayLand))
+  // The concern is kept, not erased.
+  assert.ok(/concern about political leadership is real/.test(flag.evidenceFit))
+  assert.ok(/political leadership/.test(flag.bestFit))
+  assert.ok(/policy/.test(flag.inYourVoice))
+})
+
+test('mock coaches spoken-voice and underselling phrases ("people be", "I\'m just good at", "everyone knows")', () => {
+  const result = generateMockBrandCoachResponse({
+    worksheet: "People be sleeping on my neighborhood. I'm just good at math. Everyone knows school lunch is bad.",
+    selfWords: '',
+    starExample: '',
+    audience: 'scholarship',
+    outputType: 'word_choice'
+  })
+  const words = result.wordChoiceFlags.map((f) => f.word)
+  assert.ok(words.includes('people be'))
+  assert.ok(words.includes("I'm just good at"))
+  assert.ok(words.includes('everyone knows'))
+  for (const f of result.wordChoiceFlags) assert.equal(f.category, 'too_casual')
+})
+
+test('responseSchema rejects a flag with an unknown category', () => {
+  const good = generateMockBrandCoachResponse(POP_UP_PAYLOAD)
+  const bad = {
+    ...good,
+    wordChoiceFlags: [{ ...good.wordChoiceFlags[0], category: 'too_spicy' }]
+  }
+  assert.throws(() => brandCoachTemplate.responseSchema(bad), /category/)
 })
 
 test('mock flags newly added weak words (creative, entrepreneur, good leader, responsible)', () => {

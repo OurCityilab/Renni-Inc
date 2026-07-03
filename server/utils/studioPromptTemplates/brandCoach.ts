@@ -22,7 +22,8 @@ import type {
   BrandCoachResponse,
   SherpaAudience,
   SherpaOutputType,
-  WordChoiceFlag
+  WordChoiceFlag,
+  WordFlagCategory
 } from '~~/app/types/studio/models'
 import type { StudioPromptTemplate } from './index'
 
@@ -57,7 +58,10 @@ export const BRAND_COACH_OUTPUT_TYPES: readonly SherpaOutputType[] = Object.free
 ])
 
 const MAX_INPUT_CHARS = 16_000
-const MAX_OUTPUT_TOKENS = 1_400
+// Worst case is resume_draft (full multi-section resume ≈ 600–900
+// tokens) plus five seven-part word flags (≈ 1,400) — a truncated
+// response fails JSON validation entirely, so the cap needs headroom.
+const MAX_OUTPUT_TOKENS = 2_600
 
 const AUDIENCE_DESCRIPTIONS: Record<SherpaAudience, string> = {
   admissions:
@@ -99,7 +103,7 @@ Every response you give MUST be a single JSON object with exactly these five fie
 
 {
   "strengths": string,
-  "wordChoiceFlags": [{ "word": string, "howItMayLand": string, "alternatives": string[], "why": string }],
+  "wordChoiceFlags": [{ "word": string, "category": "too_vague" | "too_inflated" | "too_casual", "definition": string, "howItMayLand": string, "evidenceFit": string, "alternatives": string[], "bestFit": string, "inYourVoice": string }],
   "audienceRead": string,
   "polishedVersion": string,
   "followUpQuestions": string[]
@@ -107,7 +111,16 @@ Every response you give MUST be a single JSON object with exactly these five fie
 
 Field guidance:
 - "strengths": 1–3 sentences naming what is genuinely strong in the student's raw material — real evidence, a specific story, a distinctive detail. Be honest and specific, never generic praise.
-- "wordChoiceFlags": 0–4 flags. Flag words that overclaim, undersell, or land differently than the student intends. For each: "word" is the student's word or phrase, "howItMayLand" explains how this audience may actually hear it, "alternatives" gives 2–6 more precise options, "why" explains which alternative fits depending on the student's actual evidence. Example of the expected depth: if a student calls himself a "philanthropist," respond along the lines of — philanthropist may sound like someone with significant financial resources, a foundation, or a long public giving record; if the evidence is service, mentoring, organizing, volunteering, or helping their community, consider more precise language such as community builder, service-minded leader, youth advocate, volunteer organizer, mutual aid participant, or emerging social entrepreneur — then explain which fits their evidence. Other words that usually deserve a flag when unsupported: helped, hard worker, people person, creative, a lot, responsible, good leader, entrepreneur. Never just call a word wrong — show how to make it specific. Empty array only if nothing needs flagging.
+- "wordChoiceFlags": 0–5 flags, and never more than 5. Pick only the 3–5 HIGHEST-IMPACT words or phrases — this is a coaching moment, not a vocabulary lesson, and a student who gets ten flags tunes all of them out. Empty array only if nothing needs flagging. Each flag is a complete mini-lesson with every field filled in:
+  - "word": the student's original word or phrase, exactly as they wrote it.
+  - "category": one of three kinds of problem. "too_vague" — the word hides what actually happened (a lot, hard worker, good leader, helped with, creative, responsible). "too_inflated" — the word claims more than the evidence supports (philanthropist, entrepreneur, CEO, expert, visionary). "too_casual" — the word is fine out loud but risky on paper for this audience: slang, filler, or charged phrasing (stuff, people person, "I'm just good at", "everyone knows", nicknames or insults for public figures).
+  - "definition": a plain-English definition of what the word usually means to a reader — e.g., "A philanthropist is usually someone who gives significant money, resources, or long-term public support to causes."
+  - "howItMayLand": how THIS selected audience may actually hear it — e.g., "An admissions reader may hear this as someone with major financial resources, a foundation, or a public giving record."
+  - "evidenceFit": whether the word fits the student's ACTUAL evidence, referencing what they wrote — e.g., "Based on what you wrote, your evidence is service, volunteering, and community care. That is strong, but philanthropist may overstate the role unless you have donated significant money or organized giving at scale."
+  - "alternatives": 3–6 more precise options, each tied to the evidence that would justify it — e.g., "community builder — if your focus is bringing people together", "volunteer organizer — if you helped coordinate people, supplies, or events".
+  - "bestFit": your single best-fit recommendation for THIS student's story, with the reason, drawn from their real evidence — e.g., "service-minded community builder, because your evidence includes PTSA, volunteering, and church nursery work."
+  - "inYourVoice": ONE sentence showing the best-fit choice inside the student's revised narrative, built only from what they gave you — with bracketed prompts if evidence is missing.
+  For "too_casual" flags on political or charged phrasing, keep the student's concern and coach the wording. Example: a student writes "our president the orange man." Do not erase the political concern — flag the phrase: definition/howItMayLand along the lines of "this reads as casual and insulting; even a reader who shares your concern may see the writing as less mature and less precise," and offer a reframe that keeps the substance, like "I pay attention to political leadership and how decisions from people in power affect communities," with an inYourVoice sentence such as "I get curious about leadership, policy, and how political decisions affect everyday people." Never just call a word wrong — define it, explain the audience read, match it against the student's evidence, then recommend the best fit.
 - "audienceRead": 1–3 sentences describing how the selected audience will likely read this student's material as written — what will land well and what may be misread or skimmed past.
 - "polishedVersion": the selected output type, built ONLY from what the student gave you, following the output guidance in the user message. Keep the student's real experience and recognizable voice, but make it sound professional.
 - "followUpQuestions": 1–2 specific, answerable questions that would make the material stronger — push for the missing number, outcome, or concrete moment. Never a vague "tell me more."
@@ -115,6 +128,11 @@ Field guidance:
 Hard rules (do not relax):
 - Never fabricate facts, numbers, titles, achievements, or outcomes the student did not provide. Where a metric is missing but would strengthen the output, insert a bracketed prompt like [add number], [add timeframe], or [add result].
 - Never make the student sound older, more credentialed, or more experienced than their own words support. Age-appropriate for a high-school student, always.
+- Preserve the student's natural voice. Improve clarity and professionalism, but never make them sound more polished than their evidence supports. The polished version should still sound like them.
+- Never upgrade roles. If the student says they volunteered, do not rewrite it as led, organized, coordinated, mentored, or managed unless the student gave evidence for that role. Where the role is unclear, use a bracketed prompt such as [describe your role] or [name what you organized].
+- If the student raises political or sensitive concerns, coach the language directly but neutrally. Do not erase the student's concern — help them reframe it for their chosen audience using precise, respectful language.
+- If the coaching focus indicates early-stage or raw-material work, the polished version should read like a refined raw-material summary in the student's voice — not a finished college essay or an adult bio.
+- Use student-safe language when naming problems: "too general," "hard to picture," "unsupported," or "needs evidence." Avoid harsh labels like "defensive" unless clearly warranted.
 - Light, encouraging pushback: name the issue plainly, explain how it may land, offer better options, and let the student choose. Do not lecture.
 - For STAR material, check all four parts: Situation clear? Task (their responsibility) clear? Action personal ("I did", not "we did")? Result concrete (outcome, number, lesson, or change)? Push on weak Results in followUpQuestions.
 - Plain language. You are a coach, not an approver — a human coach reviews and approves the final artifact, not you.
@@ -159,6 +177,17 @@ function requireStringArray(value: unknown, field: string): string[] {
   return value as string[]
 }
 
+const WORD_FLAG_CATEGORIES: readonly WordFlagCategory[] = ['too_vague', 'too_inflated', 'too_casual']
+
+function requireCategory(value: unknown, field: string): WordFlagCategory {
+  if (typeof value !== 'string' || !WORD_FLAG_CATEGORIES.includes(value as WordFlagCategory)) {
+    throw new Error(
+      `Brand Coach response field "${field}" must be one of: ${WORD_FLAG_CATEGORIES.join(', ')}.`
+    )
+  }
+  return value as WordFlagCategory
+}
+
 function validateFlags(value: unknown): WordChoiceFlag[] {
   if (!Array.isArray(value)) {
     throw new Error('Brand Coach response field "wordChoiceFlags" must be an array.')
@@ -170,9 +199,13 @@ function validateFlags(value: unknown): WordChoiceFlag[] {
     const obj = entry as Record<string, unknown>
     return {
       word: requireString(obj.word, `wordChoiceFlags[${i}].word`),
+      category: requireCategory(obj.category, `wordChoiceFlags[${i}].category`),
+      definition: requireString(obj.definition, `wordChoiceFlags[${i}].definition`),
       howItMayLand: requireString(obj.howItMayLand, `wordChoiceFlags[${i}].howItMayLand`),
+      evidenceFit: requireString(obj.evidenceFit, `wordChoiceFlags[${i}].evidenceFit`),
       alternatives: requireStringArray(obj.alternatives, `wordChoiceFlags[${i}].alternatives`),
-      why: requireString(obj.why, `wordChoiceFlags[${i}].why`)
+      bestFit: requireString(obj.bestFit, `wordChoiceFlags[${i}].bestFit`),
+      inYourVoice: requireString(obj.inYourVoice, `wordChoiceFlags[${i}].inYourVoice`)
     }
   })
 }
@@ -205,102 +238,222 @@ const WORD_FLAG_RULES: FlagRule[] = [
   {
     pattern: /\bphilanthropists?\b/i,
     word: 'philanthropist',
+    category: 'too_inflated',
+    definition:
+      'A philanthropist is usually someone who gives significant money, resources, or long-term public support to causes.',
     howItMayLand:
-      'Philanthropist may sound like someone with significant financial resources, a foundation, or a long public giving record.',
+      'A reader may hear this as someone with major financial resources, a foundation, or a public giving record.',
+    evidenceFit:
+      'Check your evidence: unless you have donated significant money or organized giving at scale, this word may overstate the role. Service, volunteering, and community care are strong — name them precisely instead.',
     alternatives: [
-      'community builder',
-      'service-minded leader',
-      'youth advocate',
-      'volunteer organizer',
-      'mutual aid participant',
-      'emerging social entrepreneur'
+      'community builder — if your focus is bringing people together',
+      'service-minded leader — if your evidence is volunteering and showing up consistently',
+      'youth advocate — if your work supports younger students or children',
+      'volunteer organizer — if you helped coordinate people, supplies, or events',
+      'emerging social entrepreneur — if you are building a project that solves a community problem'
     ],
-    why: 'If your evidence is service, mentoring, organizing, volunteering, or helping your community, more precise language keeps you credible. Pick the one your evidence supports: "volunteer organizer" if you organize, "youth advocate" if you speak up for younger people, "community builder" if you bring people together.'
+    bestFit:
+      'Pick the one your evidence supports: "volunteer organizer" if you organize, "youth advocate" if you speak up for younger people, "community builder" if you bring people together.',
+    inYourVoice:
+      'I\'m a service-minded community builder — [name the group or cause you show up for and what you do there].'
   },
   {
     pattern: /\bpassionate\b/i,
     word: 'passionate',
+    category: 'too_vague',
+    definition: 'Passionate means caring intensely about something — but it names the feeling, not any action.',
     howItMayLand: 'Passionate appears so often that many readers skim right past it.',
+    evidenceFit:
+      'Check your evidence: do you have one specific action that shows the passion? If so, the action belongs in the sentence, not the adjective.',
     alternatives: ['committed to', 'focused on', 'known for', 'drawn to'],
-    why: 'Showing the passion with one specific action or example says more than naming it.'
+    bestFit:
+      '"Committed to" plus one specific action or example says more than "passionate" ever will.',
+    inYourVoice: 'I\'m committed to [your topic] — last [timeframe], I [one specific thing you did about it].'
   },
   {
     pattern: /\bhard[- ]?work(?:er|ing)\b/i,
     word: 'hardworking',
+    category: 'too_vague',
+    definition: 'Hardworking claims steady effort — but gives the reader nothing to picture.',
     howItMayLand: 'Nearly every application says hardworking, so on its own it does not set you apart.',
+    evidenceFit:
+      'Check your evidence: what did you finish, stick with, or show up for when it was hard? That example is the proof.',
     alternatives: ['consistent', 'reliable under deadlines', 'someone who finishes what they start'],
-    why: 'One example of following through is stronger evidence than the adjective.'
+    bestFit:
+      '"Someone who finishes what they start" — backed by one example of following through — is stronger evidence than the adjective.',
+    inYourVoice: 'I finish what I start: I [one thing you stuck with] for [add timeframe], even when [what made it hard].'
   },
   {
     pattern: /\bpeople person\b/i,
     word: 'people person',
+    category: 'too_casual',
+    definition: 'People person is spoken shorthand for being good with people — friendly, easy to talk to.',
     howItMayLand: 'People person reads casual — fine out loud, weaker on paper.',
+    evidenceFit:
+      'Check your evidence: do people come back to you, or do you explain things well? Each points to a different, sharper word.',
     alternatives: ['strong communicator', 'relationship builder', 'team-oriented'],
-    why: 'Choose based on your evidence: "relationship builder" if people come back to you, "strong communicator" if you explain things well.'
+    bestFit:
+      '"Relationship builder" if people come back to you, "strong communicator" if you explain things well.',
+    inYourVoice: 'I\'m a relationship builder — [name who keeps coming back to you and why].'
   },
   {
     pattern: /\b(expert|guru)\b/i,
     word: 'expert',
+    category: 'too_inflated',
+    definition: 'An expert has deep, proven knowledge that others rely on — usually after years of work in a field.',
     howItMayLand:
       'Expert or guru can overclaim for a student and invite a "prove it" reaction from recruiters and employers.',
+    evidenceFit:
+      'Check your evidence: real skill you are building counts — but "expert" asks the reader to test you on it.',
     alternatives: ['experienced in', 'skilled at', 'building real skill in'],
-    why: 'Precise claims you can back up build more trust than big ones you cannot.'
+    bestFit: '"Building real skill in" — precise claims you can back up build more trust than big ones you cannot.',
+    inYourVoice: 'I\'m building real skill in [your area] — so far I\'ve [one concrete thing you\'ve done with it].'
   },
   {
     pattern: /\bhelped( out| with)?\b/i,
     word: 'helped',
+    category: 'too_vague',
+    definition: '"Helped" says you were involved — but not what you personally did.',
     howItMayLand:
       '"Helped" hides what you personally did — resume readers and recruiters look for the specific action.',
+    evidenceFit:
+      'Check your evidence: did you set it up, run it, keep it going, or build something? The true verb is in there.',
     alternatives: ['supported', 'organized', 'led', 'coordinated', 'built', 'created'],
-    why: 'Pick the verb that matches what actually happened: "organized" if you set it up, "led" if others followed your plan, "supported" if you kept it running.'
+    bestFit:
+      'Pick the verb that matches what actually happened: "organized" if you set it up, "led" if others followed your plan, "supported" if you kept it running.',
+    inYourVoice: 'I [organized / supported / built — the verb that matches] [the specific task] for [who it was for].'
   },
   {
     pattern: /\b(stuff|things)\b/i,
     word: 'stuff / things',
+    category: 'too_casual',
+    definition: '"Stuff" and "things" are filler words that stand in for whatever you did not name.',
     howItMayLand: 'Vague words like "stuff" and "things" make real work sound smaller than it was.',
+    evidenceFit: 'Check your evidence: you know the actual task, product, or event — it just is not on the page yet.',
     alternatives: ['name the actual task, product, or event'],
-    why: '"Sold sweatshirts at our pop-up shop" beats "sold stuff" every time.'
+    bestFit: 'Replace it with the real noun: "Sold sweatshirts at our pop-up shop" beats "sold stuff" every time.',
+    inYourVoice: 'I sold [the actual product] at [the actual event] — [add number] in [add timeframe].'
   },
   {
     pattern: /\ba lot\b/i,
     word: 'a lot',
+    category: 'too_vague',
+    definition: '"A lot" claims quantity without giving one.',
     howItMayLand: '"A lot" invites the question: how much, exactly?',
+    evidenceFit:
+      'Check your evidence: is there a real count, frequency, or timeframe you could use? Even a rough honest number beats "a lot."',
     alternatives: ['[add number]', 'a specific count, frequency, or timeframe'],
-    why: 'If you know the number, use it. If not, keep a placeholder like [add number] until you can check.'
+    bestFit: 'If you know the number, use it. If not, keep a placeholder like [add number] until you can check.',
+    inYourVoice: 'I did this [add number] times over [add timeframe].'
   },
   {
     pattern: /\bcreatives?\b|\bcreativity\b/i,
     word: 'creative',
+    category: 'too_vague',
+    definition: 'Creative claims you make or imagine new things — but the claim only works with an example attached.',
     howItMayLand: 'Creative is claimed so often that readers need to see it, not just hear it.',
+    evidenceFit: 'Check your evidence: name one thing you made, designed, or figured out — the example proves the adjective.',
     alternatives: ['designed', 'built', 'came up with [the specific idea]', 'made [the specific thing]'],
-    why: 'Name one thing you made, designed, or figured out — the example proves the adjective.'
+    bestFit: 'Lead with the made thing itself — "designed" or "built" plus the real object.',
+    inYourVoice: 'I designed [the specific thing you made] for [who it was for].'
   },
   {
     pattern: /\bresponsible\b/i,
     word: 'responsible',
-    howItMayLand:
-      '"Responsible for" tells the reader a duty existed — not that you delivered on it.',
+    category: 'too_vague',
+    definition: '"Responsible for" describes a duty you were given — not what you did with it.',
+    howItMayLand: '"Responsible for" tells the reader a duty existed — not that you delivered on it.',
+    evidenceFit:
+      'Check your evidence: what did you actually do with the responsibility — run it, track it, keep it going?',
     alternatives: ['managed', 'ran', 'owned', 'delivered', 'kept [X] running'],
-    why: 'Say what you did with the responsibility: "managed the cash box for our pop-up" is stronger than "responsible for money."'
+    bestFit:
+      'Say what you did with the responsibility: "managed the cash box for our pop-up" is stronger than "responsible for money."',
+    inYourVoice: 'I managed [the specific thing you were trusted with] — [what stayed on track because you did].'
   },
   {
     pattern: /\bgood leader\b|\bleadership skills\b/i,
     word: 'good leader',
+    category: 'too_vague',
+    definition: 'A leader is someone others actually follow — the phrase claims the title without showing the following.',
     howItMayLand: 'Calling yourself a good leader asks the reader to take your word for it.',
+    evidenceFit:
+      'Check your evidence: who followed you, and what got done because you led? That result convinces more than the title.',
     alternatives: ['led a team of [add number]', 'organized [the event]', 'trained new members', 'captained'],
-    why: 'Show the leading: who followed you, and what got done because you led. The result convinces more than the title.'
+    bestFit: 'Show the leading with the strongest concrete example you have — team, event, or training.',
+    inYourVoice: 'I led [add number] classmates to [what got done because you led].'
   },
   {
     pattern: /\bentrepreneurs?\b/i,
     word: 'entrepreneur',
+    category: 'too_inflated',
+    definition: 'An entrepreneur builds and runs a business — readers picture products, customers, and sales.',
     howItMayLand:
       'Entrepreneur can land as a big claim when the business is early — some readers will ask what you have actually sold or built.',
+    evidenceFit:
+      'Check your evidence: real products or real sales support the word; an idea in progress deserves honest in-progress language.',
     alternatives: [
       'founder of a student-run brand',
       'started a small business selling [product]',
       'building a business idea into its first sales'
     ],
-    why: 'Anchor it to what exists: real products, real sales, or say honestly that you are building it. Credible beats impressive.'
+    bestFit:
+      'Anchor it to what exists: real products, real sales, or say honestly that you are building it. Credible beats impressive.',
+    inYourVoice: 'I started a small business selling [product] — so far [add number] sales at [the event or place].'
+  },
+  {
+    pattern: /\borange man\b/i,
+    word: 'orange man',
+    category: 'too_casual',
+    definition: 'A nickname like this is an insult label for a public figure — it signals a stance, not an observation.',
+    howItMayLand:
+      'This reads as casual and insulting. Even a reader who shares your concern may see the writing as less mature and less precise.',
+    evidenceFit:
+      'Your concern about political leadership is real material — keep it. The nickname is the only part that weakens it.',
+    alternatives: [
+      'political leadership',
+      'decisions from people in power',
+      'the current administration',
+      'name the specific policy or decision you are reacting to'
+    ],
+    bestFit:
+      'Name the leadership and the impact instead of the person: "I pay attention to political leadership and how decisions from people in power affect communities."',
+    inYourVoice:
+      'I get curious about leadership, policy, and how political decisions affect everyday people — especially [the community you care about].'
+  },
+  {
+    pattern: /\bpeople be\b/i,
+    word: 'people be',
+    category: 'too_casual',
+    definition: 'Spoken-voice phrasing — natural out loud, but it reads as unedited on paper.',
+    howItMayLand:
+      'On paper, spoken phrasing can make a reader focus on the grammar instead of your point.',
+    evidenceFit: 'Your observation about people is the material — keep the insight, tighten the phrasing for paper.',
+    alternatives: ['people often', 'people tend to', 'I\'ve noticed that people'],
+    bestFit: '"I\'ve noticed that people…" keeps your voice and your observation while reading as intentional.',
+    inYourVoice: 'I\'ve noticed that people [your actual observation].',
+  },
+  {
+    pattern: /\bi'?m just good at\b/i,
+    word: "I'm just good at",
+    category: 'too_casual',
+    definition: '"Just" shrinks the claim before the reader even hears it.',
+    howItMayLand: 'The word "just" undersells you — it tells the reader this skill is no big deal.',
+    evidenceFit: 'Check your evidence: if you are good at it, there is a moment that proves it. Drop the "just" and show the moment.',
+    alternatives: ["I'm good at", "I'm known for", 'People come to me when'],
+    bestFit: '"People come to me when…" turns the same claim into evidence someone else would back up.',
+    inYourVoice: 'People come to me when [the thing you are good at is needed] — like the time I [one specific moment].'
+  },
+  {
+    pattern: /\beveryone knows\b/i,
+    word: 'everyone knows',
+    category: 'too_casual',
+    definition: '"Everyone knows" claims agreement without giving the reader a reason to agree.',
+    howItMayLand:
+      'A reader who does not already agree may stop trusting the sentence — it can come across as assuming instead of showing.',
+    evidenceFit: 'Check your evidence: what have YOU seen or experienced that makes this true? That is the stronger sentence.',
+    alternatives: ["I've seen that", "In my experience", "Where I'm from"],
+    bestFit: '"I\'ve seen that…" grounds the claim in your own experience, which no reader can argue with.',
+    inYourVoice: "I've seen that [your claim] — [one specific moment or place where you saw it]."
   }
 ]
 
@@ -490,8 +643,8 @@ function mockPolished(payload: BrandCoachPayload, combined: string): string {
       const hits = WORD_FLAG_RULES.filter((r) => r.pattern.test(combined))
       if (!hits.length) return `${seed.join(' ')}\n\n(No overused words flagged — see the follow-up questions for how to add evidence.)`
       return hits
-        .map((h) => `Instead of "${h.word}", try: ${h.alternatives.join(', ')}.`)
-        .join('\n')
+        .map((h) => `Instead of "${h.word}" — ${h.bestFit}\nIn your voice: ${h.inYourVoice}`)
+        .join('\n\n')
     }
     case 'pitch_3s':
       return `I'm [your name], and ${seed[0] ? `"${seed[0]}"` : '[one thing you do, in 8–12 words]'} — tighten this until you can say it in one breath.`
@@ -546,8 +699,17 @@ export function generateMockBrandCoachResponse(payload: BrandCoachPayload): Bran
     .join('\n')
 
   const flags = WORD_FLAG_RULES.filter((r) => r.pattern.test(combined))
-    .slice(0, 4)
-    .map(({ word, howItMayLand, alternatives, why }) => ({ word, howItMayLand, alternatives, why }))
+    .slice(0, 5)
+    .map(({ word, category, definition, howItMayLand, evidenceFit, alternatives, bestFit, inYourVoice }) => ({
+      word,
+      category,
+      definition,
+      howItMayLand,
+      evidenceFit,
+      alternatives,
+      bestFit,
+      inYourVoice
+    }))
 
   const wordCount = clean(combined).split(' ').filter(Boolean).length
   const strengths = `You brought real material to work with — about ${wordCount} words of your own experience${
@@ -583,7 +745,7 @@ export function generateMockBrandCoachResponse(payload: BrandCoachPayload): Bran
 
 export const brandCoachTemplate: StudioPromptTemplate<BrandCoachPayload, BrandCoachResponse> = {
   mode: 'brand-coach',
-  templateVersion: 'brand-coach.v1.3.0',
+  templateVersion: 'brand-coach.v1.5.0',
   systemPrompt: buildSystemPrompt,
   userPromptBuilder: buildUserPrompt,
   responseSchema: validateResponse,

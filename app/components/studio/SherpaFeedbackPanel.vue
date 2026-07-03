@@ -1,7 +1,13 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { usePortfolioArtifact } from '~/composables/usePortfolioArtifact'
-import type { BrandCoachResponse, PortfolioArtifactType } from '~/types/studio/models'
+import type { BrandCoachResponse, PortfolioArtifactType, WordFlagCategory } from '~/types/studio/models'
+
+const categoryLabels: Record<WordFlagCategory, string> = {
+  too_vague: 'Too general',
+  too_inflated: 'Bigger than your evidence',
+  too_casual: 'Casual / risky for this audience'
+}
 
 const props = defineProps<{
   result: BrandCoachResponse
@@ -93,14 +99,25 @@ async function saveToPortfolio() {
       <div
         v-for="(flag, i) in result.wordChoiceFlags"
         :key="i"
-        class="mt-2 rounded-md bg-amber-50 p-3 text-sm text-neutral-800"
+        class="mt-2 space-y-1 rounded-md bg-amber-50 p-3 text-sm text-neutral-800"
       >
-        <p class="font-medium">"{{ flag.word }}"</p>
-        <p class="mt-1">{{ flag.howItMayLand }}</p>
-        <p class="mt-1">
-          <span class="font-medium">Try instead:</span> {{ flag.alternatives.join(', ') }}
+        <p class="flex flex-wrap items-center gap-2 font-medium">
+          "{{ flag.word }}"
+          <span class="rounded-full bg-amber-200 px-2 py-0.5 text-xs font-medium text-amber-900">
+            {{ categoryLabels[flag.category] }}
+          </span>
         </p>
-        <p class="mt-1 text-neutral-600">{{ flag.why }}</p>
+        <p><span class="font-medium">What it usually means:</span> {{ flag.definition }}</p>
+        <p><span class="font-medium">How it may read:</span> {{ flag.howItMayLand }}</p>
+        <p><span class="font-medium">Does it fit your evidence?</span> {{ flag.evidenceFit }}</p>
+        <div>
+          <p class="font-medium">Better options:</p>
+          <ul class="list-inside list-disc">
+            <li v-for="(alt, j) in flag.alternatives" :key="j">{{ alt }}</li>
+          </ul>
+        </div>
+        <p><span class="font-medium">Best fit for your story:</span> {{ flag.bestFit }}</p>
+        <p class="text-neutral-600"><span class="font-medium text-neutral-800">In your voice:</span> {{ flag.inYourVoice }}</p>
       </div>
     </div>
 

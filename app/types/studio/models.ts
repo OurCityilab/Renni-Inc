@@ -215,11 +215,17 @@ export type SherpaOutputType =
   | 'resume_draft'
   | 'linkedin_profile'
 
+export type WordFlagCategory = 'too_vague' | 'too_inflated' | 'too_casual'
+
 export interface WordChoiceFlag {
   word: string
+  category: WordFlagCategory
+  definition: string
   howItMayLand: string
+  evidenceFit: string
   alternatives: string[]
-  why: string
+  bestFit: string
+  inYourVoice: string
 }
 
 export interface BrandCoachResponse {
