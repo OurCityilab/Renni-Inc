@@ -232,6 +232,82 @@ test('mock coaches casual political phrasing ("orange man") without erasing the 
   assert.ok(/policy/.test(flag.inYourVoice))
 })
 
+// ---------- "philanthropist" is a conditional example, not a standing flag ----------
+
+test('system prompt makes philanthropist a conditional example, never a checklist item', () => {
+  const prompt = brandCoachTemplate.systemPrompt()
+  assert.ok(prompt.includes('Only flag words and phrases the student actually wrote'))
+  assert.ok(prompt.includes('conditional illustrations, not a checklist'))
+  assert.ok(prompt.includes('Never flag, define, or introduce "philanthropist" unless'))
+  // Service without inflated language → affirm + ask for evidence, no inflation flag.
+  assert.ok(prompt.includes('volunteering, service, church, PTSA, community service, or helping people'))
+  assert.ok(prompt.includes('affirm the service in "strengths"'))
+})
+
+test('regression: "orange man" gets flagged without dragging in a philanthropist flag', () => {
+  const result = generateMockBrandCoachResponse({
+    worksheet: 'I do not like what our president the orange man is doing to my community',
+    selfWords: '',
+    starExample: '',
+    audience: 'admissions',
+    outputType: 'word_choice'
+  })
+  const words = result.wordChoiceFlags.map((f) => f.word)
+  assert.ok(words.includes('orange man'))
+  assert.ok(!words.includes('philanthropist'))
+  assert.ok(!JSON.stringify(result).toLowerCase().includes('philanthrop'))
+})
+
+test('regression: volunteering/PTSA/Pink Pearls/church nursery alone never triggers philanthropist', () => {
+  const result = generateMockBrandCoachResponse({
+    worksheet:
+      'I volunteer in the church nursery every Sunday, I serve on the PTSA, and I mentor with Pink Pearls in my community',
+    selfWords: 'volunteer, community service',
+    starExample: '',
+    audience: 'scholarship',
+    outputType: 'word_choice'
+  })
+  const words = result.wordChoiceFlags.map((f) => f.word)
+  assert.ok(!words.includes('philanthropist'))
+  assert.ok(!JSON.stringify(result).toLowerCase().includes('philanthrop'))
+  // The service is affirmed and pushed toward specifics, not inflated language.
+  assert.ok(result.strengths.length > 0)
+  assert.ok(result.followUpQuestions.some((q) => /number|contributed|changed/i.test(q)))
+})
+
+test('regression: philanthropist-family words the student actually used still get the full mini-lesson', () => {
+  const result = generateMockBrandCoachResponse({
+    worksheet: 'My dream is a life of philanthropy in my city',
+    selfWords: '',
+    starExample: '',
+    audience: 'admissions',
+    outputType: 'word_choice'
+  })
+  const flag = result.wordChoiceFlags.find((f) => f.word === 'philanthropist')
+  assert.ok(flag, 'philanthropy (student\'s own word) should trigger the mini-lesson')
+  assert.equal(flag.category, 'too_inflated')
+  assert.ok(flag.definition.length > 0)
+  assert.ok(flag.howItMayLand.length > 0)
+  assert.ok(flag.evidenceFit.length > 0)
+  assert.ok(flag.alternatives.length >= 3)
+  assert.ok(flag.bestFit.length > 0)
+  assert.ok(flag.inYourVoice.length > 0)
+})
+
+test('regression: "service-minded" and "community service" are never treated as inflated', () => {
+  const result = generateMockBrandCoachResponse({
+    worksheet: 'I am a service-minded community builder and I do community service twice a month',
+    selfWords: 'service-minded',
+    starExample: '',
+    audience: 'general',
+    outputType: 'word_choice'
+  })
+  assert.ok(result.wordChoiceFlags.every((f) => f.category !== 'too_inflated'))
+  const words = result.wordChoiceFlags.map((f) => f.word)
+  assert.ok(!words.includes('philanthropist'))
+  assert.ok(!words.some((w) => /service/i.test(w)))
+})
+
 test('mock coaches spoken-voice and underselling phrases ("people be", "I\'m just good at", "everyone knows")', () => {
   const result = generateMockBrandCoachResponse({
     worksheet: "People be sleeping on my neighborhood. I'm just good at math. Everyone knows school lunch is bad.",

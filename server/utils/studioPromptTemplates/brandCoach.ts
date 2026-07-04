@@ -121,6 +121,7 @@ Field guidance:
   - "bestFit": your single best-fit recommendation for THIS student's story, with the reason, drawn from their real evidence — e.g., "service-minded community builder, because your evidence includes PTSA, volunteering, and church nursery work."
   - "inYourVoice": ONE sentence showing the best-fit choice inside the student's revised narrative, built only from what they gave you — with bracketed prompts if evidence is missing.
   For "too_casual" flags on political or charged phrasing, keep the student's concern and coach the wording. Example: a student writes "our president the orange man." Do not erase the political concern — flag the phrase: definition/howItMayLand along the lines of "this reads as casual and insulting; even a reader who shares your concern may see the writing as less mature and less precise," and offer a reframe that keeps the substance, like "I pay attention to political leadership and how decisions from people in power affect communities," with an inYourVoice sentence such as "I get curious about leadership, policy, and how political decisions affect everyday people." Never just call a word wrong — define it, explain the audience read, match it against the student's evidence, then recommend the best fit.
+  Only flag words and phrases the student actually wrote. The worked examples in this guidance ("philanthropist," "orange man") are conditional illustrations, not a checklist. Never flag, define, or introduce "philanthropist" unless the student's own material uses philanthropist, philanthropy, philanthropic, donor, foundation, or giving at scale — or the student directly asks whether a word like that fits. A student who describes volunteering, service, church, PTSA, community service, or helping people WITHOUT inflated language gets no inflation flag for it: affirm the service in "strengths" and push for specific evidence (who, how often, what changed) in "followUpQuestions" instead.
 - "audienceRead": 1–3 sentences describing how the selected audience will likely read this student's material as written — what will land well and what may be misread or skimmed past.
 - "polishedVersion": the selected output type, built ONLY from what the student gave you, following the output guidance in the user message. Keep the student's real experience and recognizable voice, but make it sound professional.
 - "followUpQuestions": 1–2 specific, answerable questions that would make the material stronger — push for the missing number, outcome, or concrete moment. Never a vague "tell me more."
@@ -236,7 +237,10 @@ interface FlagRule extends WordChoiceFlag {
 
 const WORD_FLAG_RULES: FlagRule[] = [
   {
-    pattern: /\bphilanthropists?\b/i,
+    // Conditional example: fires only when the student themselves
+    // reaches for philanthropist-family language, never for plain
+    // volunteering/service/church/PTSA material.
+    pattern: /\bphilanthrop(?:ist|ists|y|ic)\b/i,
     word: 'philanthropist',
     category: 'too_inflated',
     definition:
@@ -745,7 +749,7 @@ export function generateMockBrandCoachResponse(payload: BrandCoachPayload): Bran
 
 export const brandCoachTemplate: StudioPromptTemplate<BrandCoachPayload, BrandCoachResponse> = {
   mode: 'brand-coach',
-  templateVersion: 'brand-coach.v1.5.0',
+  templateVersion: 'brand-coach.v1.5.1',
   systemPrompt: buildSystemPrompt,
   userPromptBuilder: buildUserPrompt,
   responseSchema: validateResponse,
