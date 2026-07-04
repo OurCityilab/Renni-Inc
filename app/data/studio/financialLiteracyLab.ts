@@ -140,6 +140,12 @@ export interface BudgetPlanInputs {
   wantsList: string
 }
 
+export function hasAnyBudgetPlanAnswer(inputs: BudgetPlanInputs): boolean {
+  return (Object.keys(inputs) as Array<keyof BudgetPlanInputs>).some(
+    (key) => inputs[key].trim().length > 0
+  )
+}
+
 export function composeBudgetPlan(inputs: BudgetPlanInputs): string {
   const takeHome = inputs.monthlyTakeHome.trim()
   const line = (label: string, percent: string) =>

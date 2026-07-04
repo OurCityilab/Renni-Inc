@@ -30,6 +30,18 @@ const annual = computed(() => {
 
 const result = computed(() => (annual.value ? computeTakeHomePay(annual.value) : null))
 
+const usingSalary = computed(() => num(answers.annualSalary) > 0)
+const hasHourlyInputs = computed(
+  () => num(answers.hourlyWage) > 0 && num(answers.hoursPerWeek) > 0
+)
+const sourceLabel = computed(() => {
+  if (usingSalary.value && hasHourlyInputs.value) {
+    return 'Using your yearly salary — when both are filled in, the salary wins. Clear it to use your hourly numbers instead.'
+  }
+  if (usingSalary.value) return 'Using your yearly salary.'
+  return 'Using your hourly wage and weekly hours.'
+})
+
 const money = (n: number) =>
   n.toLocaleString('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 })
 
@@ -92,6 +104,7 @@ const takeHomePercentLabel = Math.round(DEFAULT_COHORT_SETTINGS.takeHomePayFacto
       </label>
 
       <div v-if="result" class="rounded-md bg-studio-50 p-3 text-sm text-neutral-800">
+        <p class="mb-1 text-xs font-medium text-studio-700">{{ sourceLabel }}</p>
         <p><span class="font-medium">Yearly pay (gross):</span> {{ money(annual) }}</p>
         <p><span class="font-medium">Monthly pay (gross):</span> {{ money(result.monthlyGross) }}</p>
         <p class="mt-1 text-base font-semibold">

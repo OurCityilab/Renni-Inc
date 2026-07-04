@@ -2,7 +2,11 @@
 import { computed, reactive, ref } from 'vue'
 import { useFinancialLiteracyDraft } from '~/composables/useFinancialLiteracyDraft'
 import { usePortfolioArtifact } from '~/composables/usePortfolioArtifact'
-import { composeBudgetPlan } from '~/data/studio/financialLiteracyLab'
+import {
+  composeBudgetPlan,
+  hasAnyBudgetPlanAnswer,
+  type BudgetPlanInputs
+} from '~/data/studio/financialLiteracyLab'
 import { computeBudgetSplit } from '~/utils/studio/calculators'
 
 definePageMeta({ layout: 'studio' })
@@ -45,24 +49,29 @@ const planSaving = ref(false)
 const planSaved = ref(false)
 const planError = ref<string | null>(null)
 
+const planInputs = computed<BudgetPlanInputs>(() => ({
+  monthlyTakeHome: answers.monthlyTakeHome,
+  needsPercent: answers.needsPercent,
+  wantsPercent: answers.wantsPercent,
+  savingsPercent: answers.savingsPercent,
+  givingPercent: answers.givingPercent,
+  needsList: answers.needsList,
+  wantsList: answers.wantsList
+}))
+const canSavePlan = computed(() => hasAnyBudgetPlanAnswer(planInputs.value))
+
 async function saveBudgetPlan() {
-  if (planSaving.value || !draft.studentUid) return
+  if (planSaving.value || !draft.studentUid || !canSavePlan.value) return
   planSaving.value = true
   planError.value = null
   try {
-    await artifactApi.create(
+    // Updates the existing "My Budget Plan" draft when one exists,
+    // so re-saving never stacks duplicates in the Portfolio.
+    await artifactApi.createOrUpdateDraft(
       draft.studentUid,
       'budget',
       'My Budget Plan',
-      composeBudgetPlan({
-        monthlyTakeHome: answers.monthlyTakeHome,
-        needsPercent: answers.needsPercent,
-        wantsPercent: answers.wantsPercent,
-        savingsPercent: answers.savingsPercent,
-        givingPercent: answers.givingPercent,
-        needsList: answers.needsList,
-        wantsList: answers.wantsList
-      })
+      composeBudgetPlan(planInputs.value)
     )
     planSaved.value = true
   } catch {
@@ -203,12 +212,16 @@ async function saveBudgetPlan() {
       <p class="text-sm font-semibold text-neutral-800">Save your plan</p>
       <p class="text-xs text-neutral-600">
         Saves "My Budget Plan" to your Portfolio as a draft you own — you can edit or delete it
-        anytime.
+        anytime. Saving again updates the same draft.
       </p>
-      <button class="btn-primary w-full" :disabled="planSaving || planSaved" @click="saveBudgetPlan">
-        {{ planSaved ? 'Saved to Portfolio ✓' : (planSaving ? 'Saving…' : 'Save My Budget Plan to Portfolio') }}
+      <button class="btn-primary w-full" :disabled="planSaving || !canSavePlan" @click="saveBudgetPlan">
+        {{ planSaving ? 'Saving…' : (planSaved ? 'Update My Budget Plan in Portfolio' : 'Save My Budget Plan to Portfolio') }}
       </button>
+      <p v-if="!canSavePlan" class="text-xs text-neutral-500">
+        Add at least one budget number or reflection before saving.
+      </p>
       <p v-if="planError" class="text-sm text-rose-700">{{ planError }}</p>
+      <p v-if="planSaved && !planError" class="text-xs text-emerald-700">Saved to Portfolio ✓</p>
       <p v-if="planSaved" class="text-sm">
         <NuxtLink to="/studio/portfolio" class="font-medium text-studio-700">
           View it in My Portfolio →

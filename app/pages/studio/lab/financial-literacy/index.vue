@@ -13,6 +13,10 @@ definePageMeta({ layout: 'studio' })
         Real numbers, your choices. Work through five short modules — paychecks, budgets,
         credit, housing — and finish with a money plan that's yours.
       </p>
+      <p class="mt-1 text-xs text-neutral-500">
+        Start with Modules 1 and 2. One module per session is enough. Module 5 pulls your work
+        together into a Money Plan.
+      </p>
     </div>
 
     <NuxtLink

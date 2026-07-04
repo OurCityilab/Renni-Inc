@@ -100,13 +100,18 @@ export interface DebtPayoffInput {
 
 export type DebtPayoffResult =
   | { paysOff: true; months: number; totalPaid: number; totalInterest: number }
-  | { paysOff: false; firstMonthInterest: number }
+  | {
+      paysOff: false
+      reason: 'payment_below_interest' | 'longer_than_cap'
+      firstMonthInterest: number
+    }
 
 // Month-by-month simulation of a fixed payment against a balance
-// with monthly compounding (APR / 12). When the payment doesn't beat
-// the first month's interest, the balance never shrinks — the
-// "minimum payment trap" this calculator exists to teach. Capped at
-// 1200 months (100 years) as a hard guard against float edge cases.
+// with monthly compounding (APR / 12). Two ways to never pay off:
+// the payment doesn't beat the first month's interest (the classic
+// "minimum payment trap"), or it barely beats it and payoff would
+// take longer than the 1200-month (100-year) cap — reported as
+// not paying off rather than pretending the cap was a payoff.
 export function computeDebtPayoff(input: DebtPayoffInput): DebtPayoffResult {
   if (input.balance <= 0) {
     return { paysOff: true, months: 0, totalPaid: 0, totalInterest: 0 }
@@ -114,7 +119,7 @@ export function computeDebtPayoff(input: DebtPayoffInput): DebtPayoffResult {
   const monthlyRate = input.aprPercent / 100 / 12
   const firstMonthInterest = input.balance * monthlyRate
   if (input.monthlyPayment <= 0 || input.monthlyPayment <= firstMonthInterest) {
-    return { paysOff: false, firstMonthInterest }
+    return { paysOff: false, reason: 'payment_below_interest', firstMonthInterest }
   }
   let balance = input.balance
   let months = 0
@@ -125,6 +130,9 @@ export function computeDebtPayoff(input: DebtPayoffInput): DebtPayoffResult {
     balance = balance + interest - payment
     totalPaid += payment
     months += 1
+  }
+  if (balance > 0) {
+    return { paysOff: false, reason: 'longer_than_cap', firstMonthInterest }
   }
   return {
     paysOff: true,

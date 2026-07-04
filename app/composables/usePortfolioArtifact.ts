@@ -3,6 +3,7 @@ import {
   collection,
   deleteDoc,
   doc,
+  getDocs,
   onSnapshot,
   query,
   updateDoc,
@@ -72,6 +73,36 @@ export function usePortfolioArtifact() {
     return created.id
   }
 
+  // Re-saving a Lab plan (Budget Plan, Money Plan) should refresh the
+  // student's existing draft instead of stacking duplicates. Matches
+  // on type + title among the student's own docs (single-equality
+  // query — no composite index needed) and only updates while the
+  // artifact is still a student-owned 'draft'; once it's under review
+  // or approved, a fresh draft is created so the audit trail stays
+  // intact.
+  async function createOrUpdateDraft(
+    studentUid: string,
+    artifactType: PortfolioArtifactType,
+    title: string,
+    content: string
+  ) {
+    const snap = await getDocs(query(col(), where('studentUid', '==', studentUid)))
+    const existing = snap.docs
+      .map((d) => ({ id: d.id, data: d.data() as PortfolioArtifact }))
+      .filter(
+        (a) =>
+          a.data.artifactType === artifactType &&
+          a.data.coachStatus === 'draft' &&
+          a.data.title.trim() === title.trim()
+      )
+      .sort((a, b) => byNewest(a.data, b.data))[0]
+    if (existing) {
+      await updateContent(existing.id, title, content)
+      return { id: existing.id, updated: true }
+    }
+    return { id: await create(studentUid, artifactType, title, content), updated: false }
+  }
+
   // Rules lock title/content edits to coachStatus draft|needs_review —
   // once a coach approves an artifact it's read-only for the student.
   async function updateContent(id: string, title: string, content: string) {
@@ -101,5 +132,13 @@ export function usePortfolioArtifact() {
     await deleteDoc(doc(db(), 'portfolioArtifacts', id))
   }
 
-  return { watchByStudent, create, updateContent, submitForReview, markExported, remove }
+  return {
+    watchByStudent,
+    create,
+    createOrUpdateDraft,
+    updateContent,
+    submitForReview,
+    markExported,
+    remove
+  }
 }

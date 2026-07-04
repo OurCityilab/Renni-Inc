@@ -209,7 +209,22 @@ test('debt payoff: minimum payment trap — payment below monthly interest never
   const result = computeDebtPayoff({ balance: 500, aprPercent: 48, monthlyPayment: 15 })
   assert.equal(result.paysOff, false)
   if (!result.paysOff) {
+    assert.equal(result.reason, 'payment_below_interest')
     assert.equal(Math.round(result.firstMonthInterest), 20)
+  }
+})
+
+test('debt payoff: payment barely above interest that outlasts the cap reports longer_than_cap', () => {
+  // $10,000 at 1% APR = ~$8.33/month interest; a $9 payment technically
+  // gains ground but would take ~260 years — past the 100-year cap.
+  const result = computeDebtPayoff({ balance: 10000, aprPercent: 1, monthlyPayment: 9 })
+  assert.equal(result.paysOff, false)
+  if (!result.paysOff) {
+    assert.equal(result.reason, 'longer_than_cap')
+    assert.ok(
+      Math.abs(result.firstMonthInterest - 10000 * (0.01 / 12)) < 0.01,
+      `expected ~$8.33 first-month interest, got ${result.firstMonthInterest}`
+    )
   }
 })
 

@@ -16,6 +16,7 @@ import {
   composeMoneyPlan,
   financialLiteracyModules,
   getFinancialLiteracyModule,
+  hasAnyBudgetPlanAnswer,
   hasAnyMoneyPlanAnswer,
   MONEY_PLAN_SECTIONS,
   type BudgetPlanInputs,
@@ -175,6 +176,22 @@ test('budget plan: blanks become bracketed prompts', () => {
   assert.ok(plan.includes('[list your real needs]'))
   assert.ok(plan.includes('[list your real wants]'))
   assert.ok(!/\d/.test(plan), 'blank budget plan should not contain any numbers')
+})
+
+test('budget plan: hasAnyBudgetPlanAnswer is false when everything is empty', () => {
+  assert.equal(hasAnyBudgetPlanAnswer(emptyBudgetPlan), false)
+})
+
+test('budget plan: hasAnyBudgetPlanAnswer treats whitespace-only fields as empty', () => {
+  assert.equal(
+    hasAnyBudgetPlanAnswer({ ...emptyBudgetPlan, needsList: '   ', wantsPercent: '\n' }),
+    false
+  )
+})
+
+test('budget plan: hasAnyBudgetPlanAnswer is true with any single field filled', () => {
+  assert.equal(hasAnyBudgetPlanAnswer({ ...emptyBudgetPlan, monthlyTakeHome: '1200' }), true)
+  assert.equal(hasAnyBudgetPlanAnswer({ ...emptyBudgetPlan, wantsList: 'sneakers' }), true)
 })
 
 /* -------------------------------------------------------------------

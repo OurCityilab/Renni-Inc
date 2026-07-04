@@ -79,7 +79,14 @@ async function savePlan() {
   planSaving.value = true
   planError.value = null
   try {
-    await artifactApi.create(draft.studentUid, 'money_report', saveTitle.value, preview.value)
+    // Updates the existing draft with this title when one exists, so
+    // editing the preview and saving again never stacks duplicates.
+    await artifactApi.createOrUpdateDraft(
+      draft.studentUid,
+      'money_report',
+      saveTitle.value,
+      preview.value
+    )
     planSaved.value = true
   } catch {
     planError.value = "Couldn't save to your Portfolio. Check your connection and try again."
@@ -156,13 +163,15 @@ async function savePlan() {
         </label>
         <button
           class="btn-primary w-full"
-          :disabled="planSaving || planSaved || !saveTitle.trim()"
+          :disabled="planSaving || !saveTitle.trim()"
           @click="savePlan"
         >
-          {{ planSaved ? 'Saved to Portfolio ✓' : (planSaving ? 'Saving…' : 'Save My Money Plan to Portfolio') }}
+          {{ planSaving ? 'Saving…' : (planSaved ? 'Update My Money Plan in Portfolio' : 'Save My Money Plan to Portfolio') }}
         </button>
         <p v-if="planError" class="text-sm text-rose-700">{{ planError }}</p>
-        <p v-if="planSaved" class="text-sm">
+        <p v-if="planSaved && !planError" class="text-sm">
+          <span class="text-emerald-700">Saved to Portfolio ✓</span> — keep editing and save
+          again anytime; it updates the same draft.
           <NuxtLink to="/studio/portfolio" class="font-medium text-studio-700">
             View it in My Portfolio →
           </NuxtLink>

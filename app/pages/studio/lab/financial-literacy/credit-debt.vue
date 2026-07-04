@@ -91,8 +91,9 @@ const payoffYears = computed(() => {
     <div class="card space-y-3">
       <p class="text-sm font-semibold text-neutral-800">Debt-to-income check</p>
       <p class="text-xs text-neutral-600">
-        Lenders compare what you owe each month to what you earn. For example, mortgage lenders
-        often want total monthly debt under about 43% of gross income.
+        Lenders compare what you owe each month to what you earn. For example, many mortgage
+        lenders use guidelines around 43% of gross income — a commonly used rule of thumb, not
+        a law, and every lender sets its own bar.
       </p>
       <div class="grid grid-cols-2 gap-3">
         <label class="block text-sm">
@@ -177,7 +178,7 @@ const payoffYears = computed(() => {
             bought.
           </p>
         </template>
-        <template v-else>
+        <template v-else-if="payoff.reason === 'payment_below_interest'">
           <p class="font-semibold text-amber-800">
             This payment never pays it off.
           </p>
@@ -186,6 +187,17 @@ const payoffYears = computed(() => {
             — more than the payment covers, so the balance grows instead of shrinking. This is
             how some lenders are designed to work. The counter-move: pay more than the minimum,
             every time you can.
+          </p>
+        </template>
+        <template v-else>
+          <p class="font-semibold text-amber-800">
+            At this payment, paying this off would take more than 100 years.
+          </p>
+          <p class="mt-1 text-xs text-neutral-700">
+            The payment barely covers the roughly {{ money(payoff.firstMonthInterest) }} of
+            interest each month, so almost nothing touches what you actually owe. For real
+            purposes, this debt never gets paid off at this pace. The counter-move is the same:
+            pay more than the minimum, every time you can.
           </p>
         </template>
       </div>
