@@ -56,6 +56,84 @@ export function computeRentAffordability(
   }
 }
 
+export interface BudgetSplitInput {
+  monthlyTakeHome: number
+  needsPercent: number
+  wantsPercent: number
+  savingsPercent: number
+  givingPercent: number
+}
+
+export interface BudgetSplit {
+  needs: number
+  wants: number
+  savings: number
+  giving: number
+  totalPercent: number
+  leftoverPercent: number
+  isBalanced: boolean
+}
+
+// Percent-based budget allocation. isBalanced means the four
+// percents account for the whole take-home (within a rounding hair);
+// leftoverPercent can be negative when the student over-allocates.
+export function computeBudgetSplit(input: BudgetSplitInput): BudgetSplit {
+  const totalPercent =
+    input.needsPercent + input.wantsPercent + input.savingsPercent + input.givingPercent
+  const dollars = (percent: number) => (input.monthlyTakeHome * percent) / 100
+  return {
+    needs: dollars(input.needsPercent),
+    wants: dollars(input.wantsPercent),
+    savings: dollars(input.savingsPercent),
+    giving: dollars(input.givingPercent),
+    totalPercent,
+    leftoverPercent: 100 - totalPercent,
+    isBalanced: Math.abs(100 - totalPercent) < 0.01
+  }
+}
+
+export interface DebtPayoffInput {
+  balance: number
+  aprPercent: number
+  monthlyPayment: number
+}
+
+export type DebtPayoffResult =
+  | { paysOff: true; months: number; totalPaid: number; totalInterest: number }
+  | { paysOff: false; firstMonthInterest: number }
+
+// Month-by-month simulation of a fixed payment against a balance
+// with monthly compounding (APR / 12). When the payment doesn't beat
+// the first month's interest, the balance never shrinks — the
+// "minimum payment trap" this calculator exists to teach. Capped at
+// 1200 months (100 years) as a hard guard against float edge cases.
+export function computeDebtPayoff(input: DebtPayoffInput): DebtPayoffResult {
+  if (input.balance <= 0) {
+    return { paysOff: true, months: 0, totalPaid: 0, totalInterest: 0 }
+  }
+  const monthlyRate = input.aprPercent / 100 / 12
+  const firstMonthInterest = input.balance * monthlyRate
+  if (input.monthlyPayment <= 0 || input.monthlyPayment <= firstMonthInterest) {
+    return { paysOff: false, firstMonthInterest }
+  }
+  let balance = input.balance
+  let months = 0
+  let totalPaid = 0
+  while (balance > 0 && months < 1200) {
+    const interest = balance * monthlyRate
+    const payment = Math.min(input.monthlyPayment, balance + interest)
+    balance = balance + interest - payment
+    totalPaid += payment
+    months += 1
+  }
+  return {
+    paysOff: true,
+    months,
+    totalPaid,
+    totalInterest: totalPaid - input.balance
+  }
+}
+
 export interface LandlordQualificationInput {
   monthlyGrossIncome: number
   rent: number

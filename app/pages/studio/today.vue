@@ -52,7 +52,9 @@ const currentStatus = computed<MissionProgressStatus>(
 // it — "Start" should drop the student inside the tool, not just
 // flip a status chip.
 const labToolRoutes: Partial<Record<StudioModule, string>> = {
-  'brand-builder': '/studio/lab/brand-builder'
+  'brand-builder': '/studio/lab/brand-builder',
+  'money-basics': '/studio/lab/financial-literacy',
+  'keys-credit': '/studio/lab/financial-literacy/credit-debt'
 }
 const currentToolRoute = computed(() =>
   currentMission.value ? (labToolRoutes[currentMission.value.module] ?? null) : null

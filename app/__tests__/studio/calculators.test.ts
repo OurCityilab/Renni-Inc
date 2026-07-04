@@ -8,6 +8,8 @@
 
 import { strict as assert } from 'node:assert'
 import {
+  computeBudgetSplit,
+  computeDebtPayoff,
   computeDti,
   computeLandlordQualification,
   computeRentAffordability,
@@ -134,6 +136,104 @@ test('landlord qualification: respects a custom income multiplier', () => {
   // 900 * 4 = 3600 — exactly at the threshold, still qualifies (>=).
   assert.equal(result.meetsIncomeRule, true)
   assert.equal(result.qualifies, true)
+})
+
+// ---------- budget split ----------
+
+test('budget split: 50/30/15/5 on $1,200 take-home is balanced', () => {
+  const result = computeBudgetSplit({
+    monthlyTakeHome: 1200,
+    needsPercent: 50,
+    wantsPercent: 30,
+    savingsPercent: 15,
+    givingPercent: 5
+  })
+  assert.equal(result.needs, 600)
+  assert.equal(result.wants, 360)
+  assert.equal(result.savings, 180)
+  assert.equal(result.giving, 60)
+  assert.equal(result.totalPercent, 100)
+  assert.equal(result.isBalanced, true)
+})
+
+test('budget split: under-allocation reports leftover percent, not balanced', () => {
+  const result = computeBudgetSplit({
+    monthlyTakeHome: 1000,
+    needsPercent: 50,
+    wantsPercent: 20,
+    savingsPercent: 10,
+    givingPercent: 0
+  })
+  assert.equal(result.totalPercent, 80)
+  assert.equal(result.leftoverPercent, 20)
+  assert.equal(result.isBalanced, false)
+})
+
+test('budget split: over-allocation reports negative leftover', () => {
+  const result = computeBudgetSplit({
+    monthlyTakeHome: 1000,
+    needsPercent: 70,
+    wantsPercent: 40,
+    savingsPercent: 10,
+    givingPercent: 0
+  })
+  assert.equal(result.totalPercent, 120)
+  assert.equal(result.leftoverPercent, -20)
+  assert.equal(result.isBalanced, false)
+})
+
+// ---------- debt payoff ----------
+
+test('debt payoff: zero-interest debt pays off in balance/payment months', () => {
+  const result = computeDebtPayoff({ balance: 500, aprPercent: 0, monthlyPayment: 50 })
+  assert.ok(result.paysOff)
+  if (result.paysOff) {
+    assert.equal(result.months, 10)
+    assert.equal(Math.round(result.totalPaid), 500)
+    assert.equal(Math.round(result.totalInterest), 0)
+  }
+})
+
+test('debt payoff: interest makes the payoff longer and more expensive', () => {
+  const result = computeDebtPayoff({ balance: 500, aprPercent: 24, monthlyPayment: 50 })
+  assert.ok(result.paysOff)
+  if (result.paysOff) {
+    assert.ok(result.months > 10, `expected more than 10 months, got ${result.months}`)
+    assert.ok(result.totalInterest > 0)
+    assert.ok(Math.abs(result.totalPaid - (500 + result.totalInterest)) < 0.01)
+  }
+})
+
+test('debt payoff: minimum payment trap — payment below monthly interest never pays off', () => {
+  // $500 at 48% APR = $20/month interest; a $15 payment loses ground.
+  const result = computeDebtPayoff({ balance: 500, aprPercent: 48, monthlyPayment: 15 })
+  assert.equal(result.paysOff, false)
+  if (!result.paysOff) {
+    assert.equal(Math.round(result.firstMonthInterest), 20)
+  }
+})
+
+test('debt payoff: zero payment never pays off', () => {
+  const result = computeDebtPayoff({ balance: 500, aprPercent: 12, monthlyPayment: 0 })
+  assert.equal(result.paysOff, false)
+})
+
+test('debt payoff: zero balance is already paid off', () => {
+  const result = computeDebtPayoff({ balance: 0, aprPercent: 24, monthlyPayment: 50 })
+  assert.ok(result.paysOff)
+  if (result.paysOff) {
+    assert.equal(result.months, 0)
+    assert.equal(result.totalPaid, 0)
+  }
+})
+
+test('debt payoff: final month pays only the remaining balance, never overshoots', () => {
+  const result = computeDebtPayoff({ balance: 100, aprPercent: 0, monthlyPayment: 40 })
+  assert.ok(result.paysOff)
+  if (result.paysOff) {
+    assert.equal(result.months, 3)
+    assert.equal(Math.round(result.totalPaid), 100)
+  }
 })
 
 // ---------- default cohort settings sanity ----------

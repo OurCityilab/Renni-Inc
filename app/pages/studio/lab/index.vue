@@ -18,6 +18,18 @@ definePageMeta({ layout: 'studio' })
       <span class="btn-primary inline-block">Open Lab</span>
     </NuxtLink>
 
+    <NuxtLink
+      to="/studio/lab/financial-literacy"
+      class="card block space-y-2 hover:border-studio-300"
+    >
+      <p class="text-sm font-semibold text-neutral-800">Financial Literacy Lab</p>
+      <p class="text-sm text-neutral-600">
+        Paychecks, budgets, credit, and housing — five short modules with real calculators,
+        ending in a money plan you own.
+      </p>
+      <span class="btn-primary inline-block">Open Financial Literacy Lab</span>
+    </NuxtLink>
+
     <NuxtLink to="/studio/lab/resume-builder" class="card block space-y-2 hover:border-studio-300">
       <p class="text-sm font-semibold text-neutral-800">Resume Builder</p>
       <p class="text-sm text-neutral-600">
