@@ -11,12 +11,12 @@ async function handleSignOut() {
   await navigateTo('/login?redirect=/studio/today')
 }
 
-type TabItem = { to: string; label: string; icon: string }
+type TabItem = { to: string; label: string; icon: string; badge?: string }
 
 const tabs: TabItem[] = [
   { to: '/studio/today', label: 'Today', icon: '☀️' },
   { to: '/studio/lab', label: 'The Lab', icon: '🧪' },
-  { to: '/studio/markets', label: 'The Markets', icon: '📈' },
+  { to: '/studio/markets', label: 'The Markets', icon: '📈', badge: 'Coming soon' },
   { to: '/studio/portfolio', label: 'Portfolio', icon: '📁' }
 ]
 </script>
@@ -64,6 +64,10 @@ const tabs: TabItem[] = [
         >
           <span class="text-lg leading-none">{{ tab.icon }}</span>
           {{ tab.label }}
+          <span
+            v-if="tab.badge"
+            class="rounded-full bg-neutral-100 px-1.5 text-[9px] leading-4 text-neutral-500"
+          >{{ tab.badge }}</span>
         </NuxtLink>
       </div>
     </nav>
