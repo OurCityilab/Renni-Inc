@@ -421,6 +421,161 @@ test('every output type produces a valid mock response', () => {
   }
 })
 
+// ---------- Evidence Interviewer (brand-coach.v2) ----------
+
+test('templateVersion bumped for the evidence interviewer', () => {
+  assert.equal(brandCoachTemplate.templateVersion, 'brand-coach.v2.0.0')
+})
+
+test('system prompt teaches the nine-field schema and the readiness decision', () => {
+  const prompt = brandCoachTemplate.systemPrompt()
+  assert.ok(prompt.includes('exactly these nine fields'))
+  assert.ok(prompt.includes('"readiness": "ready" | "needs_more"'))
+  assert.ok(prompt.includes('"readinessReason"'))
+  assert.ok(prompt.includes('"evidenceQuestions"'))
+  assert.ok(prompt.includes('"preservedWords"'))
+  // The interviewer classifications.
+  assert.ok(prompt.includes('a strong raw story'))
+  assert.ok(prompt.includes('a vague claim with no evidence'))
+  assert.ok(prompt.includes('a story missing its outcome'))
+  assert.ok(prompt.includes('an inflated role claim'))
+  assert.ok(prompt.includes('risky or charged wording'))
+  assert.ok(prompt.includes('emotional but usable material'))
+  assert.ok(prompt.includes('not enough context'))
+  // Student-friendly tone and no-invention rules.
+  assert.ok(prompt.includes('I need one more detail before I can make this strong'))
+  assert.ok(prompt.includes('PARTIAL draft'))
+  assert.ok(prompt.includes('Never fill gaps by inventing'))
+  assert.ok(prompt.includes('Never upgrade a role to make material look ready'))
+})
+
+test('responseSchema defaults missing readiness fields (v1.5.x responses still validate)', () => {
+  const legacy = {
+    strengths: 's',
+    wordChoiceFlags: [],
+    audienceRead: 'a',
+    polishedVersion: 'p',
+    followUpQuestions: ['q']
+  }
+  const parsed = brandCoachTemplate.responseSchema(legacy)
+  assert.equal(parsed.readiness, 'ready')
+  assert.equal(parsed.readinessReason, '')
+  assert.deepEqual(parsed.evidenceQuestions, [])
+  assert.deepEqual(parsed.preservedWords, [])
+})
+
+test('responseSchema round-trips needs_more with its questions', () => {
+  const parsed = brandCoachTemplate.responseSchema({
+    strengths: 's',
+    wordChoiceFlags: [],
+    audienceRead: 'a',
+    polishedVersion: 'p [add result]',
+    followUpQuestions: ['q'],
+    readiness: 'needs_more',
+    readinessReason: 'One more detail needed.',
+    evidenceQuestions: ['What changed?'],
+    preservedWords: []
+  })
+  assert.equal(parsed.readiness, 'needs_more')
+  assert.equal(parsed.readinessReason, 'One more detail needed.')
+  assert.deepEqual(parsed.evidenceQuestions, ['What changed?'])
+})
+
+test('responseSchema coerces an invalid readiness value to ready', () => {
+  const good = generateMockBrandCoachResponse(POP_UP_PAYLOAD)
+  const parsed = brandCoachTemplate.responseSchema({ ...good, readiness: 'maybe' })
+  assert.equal(parsed.readiness, 'ready')
+})
+
+test('mock readiness: "idk what to put lol" gets questions, not an invented draft', () => {
+  const result = generateMockBrandCoachResponse({
+    worksheet: 'idk what to put lol',
+    selfWords: '',
+    starExample: '',
+    audience: 'general',
+    outputType: 'pitch_30s'
+  })
+  assert.equal(result.readiness, 'needs_more')
+  assert.ok(result.readinessReason && result.readinessReason.length > 0)
+  assert.ok(result.evidenceQuestions && result.evidenceQuestions.length >= 1)
+  assert.ok(result.evidenceQuestions!.length <= 3)
+  // No invented evidence: the partial draft carries brackets, not facts.
+  assert.equal(/\d/.test(result.polishedVersion), false)
+  assert.ok(/\[/.test(result.polishedVersion))
+  assert.deepEqual(result.preservedWords, [])
+})
+
+test('mock readiness: vague claim with no evidence is needs_more', () => {
+  const result = generateMockBrandCoachResponse({
+    worksheet: '',
+    selfWords: 'hard worker, good leader',
+    starExample: '',
+    audience: 'recruiter',
+    outputType: 'resume_bullets'
+  })
+  assert.equal(result.readiness, 'needs_more')
+  assert.ok(result.evidenceQuestions!.some((q) => /specific moment|number|changed/i.test(q)))
+})
+
+test('mock readiness: labeled STAR missing its Result asks the outcome question', () => {
+  const fields = composeBrandCoachFields(FULL_FORM)
+  const result = generateMockBrandCoachResponse({
+    ...fields,
+    audience: 'recruiter',
+    outputType: 'star_story'
+  })
+  assert.equal(result.readiness, 'needs_more')
+  assert.ok(result.evidenceQuestions!.some((q) => /what changed because of what you did/i.test(q)))
+})
+
+test('mock readiness: strong specific story with a real number is ready', () => {
+  const result = generateMockBrandCoachResponse({
+    worksheet:
+      'I organized a bake sale that raised 300 dollars for our robotics team. I planned the table, set the prices, and we sold out in 2 hours. I learned how to plan ahead and track money.',
+    selfWords: 'organizer',
+    starExample: '',
+    audience: 'scholarship',
+    outputType: 'pitch_30s'
+  })
+  assert.equal(result.readiness, 'ready')
+  assert.deepEqual(result.evidenceQuestions, [])
+  assert.ok(result.preservedWords && result.preservedWords.length >= 1)
+  assert.ok(result.preservedWords!.length <= 3)
+  // Preserved words are the student's own sentences, never invented.
+  assert.ok(result.preservedWords!.every((w) => /bake sale|planned|sold out|track money|organiz/i.test(w)))
+})
+
+test('mock readiness: emotional but concrete material is still ready', () => {
+  const result = generateMockBrandCoachResponse({
+    worksheet:
+      'When my grandmother got sick I started cooking dinner for my whole family every night for 6 months. It was hard and I cried some nights, but I learned patience and how to plan meals on a budget.',
+    selfWords: '',
+    starExample: '',
+    audience: 'admissions',
+    outputType: 'pitch_1min_tmay'
+  })
+  assert.equal(result.readiness, 'ready')
+})
+
+test('mock readiness: needs_more never leaks coaching-dictionary words as evidence', () => {
+  const result = generateMockBrandCoachResponse({
+    worksheet: 'idk what to put lol',
+    selfWords: '',
+    starExample: '',
+    audience: 'general',
+    outputType: 'pitch_3s'
+  })
+  assert.ok(!JSON.stringify(result).toLowerCase().includes('philanthrop'))
+})
+
+test('mock readiness output round-trips through responseSchema unchanged', () => {
+  const needsMore = generateMockBrandCoachResponse(POP_UP_PAYLOAD)
+  const parsedNeedsMore = brandCoachTemplate.responseSchema(needsMore)
+  assert.equal(parsedNeedsMore.readiness, needsMore.readiness)
+  assert.deepEqual(parsedNeedsMore.evidenceQuestions, needsMore.evidenceQuestions)
+  assert.deepEqual(parsedNeedsMore.preservedWords, needsMore.preservedWords)
+})
+
 /* -------------------------------------------------------------------
  * Runner
  * ------------------------------------------------------------------ */

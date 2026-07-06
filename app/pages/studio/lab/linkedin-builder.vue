@@ -107,7 +107,8 @@ async function buildLinkedin() {
       starExample: '',
       focus: LINKEDIN_FOCUS,
       audience: audience.value,
-      outputType: 'linkedin_profile'
+      outputType: 'linkedin_profile',
+      source: 'linkedin-builder'
     })
     result.value = res.sherpa
     wasMock.value = res.mock

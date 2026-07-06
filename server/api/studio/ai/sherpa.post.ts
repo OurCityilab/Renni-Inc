@@ -48,6 +48,7 @@ import {
   recordSuccessfulStudioCall,
   withinStudioDailyLimit
 } from '~~/server/utils/studioAiRateLimit'
+import { resolveStudioSessionModule } from '~~/server/utils/studioAiSessionModule'
 import type {
   BrandCoachResponse,
   SherpaAudience,
@@ -313,11 +314,13 @@ export default defineEventHandler(async (event) => {
   const raw = await readBody(event)
 
   let mode = DEFAULT_MODE
+  let sourceModule = resolveStudioSessionModule(undefined)
   if (raw && typeof raw === 'object') {
     const candidate = (raw as Record<string, unknown>).mode
     if (typeof candidate === 'string' && candidate.length > 0) {
       mode = candidate
     }
+    sourceModule = resolveStudioSessionModule((raw as Record<string, unknown>).source)
   }
 
   const template = resolveStudioPromptTemplate(mode)
@@ -397,7 +400,7 @@ export default defineEventHandler(async (event) => {
     .join('\n')
   await db.collection('aiSessions').add({
     studentUid: uid,
-    module: 'brand-builder',
+    module: sourceModule,
     inputText,
     aiResponse: sherpa,
     promptVersion: template.templateVersion || mode,

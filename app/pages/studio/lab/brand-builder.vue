@@ -174,7 +174,8 @@ async function getFeedback() {
     const res = await sherpaApi.askBrandCoach({
       ...composeBrandCoachFields(form),
       audience: audience.value,
-      outputType: outputType.value
+      outputType: outputType.value,
+      source: 'brand-builder'
     })
     result.value = res.sherpa
     resultOutputType.value = outputType.value

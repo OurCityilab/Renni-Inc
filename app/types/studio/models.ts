@@ -228,21 +228,33 @@ export interface WordChoiceFlag {
   inYourVoice: string
 }
 
+export type SherpaReadiness = 'ready' | 'needs_more'
+
 export interface BrandCoachResponse {
   strengths: string
   wordChoiceFlags: WordChoiceFlag[]
   audienceRead: string
   polishedVersion: string
   followUpQuestions: string[]
+  // Evidence Interviewer fields (brand-coach.v2.x, additive). Older
+  // stored responses lack them; readers must default readiness to
+  // 'ready'.
+  readiness?: SherpaReadiness
+  readinessReason?: string
+  evidenceQuestions?: string[]
+  preservedWords?: string[]
 }
 
 // -------- aiSessions/{id} --------
 export interface AISession {
   id: string
   studentUid: string
-  module: StudioModule
+  // A StudioModule value, a 'personal-brand-<slug>' worksheet label,
+  // or a builder slug ('resume-builder', 'linkedin-builder'). Docs
+  // written before brand-coach v2 all carry 'brand-builder'.
+  module: string
   inputText: string
-  aiResponse: SherpaResponse
+  aiResponse: SherpaResponse | BrandCoachResponse
   promptVersion: string
   createdAt: IsoTimestamp
 }

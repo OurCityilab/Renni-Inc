@@ -111,7 +111,8 @@ async function askSherpa() {
       ...composeWorksheetPayload(worksheet, answers),
       focus: worksheet.sherpaFocus,
       audience: audience.value,
-      outputType: outputType.value
+      outputType: outputType.value,
+      source: `personal-brand-${worksheet.slug}`
     })
     result.value = res.sherpa
     resultOutputType.value = outputType.value

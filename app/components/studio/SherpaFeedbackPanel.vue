@@ -20,6 +20,14 @@ const props = defineProps<{
 
 const artifactApi = usePortfolioArtifact()
 
+// Evidence Interviewer (brand-coach.v2). Older responses have no
+// readiness field — default to 'ready' so nothing changes for them.
+const needsMore = computed(() => props.result.readiness === 'needs_more')
+const evidenceQuestions = computed(() => props.result.evidenceQuestions ?? [])
+const preservedWords = computed(() =>
+  needsMore.value ? [] : (props.result.preservedWords ?? [])
+)
+
 // Editable final draft — students revise the Sherpa's polished
 // version here before copying, saving, or printing it.
 const finalDraft = ref(props.result.polishedVersion)
@@ -89,6 +97,24 @@ async function saveToPortfolio() {
   <div class="card space-y-4">
     <span v-if="wasMock" class="chip-draft">Practice mode — no AI call was made</span>
 
+    <!-- Evidence interview — a coaching state, not an error. The
+         Sherpa is asking for evidence before it finishes the draft. -->
+    <div v-if="needsMore" class="space-y-2 rounded-md border-2 border-studio-300 bg-studio-50 p-3">
+      <h2 class="text-sm font-semibold text-studio-800">
+        A little more evidence will make this stronger
+      </h2>
+      <p v-if="result.readinessReason" class="text-sm text-neutral-700">
+        {{ result.readinessReason }}
+      </p>
+      <ul v-if="evidenceQuestions.length" class="list-inside list-disc text-sm font-medium text-neutral-800">
+        <li v-for="(q, i) in evidenceQuestions" :key="i">{{ q }}</li>
+      </ul>
+      <p class="text-xs text-neutral-600">
+        Answer these in your worksheet above, then ask the Sherpa again — your draft below is a
+        partial version until then.
+      </p>
+    </div>
+
     <div>
       <h2 class="text-sm font-semibold text-neutral-500">What's strong</h2>
       <p class="mt-1 whitespace-pre-wrap text-sm text-neutral-700">{{ result.strengths }}</p>
@@ -126,9 +152,16 @@ async function saveToPortfolio() {
       <p class="mt-1 whitespace-pre-wrap text-sm text-neutral-700">{{ result.audienceRead }}</p>
     </div>
 
+    <div v-if="preservedWords.length">
+      <h2 class="text-sm font-semibold text-neutral-500">What I preserved from your words</h2>
+      <ul class="mt-1 list-inside list-disc text-sm text-neutral-700">
+        <li v-for="(w, i) in preservedWords" :key="i">"{{ w }}"</li>
+      </ul>
+    </div>
+
     <div>
       <h2 class="text-sm font-semibold text-neutral-500">
-        Final Draft / Preview — {{ outputLabel }}
+        {{ needsMore ? `Partial draft (with [brackets] to fill) — ${outputLabel}` : `Final Draft / Preview — ${outputLabel}` }}
       </h2>
       <textarea
         v-model="finalDraft"

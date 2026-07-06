@@ -32,6 +32,12 @@ export interface BrandCoachInput {
   outputType: SherpaOutputType
   /** Optional per-worksheet coaching focus (sherpaFocus from the Lab). */
   focus?: string
+  /**
+   * Which tool the call came from ('brand-builder', 'resume-builder',
+   * 'linkedin-builder', 'personal-brand-<slug>') — stored on the
+   * aiSessions audit doc so coaches can see where a session happened.
+   */
+  source?: string
 }
 
 export interface BrandCoachApiResponse {

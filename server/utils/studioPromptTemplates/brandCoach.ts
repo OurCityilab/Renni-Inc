@@ -99,14 +99,18 @@ const OUTPUT_GUIDANCE: Record<SherpaOutputType, string> = {
 function buildSystemPrompt(): string {
   return `You are the Brand Sherpa for Our City Studio, a coach who helps high-school students turn a week of personal-brand worksheet work into sharp professional language. You coach — you do not just rewrite. Every response should teach the student something about how their words land.
 
-Every response you give MUST be a single JSON object with exactly these five fields:
+Every response you give MUST be a single JSON object with exactly these nine fields:
 
 {
   "strengths": string,
   "wordChoiceFlags": [{ "word": string, "category": "too_vague" | "too_inflated" | "too_casual", "definition": string, "howItMayLand": string, "evidenceFit": string, "alternatives": string[], "bestFit": string, "inYourVoice": string }],
   "audienceRead": string,
   "polishedVersion": string,
-  "followUpQuestions": string[]
+  "followUpQuestions": string[],
+  "readiness": "ready" | "needs_more",
+  "readinessReason": string,
+  "evidenceQuestions": string[],
+  "preservedWords": string[]
 }
 
 Field guidance:
@@ -125,6 +129,12 @@ Field guidance:
 - "audienceRead": 1–3 sentences describing how the selected audience will likely read this student's material as written — what will land well and what may be misread or skimmed past.
 - "polishedVersion": the selected output type, built ONLY from what the student gave you, following the output guidance in the user message. Keep the student's real experience and recognizable voice, but make it sound professional.
 - "followUpQuestions": 1–2 specific, answerable questions that would make the material stronger — push for the missing number, outcome, or concrete moment. Never a vague "tell me more."
+- "readiness": your evidence-interviewer decision. Before polishing, judge the raw material the way a good interviewer would. Classify what you received — a strong raw story, a vague claim with no evidence, a story missing its outcome, an inflated role claim, risky or charged wording, emotional but usable material, too-casual phrasing, over-polished words that don't sound owned, or simply not enough context. If the material gives you enough real evidence to build the requested output honestly, set "ready". If the honest version would be mostly brackets — the material is a vague claim, is missing its outcome, lacks context, or is too thin to build from — set "needs_more". Risky wording or an inflated role alone does not force "needs_more" if the underlying evidence is there; coach those through wordChoiceFlags.
+- "readinessReason": one or two student-friendly sentences explaining the decision in an encouraging voice — the spirit of "I need one more detail before I can make this strong." Never scold. When "ready", say what made the material strong enough.
+- "evidenceQuestions": when "needs_more", 1–3 specific interviewer questions whose answers would unlock the draft — the missing outcome, the missing number, the missing context or personal role. When "ready", an empty array. These may overlap with followUpQuestions but must each be answerable in a sentence or two.
+- "preservedWords": when "ready", up to 3 short phrases quoted or near-quoted from the student's own material that you kept in the polished version — this shows the student their voice survived. When "needs_more", an empty array.
+
+When "readiness" is "needs_more": still return every field. "polishedVersion" becomes a PARTIAL draft — build what you honestly can from their words and leave bracketed prompts like [add result] or [add number] where the evidence is missing. Never fill gaps by inventing; ask instead, through evidenceQuestions. Never upgrade a role to make material look ready. Emotional material can still be "ready" if the evidence is real. If the wording is risky or charged, preserve the student's concern exactly as the too_casual coaching guidance above describes, whichever readiness you choose.
 
 Hard rules (do not relax):
 - Never fabricate facts, numbers, titles, achievements, or outcomes the student did not provide. Where a metric is missing but would strengthen the output, insert a bracketed prompt like [add number], [add timeframe], or [add result].
@@ -211,6 +221,23 @@ function validateFlags(value: unknown): WordChoiceFlag[] {
   })
 }
 
+// Evidence Interviewer fields are optional so older prompt versions
+// (and any model that drops a field) still validate: readiness
+// defaults to 'ready', which reproduces v1.5.x behavior exactly.
+function optionalReadiness(value: unknown): 'ready' | 'needs_more' {
+  if (value === 'needs_more') return 'needs_more'
+  return 'ready'
+}
+
+function optionalString(value: unknown): string {
+  return typeof value === 'string' ? value : ''
+}
+
+function optionalStringArray(value: unknown): string[] {
+  if (!Array.isArray(value)) return []
+  return value.filter((entry): entry is string => typeof entry === 'string')
+}
+
 function validateResponse(raw: unknown): BrandCoachResponse {
   if (!raw || typeof raw !== 'object') {
     throw new Error('Brand Coach response was not a JSON object.')
@@ -221,7 +248,11 @@ function validateResponse(raw: unknown): BrandCoachResponse {
     wordChoiceFlags: validateFlags(obj.wordChoiceFlags),
     audienceRead: requireString(obj.audienceRead, 'audienceRead'),
     polishedVersion: requireString(obj.polishedVersion, 'polishedVersion'),
-    followUpQuestions: requireStringArray(obj.followUpQuestions, 'followUpQuestions')
+    followUpQuestions: requireStringArray(obj.followUpQuestions, 'followUpQuestions'),
+    readiness: optionalReadiness(obj.readiness),
+    readinessReason: optionalString(obj.readinessReason),
+    evidenceQuestions: optionalStringArray(obj.evidenceQuestions),
+    preservedWords: optionalStringArray(obj.preservedWords)
   }
 }
 
@@ -738,18 +769,63 @@ export function generateMockBrandCoachResponse(payload: BrandCoachPayload): Bran
     followUpQuestions.push('What would a teacher, coach, employer, or teammate say you contributed?')
   }
 
+  // Evidence Interviewer readiness — deterministic, evidence-only:
+  // thin input (< 15 words) or input with neither a number nor a
+  // result signal is not enough to build an honest draft from.
+  const hasNumber = /\d/.test(combined)
+  const outcomeIsWeak = payload.starExample ? resultIsWeak : !hasResultSignal(combined)
+  const tooThin = wordCount < 15
+  const needsMore = tooThin || (!hasNumber && outcomeIsWeak)
+
+  const evidenceQuestions: string[] = []
+  if (needsMore) {
+    if (tooThin) {
+      evidenceQuestions.push(
+        'Walk me through one specific moment — what happened, what did YOU personally do, and who was it for?'
+      )
+    }
+    if (outcomeIsWeak) {
+      evidenceQuestions.push(
+        'What changed because of what you did — how many people were affected, or what was better after your action?'
+      )
+    }
+    if (!hasNumber) {
+      evidenceQuestions.push(
+        'What is one real number you could add — how many, how often, or over what timeframe?'
+      )
+    }
+    if (!evidenceQuestions.length) {
+      evidenceQuestions.push('What would a teacher, coach, employer, or teammate say you contributed?')
+    }
+  }
+
+  const readinessReason = needsMore
+    ? "You've got a real start here — I need one more detail before I can make this strong. Answer the questions below in your own words, then run the coach again."
+    : 'Your material gives me real evidence to build from — specific details I can turn into professional language without guessing. The draft below is built only from your words.'
+
+  const preservedWords = needsMore
+    ? []
+    : firstSentences(
+        stripSectionLabels(payload.worksheet || payload.selfWords || payload.starExample),
+        3
+      )
+
   return {
     strengths,
     wordChoiceFlags: flags,
     audienceRead: MOCK_AUDIENCE_READ[payload.audience],
     polishedVersion: mockPolished(payload, combined),
-    followUpQuestions: followUpQuestions.slice(0, 2)
+    followUpQuestions: followUpQuestions.slice(0, 2),
+    readiness: needsMore ? 'needs_more' : 'ready',
+    readinessReason,
+    evidenceQuestions: evidenceQuestions.slice(0, 3),
+    preservedWords
   }
 }
 
 export const brandCoachTemplate: StudioPromptTemplate<BrandCoachPayload, BrandCoachResponse> = {
   mode: 'brand-coach',
-  templateVersion: 'brand-coach.v1.5.1',
+  templateVersion: 'brand-coach.v2.0.0',
   systemPrompt: buildSystemPrompt,
   userPromptBuilder: buildUserPrompt,
   responseSchema: validateResponse,

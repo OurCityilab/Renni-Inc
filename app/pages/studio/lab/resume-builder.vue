@@ -195,7 +195,8 @@ async function buildResumeDraft() {
       starExample: '',
       focus: RESUME_FOCUS,
       audience: audience.value,
-      outputType: 'resume_draft'
+      outputType: 'resume_draft',
+      source: 'resume-builder'
     })
     result.value = res.sherpa
     wasMock.value = res.mock
