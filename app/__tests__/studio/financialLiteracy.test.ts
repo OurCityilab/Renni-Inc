@@ -22,6 +22,12 @@ import {
   type BudgetPlanInputs,
   type MoneyPlanInputs
 } from '../../data/studio/financialLiteracyLab'
+import {
+  SIMULATION_WEEK_NOTE,
+  SIMULATION_WEEK_TITLE,
+  simulationWeekDays,
+  simulationWeekPrintables
+} from '../../data/studio/simulationWeekFinancialLiteracy'
 
 interface Test {
   name: string
@@ -192,6 +198,63 @@ test('budget plan: hasAnyBudgetPlanAnswer treats whitespace-only fields as empty
 test('budget plan: hasAnyBudgetPlanAnswer is true with any single field filled', () => {
   assert.equal(hasAnyBudgetPlanAnswer({ ...emptyBudgetPlan, monthlyTakeHome: '1200' }), true)
   assert.equal(hasAnyBudgetPlanAnswer({ ...emptyBudgetPlan, wantsList: 'sneakers' }), true)
+})
+
+// ---------- simulation week ----------
+
+test('simulation week: four days, Day 1 through Day 4 in order', () => {
+  assert.equal(simulationWeekDays.length, 4)
+  simulationWeekDays.forEach((d, i) => assert.equal(d.day, `Day ${i + 1}`))
+})
+
+test('simulation week: every module slug resolves to a registered module', () => {
+  for (const d of simulationWeekDays) {
+    assert.ok(d.moduleSlugs.length > 0, `${d.day} must have at least one checkpoint module`)
+    for (const slug of d.moduleSlugs) {
+      const mod = getFinancialLiteracyModule(slug)
+      assert.ok(mod, `${d.day} references unknown module slug "${slug}"`)
+    }
+  }
+})
+
+test('simulation week: Day 4 ends with the Money Plan capstone', () => {
+  const day4 = simulationWeekDays[3]
+  assert.ok(day4)
+  assert.equal(day4.moduleSlugs[day4.moduleSlugs.length - 1], 'money-plan')
+})
+
+test('simulation week: every day has a title, case title, and big question', () => {
+  for (const d of simulationWeekDays) {
+    assert.ok(d.title.trim().length > 0)
+    assert.ok(d.caseTitle.trim().length > 0)
+    assert.ok(d.bigQuestion.trim().length > 0)
+  }
+})
+
+test('simulation week: header copy is present and case-first', () => {
+  assert.ok(SIMULATION_WEEK_TITLE.includes('Money in Real Life'))
+  assert.ok(SIMULATION_WEEK_NOTE.toLowerCase().includes('case'))
+})
+
+test('simulation week: printable assets exist under public/', () => {
+  assert.ok(simulationWeekPrintables.length >= 2)
+  for (const p of simulationWeekPrintables) {
+    assert.ok(p.href.startsWith('/studio/curriculum/'), `unexpected printable path ${p.href}`)
+    const file = join(process.cwd(), 'public', p.href)
+    assert.ok(existsSync(file), `printable asset missing: ${file}`)
+    assert.ok(p.label.trim().length > 0)
+  }
+})
+
+test('simulation week: landing page renders the section and keeps module cards', () => {
+  const indexSource = readFileSync(join(pagesDir, 'index.vue'), 'utf8')
+  assert.ok(indexSource.includes('simulationWeekDays'))
+  assert.ok(indexSource.includes('SIMULATION_WEEK_TITLE'))
+  assert.ok(indexSource.includes('financialLiteracyModules'), 'module registry cards must remain')
+  assert.ok(
+    indexSource.includes('Do the case with your team first'),
+    'checkpoint guidance must tell students the platform comes after the case'
+  )
 })
 
 /* -------------------------------------------------------------------

@@ -1,7 +1,19 @@
 <script setup lang="ts">
-import { financialLiteracyModules } from '~/data/studio/financialLiteracyLab'
+import { financialLiteracyModules, getFinancialLiteracyModule } from '~/data/studio/financialLiteracyLab'
+import {
+  SIMULATION_WEEK_NOTE,
+  SIMULATION_WEEK_TITLE,
+  simulationWeekDays,
+  simulationWeekPrintables
+} from '~/data/studio/simulationWeekFinancialLiteracy'
 
 definePageMeta({ layout: 'studio' })
+
+const dayModules = (slugs: string[]) =>
+  slugs.flatMap((slug) => {
+    const mod = getFinancialLiteracyModule(slug)
+    return mod ? [mod] : []
+  })
 </script>
 
 <template>
@@ -18,6 +30,38 @@ definePageMeta({ layout: 'studio' })
         together into a Money Plan.
       </p>
     </div>
+
+    <div class="card space-y-3 border-studio-300">
+      <div>
+        <p class="text-xs font-medium uppercase tracking-wide text-studio-700">Simulation Week</p>
+        <p class="text-sm font-semibold text-neutral-800">{{ SIMULATION_WEEK_TITLE }}</p>
+        <p class="mt-1 text-sm text-neutral-600">{{ SIMULATION_WEEK_NOTE }}</p>
+      </div>
+
+      <div v-for="simDay in simulationWeekDays" :key="simDay.day" class="rounded-md border border-neutral-200 p-3">
+        <p class="text-xs font-medium text-studio-700">{{ simDay.day }} — {{ simDay.title }}</p>
+        <p class="text-sm font-semibold text-neutral-800">Case: {{ simDay.caseTitle }}</p>
+        <p class="text-sm text-neutral-600">{{ simDay.bigQuestion }}</p>
+        <p class="mt-1 text-xs text-neutral-500">
+          Do the case with your team first, then complete
+          <template v-for="(mod, i) in dayModules(simDay.moduleSlugs)" :key="mod.slug">
+            <span v-if="i > 0"> and </span>
+            <NuxtLink :to="mod.route" class="text-studio-700 underline">{{ mod.title }}</NuxtLink>
+          </template>
+          here in Studio.
+        </p>
+      </div>
+
+      <p class="text-xs text-neutral-500">
+        Printables:
+        <template v-for="(p, i) in simulationWeekPrintables" :key="p.href">
+          <span v-if="i > 0"> · </span>
+          <a :href="p.href" target="_blank" rel="noopener" class="text-studio-700 underline">{{ p.label }}</a>
+        </template>
+      </p>
+    </div>
+
+    <p class="text-xs font-medium uppercase tracking-wide text-neutral-500">The five modules (your checkpoints)</p>
 
     <NuxtLink
       v-for="mod in financialLiteracyModules"
