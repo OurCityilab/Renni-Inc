@@ -16,7 +16,14 @@ import {
   financialLiteracyPathway
 } from '~/data/studio/financialLiteracyPathway'
 
+import { computed } from 'vue'
+
 definePageMeta({ layout: 'studio' })
+
+// The legacy card grid lists the five numbered calculator checkpoints
+// (Modules 1–5). Module 0 (Money Story & Goals) is surfaced through the
+// pathway section above, so it is intentionally excluded here.
+const checkpointModules = computed(() => financialLiteracyModules.filter((m) => m.number >= 1))
 
 const dayModules = (slugs: string[]) =>
   slugs.flatMap((slug) => {
@@ -128,7 +135,7 @@ const pathwayRoute = (slug?: string) => (slug ? getFinancialLiteracyModule(slug)
     <p class="text-xs font-medium uppercase tracking-wide text-neutral-500">The five modules (your checkpoints)</p>
 
     <NuxtLink
-      v-for="mod in financialLiteracyModules"
+      v-for="mod in checkpointModules"
       :key="mod.slug"
       :to="mod.route"
       class="card block space-y-1 hover:border-studio-300"

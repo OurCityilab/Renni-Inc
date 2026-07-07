@@ -17,6 +17,18 @@ export interface FinancialLiteracyModule {
 
 export const financialLiteracyModules: FinancialLiteracyModule[] = [
   {
+    // Module 0 — the reflection starting point students do BEFORE the
+    // calculators. Numbered 0 so the five calculator modules keep their
+    // stable 1–5 numbers (their page headings hardcode "Module 1–5").
+    slug: 'money-story-goals',
+    number: 0,
+    title: 'Money Story & Goals',
+    tagline:
+      'Before the numbers: your money habits, the pressures you carry, and the goals you are actually working toward.',
+    route: '/studio/lab/financial-literacy/money-story-goals',
+    estimatedMinutes: 45
+  },
+  {
     slug: 'take-home-pay',
     number: 1,
     title: 'Take-Home Pay',

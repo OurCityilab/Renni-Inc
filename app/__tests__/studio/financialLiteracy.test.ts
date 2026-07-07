@@ -56,9 +56,22 @@ const emptyMoneyPlan: MoneyPlanInputs = {
 
 // ---------- module registry integrity ----------
 
-test('registry: exactly five modules, numbered 1 through 5 in order', () => {
-  assert.equal(financialLiteracyModules.length, 5)
-  financialLiteracyModules.forEach((m, i) => assert.equal(m.number, i + 1))
+test('registry: six modules — Module 0 (Money Story) then calculators 1–5 in order', () => {
+  assert.equal(financialLiteracyModules.length, 6)
+  // Module 0 is the reflection starting point; numbers run 0..5 so the five
+  // calculator modules keep their stable 1–5 numbers.
+  financialLiteracyModules.forEach((m, i) => assert.equal(m.number, i))
+  assert.equal(financialLiteracyModules[0]!.slug, 'money-story-goals')
+})
+
+test('registry: the five calculator module slugs stay numbered 1–5 and stable', () => {
+  const calculators = ['take-home-pay', 'budget-builder', 'credit-debt', 'renting-homeownership', 'money-plan']
+  calculators.forEach((slug, i) => {
+    const mod = getFinancialLiteracyModule(slug)
+    assert.ok(mod, `calculator module "${slug}" must remain registered`)
+    assert.equal(mod!.number, i + 1, `${slug} must keep its stable number`)
+    assert.equal(mod!.route, `/studio/lab/financial-literacy/${slug}`)
+  })
 })
 
 test('registry: slugs are unique', () => {
@@ -296,10 +309,21 @@ test('pathway: every LIVE step maps to a registered module route', () => {
 
 test('pathway: UPCOMING steps carry no route so nothing links to a missing page', () => {
   const upcoming = financialLiteracyPathway.filter((s) => s.status === 'upcoming')
-  assert.equal(upcoming.length, 4)
+  // Three remain upcoming after Money Story & Goals went live in Phase 2.
+  assert.equal(upcoming.length, 3)
   for (const step of upcoming) {
     assert.equal(step.moduleSlug, undefined, `upcoming step "${step.title}" must not link to a route`)
   }
+})
+
+test('pathway: Money Story & Goals is live and links to its real route', () => {
+  const step = financialLiteracyPathway.find((s) => s.title === 'Money Story & Goals')
+  assert.ok(step, 'Money Story & Goals must be a pathway step')
+  assert.equal(step!.status, 'live')
+  assert.equal(step!.moduleSlug, 'money-story-goals')
+  const mod = getFinancialLiteracyModule('money-story-goals')
+  assert.ok(mod, 'money-story-goals must resolve in the registry')
+  assert.equal(mod!.route, '/studio/lab/financial-literacy/money-story-goals')
 })
 
 test('pathway: copy states the 5-hour minimum and 8–10-hour full path', () => {
@@ -336,6 +360,49 @@ test('pathway: landing page renders the pathway, keeps module cards, and keeps c
   // Case packet + field trip guide links stay reachable from the page.
   assert.ok(source.includes('simulationWeekPrintables'), 'case material links must remain')
   assert.equal(PATHWAY_TITLE, 'Money in Real Life')
+})
+
+// ---------- Money Story & Goals module (Phase 2, slice 1) ----------
+
+test('money story: registered as Module 0 with the right route and time', () => {
+  const mod = getFinancialLiteracyModule('money-story-goals')
+  assert.ok(mod, 'money-story-goals must be registered')
+  assert.equal(mod!.number, 0)
+  assert.equal(mod!.route, '/studio/lab/financial-literacy/money-story-goals')
+  assert.equal(mod!.estimatedMinutes, 45)
+  assert.ok(/habit|pressure|goal/i.test(mod!.tagline), 'tagline should signal habits/pressures/goals')
+})
+
+test('money story: page exists and saves via the shared draft key', () => {
+  const page = join(pagesDir, 'money-story-goals.vue')
+  assert.ok(existsSync(page), 'money-story-goals.vue must exist')
+  const source = readFileSync(page, 'utf8')
+  // Save reuses the existing worksheet-draft pattern, no new collection.
+  assert.ok(
+    source.includes("useFinancialLiteracyDraft('money-story-goals'"),
+    'page must persist via useFinancialLiteracyDraft with its own slug'
+  )
+  // The persisted worksheetType is the prefix + slug (no rule changes).
+  assert.equal(FINANCIAL_LITERACY_DRAFT_PREFIX + 'money-story-goals', 'financial-literacy-money-story-goals')
+  // First slice: worksheet draft only, no Portfolio artifact write yet.
+  assert.ok(!source.includes('usePortfolioArtifact'), 'first slice saves a draft only')
+  // Flows into the next module.
+  assert.ok(source.includes('/studio/lab/financial-literacy/take-home-pay'), 'must point to Take-Home Pay next')
+})
+
+test('money story: landing page lists the five calculator checkpoints, not Module 0', () => {
+  const source = readFileSync(join(pagesDir, 'index.vue'), 'utf8')
+  // Module 0 is surfaced through the pathway section; the legacy card grid
+  // stays the five numbered calculators.
+  assert.ok(source.includes('checkpointModules'), 'legacy grid must use the filtered checkpoint list')
+  assert.ok(source.includes('financialLiteracyPathway'), 'pathway (where Money Story is live) must render')
+})
+
+test('no regression: Budget Builder and Money Plan still write Portfolio artifacts', () => {
+  for (const slug of ['budget-builder', 'money-plan']) {
+    const source = readFileSync(join(pagesDir, `${slug}.vue`), 'utf8')
+    assert.ok(source.includes('usePortfolioArtifact'), `${slug} must still create its Portfolio artifact`)
+  }
 })
 
 /* -------------------------------------------------------------------

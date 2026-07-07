@@ -46,8 +46,9 @@ export const financialLiteracyPathway: PathwayModule[] = [
     title: 'Money Story & Goals',
     bigQuestion: 'What do I believe about money, and what am I trying to change?',
     artifact: 'My Money Starting Point',
-    estimatedMinutes: 30,
-    status: 'upcoming'
+    estimatedMinutes: 45,
+    status: 'live',
+    moduleSlug: 'money-story-goals'
   },
   {
     step: 2,

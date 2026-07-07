@@ -8,6 +8,21 @@ Status at time of writing: Phase 1 (pathway shell) in progress on branch
 `staging`, baseline commit `1993fa2`. The Simulation Week curriculum is
 already live on `renni-cc-staging`.
 
+> **Implementation log — Phase 2, first vertical slice (2026-07-07):**
+> The first new low-risk module, **Money Story & Goals**, is built
+> (`/studio/lab/financial-literacy/money-story-goals`, artifact "My Money
+> Starting Point", ~45 min). It is registered as **Module 0** in
+> `financialLiteracyLab.ts` so the five calculator modules keep their stable
+> 1–5 numbers, and it shows as **live** in the pathway shell. Save behavior
+> reuses the existing `useFinancialLiteracyDraft` pattern only — draft
+> persists to `worksheetResponses` under `financial-literacy-money-story-goals`
+> with **no new collection, no Firestore rule changes, and no Portfolio
+> artifact write yet** (the capstone can infer this from `worksheetResponses`
+> later). No calculators or existing module pages were changed. Next Phase 2
+> candidates (not yet started): **Banking, Cash Flow & Money Safety**;
+> **Savings, Emergencies & Big Goals**; **Work, Taxes, Benefits & Career
+> Money**.
+
 ---
 
 ## 1. Current state summary
