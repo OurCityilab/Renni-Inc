@@ -23,6 +23,26 @@ already live on `renni-cc-staging`.
 > **Savings, Emergencies & Big Goals**; **Work, Taxes, Benefits & Career
 > Money**.
 
+> **Implementation log — Phase 2 complete (2026-07-07):** the remaining
+> three low-risk modules are built and all **9 pathway steps are now live**:
+> **Banking, Cash Flow & Money Safety** (`/banking-cash-flow`, artifact "My
+> Banking & Cash Flow Setup"), **Saving, Emergencies & Big Goals**
+> (`/savings-emergencies`, artifact "My Savings & Emergency Plan"), and
+> **Work, Taxes, Benefits & Career Money** (`/work-career-money`, artifact
+> "My Work & Income Strategy"). All three follow the Money Story pattern:
+> structured reflective/case prompts, `<select>` sorts (no drag-and-drop),
+> and **draft-only** save via `useFinancialLiteracyDraft` to
+> `worksheetResponses` (keys `financial-literacy-banking-cash-flow`,
+> `-savings-emergencies`, `-work-career-money`) — no new collections, no
+> Firestore rule changes, and no Portfolio artifact writes. Registry now
+> carries a `kind` field: the three additions plus Money Story are
+> `reflection` (numbers 0, 6–8), and the five originals stay `calculator`
+> (numbers 1–5) and remain the landing "checkpoints" grid. Portfolio
+> artifact saving is still limited to Budget Builder and My Money Plan. The
+> five calculator pages and `calculators.ts` were not touched. **Next
+> recommended phase is Phase 3 (deepen the existing calculator modules)** —
+> not progress tracking, AI review, or capstone aggregation yet.
+
 ---
 
 ## 1. Current state summary

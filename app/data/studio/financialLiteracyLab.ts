@@ -13,6 +13,13 @@ export interface FinancialLiteracyModule {
   tagline: string
   route: string
   estimatedMinutes: number
+  /**
+   * 'calculator' = one of the five original deterministic-calculator
+   * checkpoints (shown in the landing "checkpoints" grid). 'reflection' =
+   * a structured decision/reflection module (Money Story and the Phase 2
+   * additions) surfaced through the pathway, not the checkpoint grid.
+   */
+  kind: 'calculator' | 'reflection'
 }
 
 export const financialLiteracyModules: FinancialLiteracyModule[] = [
@@ -26,7 +33,8 @@ export const financialLiteracyModules: FinancialLiteracyModule[] = [
     tagline:
       'Before the numbers: your money habits, the pressures you carry, and the goals you are actually working toward.',
     route: '/studio/lab/financial-literacy/money-story-goals',
-    estimatedMinutes: 45
+    estimatedMinutes: 45,
+    kind: 'reflection'
   },
   {
     slug: 'take-home-pay',
@@ -35,7 +43,8 @@ export const financialLiteracyModules: FinancialLiteracyModule[] = [
     tagline:
       'See the difference between what a job pays and what actually lands in your account — and why.',
     route: '/studio/lab/financial-literacy/take-home-pay',
-    estimatedMinutes: 15
+    estimatedMinutes: 15,
+    kind: 'calculator'
   },
   {
     slug: 'budget-builder',
@@ -44,7 +53,8 @@ export const financialLiteracyModules: FinancialLiteracyModule[] = [
     tagline:
       'Split your real take-home number across needs, wants, savings, and giving — your plan, your percentages.',
     route: '/studio/lab/financial-literacy/budget-builder',
-    estimatedMinutes: 20
+    estimatedMinutes: 20,
+    kind: 'calculator'
   },
   {
     slug: 'credit-debt',
@@ -53,7 +63,8 @@ export const financialLiteracyModules: FinancialLiteracyModule[] = [
     tagline:
       'How credit works, what a credit score is, and why minimum payments can keep you paying for years.',
     route: '/studio/lab/financial-literacy/credit-debt',
-    estimatedMinutes: 20
+    estimatedMinutes: 20,
+    kind: 'calculator'
   },
   {
     slug: 'renting-homeownership',
@@ -62,7 +73,8 @@ export const financialLiteracyModules: FinancialLiteracyModule[] = [
     tagline:
       'What landlords check before saying yes, what rent you can actually afford, and how ownership builds wealth over time.',
     route: '/studio/lab/financial-literacy/renting-homeownership',
-    estimatedMinutes: 20
+    estimatedMinutes: 20,
+    kind: 'calculator'
   },
   {
     slug: 'money-plan',
@@ -71,7 +83,41 @@ export const financialLiteracyModules: FinancialLiteracyModule[] = [
     tagline:
       'Pull everything together into one plan you own — savable to your Portfolio.',
     route: '/studio/lab/financial-literacy/money-plan',
-    estimatedMinutes: 15
+    estimatedMinutes: 15,
+    kind: 'calculator'
+  },
+  {
+    // Phase 2 reflection modules (numbers 6–8, appended so the calculator
+    // modules keep their stable 1–5 numbers). Surfaced via the pathway,
+    // not the checkpoint grid.
+    slug: 'banking-cash-flow',
+    number: 6,
+    title: 'Banking, Cash Flow & Money Safety',
+    tagline:
+      'Where your money should go on payday, how to dodge unnecessary fees, and how to keep it safe.',
+    route: '/studio/lab/financial-literacy/banking-cash-flow',
+    estimatedMinutes: 60,
+    kind: 'reflection'
+  },
+  {
+    slug: 'savings-emergencies',
+    number: 7,
+    title: 'Saving, Emergencies & Big Goals',
+    tagline:
+      'Plan for what you know is coming and what you don’t — emergencies, known costs, and goals that matter.',
+    route: '/studio/lab/financial-literacy/savings-emergencies',
+    estimatedMinutes: 60,
+    kind: 'reflection'
+  },
+  {
+    slug: 'work-career-money',
+    number: 8,
+    title: 'Work, Taxes, Benefits & Career Money',
+    tagline:
+      'How job choices, benefits, taxes, side hustles, and skills shape what you actually earn and keep.',
+    route: '/studio/lab/financial-literacy/work-career-money',
+    estimatedMinutes: 60,
+    kind: 'reflection'
   }
 ]
 

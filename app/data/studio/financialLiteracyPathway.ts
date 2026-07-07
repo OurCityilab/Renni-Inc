@@ -64,8 +64,9 @@ export const financialLiteracyPathway: PathwayModule[] = [
     title: 'Banking, Cash Flow & Money Safety',
     bigQuestion: 'Where should my money go when I get paid?',
     artifact: 'My Banking & Cash Flow Setup',
-    estimatedMinutes: 45,
-    status: 'upcoming'
+    estimatedMinutes: 60,
+    status: 'live',
+    moduleSlug: 'banking-cash-flow'
   },
   {
     step: 4,
@@ -81,8 +82,9 @@ export const financialLiteracyPathway: PathwayModule[] = [
     title: 'Saving, Emergencies & Big Goals',
     bigQuestion: 'How do I prepare for what I know is coming and what I don’t?',
     artifact: 'My Savings & Emergency Plan',
-    estimatedMinutes: 45,
-    status: 'upcoming'
+    estimatedMinutes: 60,
+    status: 'live',
+    moduleSlug: 'savings-emergencies'
   },
   {
     step: 6,
@@ -107,8 +109,9 @@ export const financialLiteracyPathway: PathwayModule[] = [
     title: 'Work, Taxes, Benefits & Career Money',
     bigQuestion: 'How do jobs, benefits, taxes, and career choices affect my money?',
     artifact: 'My Work & Income Strategy',
-    estimatedMinutes: 45,
-    status: 'upcoming'
+    estimatedMinutes: 60,
+    status: 'live',
+    moduleSlug: 'work-career-money'
   },
   {
     step: 9,

@@ -56,22 +56,32 @@ const emptyMoneyPlan: MoneyPlanInputs = {
 
 // ---------- module registry integrity ----------
 
-test('registry: six modules — Module 0 (Money Story) then calculators 1–5 in order', () => {
-  assert.equal(financialLiteracyModules.length, 6)
-  // Module 0 is the reflection starting point; numbers run 0..5 so the five
-  // calculator modules keep their stable 1–5 numbers.
+test('registry: nine modules, numbered by array index, Money Story first', () => {
+  assert.equal(financialLiteracyModules.length, 9)
+  // numbers run 0..8 so the five calculator modules keep their stable 1–5.
   financialLiteracyModules.forEach((m, i) => assert.equal(m.number, i))
   assert.equal(financialLiteracyModules[0]!.slug, 'money-story-goals')
 })
 
-test('registry: the five calculator module slugs stay numbered 1–5 and stable', () => {
+test('registry: exactly five calculator modules, numbered 1–5 and stable', () => {
   const calculators = ['take-home-pay', 'budget-builder', 'credit-debt', 'renting-homeownership', 'money-plan']
+  const calcModules = financialLiteracyModules.filter((m) => m.kind === 'calculator')
+  assert.equal(calcModules.length, 5, 'the checkpoint grid must stay five calculator modules')
   calculators.forEach((slug, i) => {
     const mod = getFinancialLiteracyModule(slug)
     assert.ok(mod, `calculator module "${slug}" must remain registered`)
+    assert.equal(mod!.kind, 'calculator', `${slug} must stay a calculator module`)
     assert.equal(mod!.number, i + 1, `${slug} must keep its stable number`)
     assert.equal(mod!.route, `/studio/lab/financial-literacy/${slug}`)
   })
+})
+
+test('registry: the four reflection modules are Money Story + the three Phase 2 additions', () => {
+  const reflection = financialLiteracyModules.filter((m) => m.kind === 'reflection').map((m) => m.slug)
+  assert.deepEqual(
+    reflection.sort(),
+    ['banking-cash-flow', 'money-story-goals', 'savings-emergencies', 'work-career-money']
+  )
 })
 
 test('registry: slugs are unique', () => {
@@ -307,13 +317,10 @@ test('pathway: every LIVE step maps to a registered module route', () => {
   }
 })
 
-test('pathway: UPCOMING steps carry no route so nothing links to a missing page', () => {
+test('pathway: no UPCOMING steps remain — all nine checkpoints are live', () => {
   const upcoming = financialLiteracyPathway.filter((s) => s.status === 'upcoming')
-  // Three remain upcoming after Money Story & Goals went live in Phase 2.
-  assert.equal(upcoming.length, 3)
-  for (const step of upcoming) {
-    assert.equal(step.moduleSlug, undefined, `upcoming step "${step.title}" must not link to a route`)
-  }
+  // Phase 2 is complete: every pathway step now resolves to a real module.
+  assert.equal(upcoming.length, 0)
 })
 
 test('pathway: Money Story & Goals is live and links to its real route', () => {
@@ -396,6 +403,41 @@ test('money story: landing page lists the five calculator checkpoints, not Modul
   // stays the five numbered calculators.
   assert.ok(source.includes('checkpointModules'), 'legacy grid must use the filtered checkpoint list')
   assert.ok(source.includes('financialLiteracyPathway'), 'pathway (where Money Story is live) must render')
+})
+
+// ---------- remaining Phase 2 reflection modules ----------
+
+const PHASE2_MODULES = [
+  { slug: 'banking-cash-flow', number: 6, next: '/studio/lab/financial-literacy/budget-builder' },
+  { slug: 'savings-emergencies', number: 7, next: '/studio/lab/financial-literacy/credit-debt' },
+  { slug: 'work-career-money', number: 8, next: '/studio/lab/financial-literacy/money-plan' }
+] as const
+
+test('phase 2: the three new modules are registered as reflection modules 6–8', () => {
+  for (const { slug, number } of PHASE2_MODULES) {
+    const mod = getFinancialLiteracyModule(slug)
+    assert.ok(mod, `${slug} must be registered`)
+    assert.equal(mod!.number, number, `${slug} must keep its stable number`)
+    assert.equal(mod!.kind, 'reflection', `${slug} must be a reflection module`)
+    assert.equal(mod!.route, `/studio/lab/financial-literacy/${slug}`)
+    assert.ok(mod!.estimatedMinutes >= 5 && mod!.estimatedMinutes <= 60, `${slug} minutes out of range`)
+  }
+})
+
+test('phase 2: each new page saves as a draft only and links to the next checkpoint', () => {
+  for (const { slug, next } of PHASE2_MODULES) {
+    const page = join(pagesDir, `${slug}.vue`)
+    assert.ok(existsSync(page), `${slug}.vue must exist`)
+    const source = readFileSync(page, 'utf8')
+    assert.ok(
+      source.includes(`useFinancialLiteracyDraft('${slug}'`),
+      `${slug} must persist via useFinancialLiteracyDraft with its own slug`
+    )
+    // Low-risk pattern: draft only, no Portfolio artifact write.
+    assert.ok(!source.includes('usePortfolioArtifact'), `${slug} must save a draft only`)
+    // Each module points forward to its next checkpoint.
+    assert.ok(source.includes(next), `${slug} must link forward to ${next}`)
+  }
 })
 
 test('no regression: Budget Builder and Money Plan still write Portfolio artifacts', () => {

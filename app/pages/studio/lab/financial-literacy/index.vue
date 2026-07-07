@@ -20,10 +20,10 @@ import { computed } from 'vue'
 
 definePageMeta({ layout: 'studio' })
 
-// The legacy card grid lists the five numbered calculator checkpoints
-// (Modules 1–5). Module 0 (Money Story & Goals) is surfaced through the
-// pathway section above, so it is intentionally excluded here.
-const checkpointModules = computed(() => financialLiteracyModules.filter((m) => m.number >= 1))
+// The legacy card grid lists the five original calculator checkpoints
+// (Modules 1–5). Reflection modules (Money Story and the Phase 2 additions)
+// are surfaced through the pathway section above, so they are excluded here.
+const checkpointModules = computed(() => financialLiteracyModules.filter((m) => m.kind === 'calculator'))
 
 const dayModules = (slugs: string[]) =>
   slugs.flatMap((slug) => {
