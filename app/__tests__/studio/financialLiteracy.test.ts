@@ -28,6 +28,12 @@ import {
   simulationWeekDays,
   simulationWeekPrintables
 } from '../../data/studio/simulationWeekFinancialLiteracy'
+import {
+  PATHWAY_CORE_PATH,
+  PATHWAY_FULL_PATH,
+  PATHWAY_TITLE,
+  financialLiteracyPathway
+} from '../../data/studio/financialLiteracyPathway'
 
 interface Test {
   name: string
@@ -255,6 +261,81 @@ test('simulation week: landing page renders the section and keeps module cards',
     indexSource.includes('Do the case with your team first'),
     'checkpoint guidance must tell students the platform comes after the case'
   )
+})
+
+// ---------- Money in Real Life pathway shell (Phase 1) ----------
+
+const EXPECTED_ARTIFACTS = [
+  'My Money Starting Point',
+  'My First Check Plan',
+  'My Banking & Cash Flow Setup',
+  'My Budget Plan',
+  'My Savings & Emergency Plan',
+  'My Credit Rulebook',
+  'My Independence Readiness Plan',
+  'My Work & Income Strategy',
+  'My 12-Month Money Plan'
+]
+
+test('pathway: has nine steps, numbered 1 through 9 in order', () => {
+  assert.equal(financialLiteracyPathway.length, 9)
+  financialLiteracyPathway.forEach((step, i) => assert.equal(step.step, i + 1))
+})
+
+test('pathway: every LIVE step maps to a registered module route', () => {
+  const live = financialLiteracyPathway.filter((s) => s.status === 'live')
+  // The five current modules are the five live pathway steps.
+  assert.equal(live.length, financialLiteracyModules.length)
+  for (const step of live) {
+    assert.ok(step.moduleSlug, `live step "${step.title}" must reference a module slug`)
+    const mod = getFinancialLiteracyModule(step.moduleSlug!)
+    assert.ok(mod, `live step "${step.title}" references unknown slug "${step.moduleSlug}"`)
+    assert.equal(mod!.route, `/studio/lab/financial-literacy/${step.moduleSlug}`)
+  }
+})
+
+test('pathway: UPCOMING steps carry no route so nothing links to a missing page', () => {
+  const upcoming = financialLiteracyPathway.filter((s) => s.status === 'upcoming')
+  assert.equal(upcoming.length, 4)
+  for (const step of upcoming) {
+    assert.equal(step.moduleSlug, undefined, `upcoming step "${step.title}" must not link to a route`)
+  }
+})
+
+test('pathway: copy states the 5-hour minimum and 8–10-hour full path', () => {
+  const source = readFileSync(join(pagesDir, 'index.vue'), 'utf8')
+  assert.ok(PATHWAY_CORE_PATH.includes('5-hour minimum'))
+  assert.ok(PATHWAY_FULL_PATH.includes('8–10-hour full path'))
+  // The landing page must actually render both framings.
+  assert.ok(source.includes('PATHWAY_CORE_PATH'))
+  assert.ok(source.includes('PATHWAY_FULL_PATH'))
+})
+
+test('pathway: includes all nine target artifacts', () => {
+  const artifacts = financialLiteracyPathway.map((s) => s.artifact)
+  for (const expected of EXPECTED_ARTIFACTS) {
+    assert.ok(artifacts.includes(expected), `pathway missing artifact "${expected}"`)
+  }
+  assert.equal(new Set(artifacts).size, 9, 'artifacts must be unique')
+})
+
+test('pathway: every step has a big question and a realistic time estimate', () => {
+  for (const step of financialLiteracyPathway) {
+    assert.ok(step.title.trim().length > 0, `step ${step.step} needs a title`)
+    assert.ok(step.bigQuestion.trim().length > 0, `step ${step.step} needs a big question`)
+    assert.ok(step.estimatedMinutes >= 15 && step.estimatedMinutes <= 120, `step ${step.step} minutes out of range`)
+  }
+})
+
+test('pathway: landing page renders the pathway, keeps module cards, and keeps case links', () => {
+  const source = readFileSync(join(pagesDir, 'index.vue'), 'utf8')
+  assert.ok(source.includes('financialLiteracyPathway'), 'pathway steps must render')
+  assert.ok(source.includes('PATHWAY_TITLE'), 'pathway title must render')
+  assert.ok(source.includes('financialLiteracyModules'), 'the five module cards must remain')
+  assert.ok(source.includes('simulationWeekDays'), 'the Simulation Week section must remain')
+  // Case packet + field trip guide links stay reachable from the page.
+  assert.ok(source.includes('simulationWeekPrintables'), 'case material links must remain')
+  assert.equal(PATHWAY_TITLE, 'Money in Real Life')
 })
 
 /* -------------------------------------------------------------------
